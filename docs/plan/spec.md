@@ -35,11 +35,12 @@ Threads [@cowboy76 게시물](https://www.threads.com/@cowboy76/post/DeqgY7wiJYa
 | 에이전트 | 이벤트 수단 (원본 기준) | R1 읽기 도구 | R2 명령 도구 |
 |---|---|---|---|
 | Claude Code | 훅 — 원본이 지원한다 | `Read` · `Grep` · `Glob` · `LS` · `NotebookRead` · `WebFetch` · `WebSearch` | `Bash` · `PowerShell` · `BashOutput` · `KillShell` · `KillBash` |
-| OpenCode | 플러그인 `opencode-plugin/` — 원본이 지원한다 | `read` · `grep` · `glob` · `list` · `webfetch` · `websearch` | `bash` |
+| OpenCode | 플러그인 `opencode-plugin/` — 원본이 지원한다 | `read` · `grep` · `glob` · `webfetch` · `websearch` | `bash` |
 | Gemini CLI | 훅(`BeforeTool` · `AfterTool` …) — 원본은 조사 · 설계만 있다(ENH-012) | `read_file` · `read_many_files` · `glob` · `grep_search` · `search_file_content` · `list_directory` · `web_fetch` · `google_web_search` | `run_shell_command` |
 | Codex CLI | 훅(실험 기능) — 원본 조사(2026-04) 기준 셸 도구만 잡힌다. 붙이기 전에 현재 문서로 다시 확인한다 | 확인 필요 | `shell` 계열 |
 
 - 도구 이름 출처: Claude Code [훅 문서](https://code.claude.com/docs/en/hooks), OpenCode [도구 문서](https://opencode.ai/docs/tools/), Gemini CLI `docs/research/google-gemini-cli-hooks.md`, Codex `docs/research/openai-codex-hooks.md`.
+- Claude Code 는 서브에이전트 안에서 부른 도구 이벤트에 그 서브에이전트의 `agent_id` 를 붙인다([훅 문서](https://code.claude.com/docs/en/hooks)). 원본 훅은 이 값을 버리고 모든 도구를 사장에게 붙였다. 이 포크는 그 값으로 해당 직원을 찾아 활동을 붙인다.
 - 사장 이름표는 지금 "Claude" 로 고정돼 있다. 세션을 띄운 에이전트 이름(Claude · OpenCode · Gemini · Codex)을 보여 주게 바꾼다.
 
 ## 화면 배치
