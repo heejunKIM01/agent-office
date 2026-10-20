@@ -37,6 +37,7 @@ The scripts directory contains testing and development utilities:
 | Script | Purpose | Session ID |
 |--------|---------|------------|
 | `simulate_events.py` | Run simulation scenarios | `sim_session_123` (default) |
+| `gemini_session.sh` | Run the real Gemini CLI (npx, pinned) against `fake_gemini_api.py` with this repo's Gemini hook, in a throwaway project and HOME | the Gemini session id |
 | `live_session.sh` | Run a short real Claude Code session against the local backend (haiku, $0.5 cap); hooks apply to that session only | the real session id |
 | `test_single_agent.py` | Debug pathfinding with one agent | `test_single_agent` |
 | `gen_types.py` | Generate TypeScript from Pydantic models | N/A |

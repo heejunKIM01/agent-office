@@ -196,7 +196,8 @@ def parse_todos_from_event(event: AnyEvent) -> list[TodoItem]:
             continue
 
         item_dict: dict[str, Any] = cast(dict[str, Any], item)
-        content: str = str(item_dict.get("content", ""))
+        # Gemini CLI's write_todos names the text "description".
+        content: str = str(item_dict.get("content") or item_dict.get("description") or "")
         status_str: str = str(item_dict.get("status", "pending"))
         active_form_raw: Any = item_dict.get("activeForm")
         active_form: str | None = str(active_form_raw) if active_form_raw else None

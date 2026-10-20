@@ -76,8 +76,8 @@ TODO_TOOLS: frozenset[str] = frozenset({"todowrite", "write_todos"})
 
 # Tool input keys that name what a call works on, most specific first:
 # Claude Code (file_path, notebook_path, pattern, path, url, query), OpenCode
-# (filePath), Gemini CLI (absolute_path, dir_path) and Codex CLI (command as
-# an argv list).
+# (filePath), Gemini CLI (absolute_path, dir_path, read_many_files' include
+# list) and Codex CLI (command as an argv list).
 _COMMAND_KEYS = ("command", "cmd")
 _PATH_KEYS = (
     "file_path",
@@ -87,6 +87,7 @@ _PATH_KEYS = (
     "pattern",
     "path",
     "dir_path",
+    "include",
 )
 _TEXT_KEYS = ("url", "query")
 

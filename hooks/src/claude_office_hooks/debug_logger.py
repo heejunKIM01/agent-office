@@ -117,7 +117,7 @@ def debug_log(
         with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
             f.write(f"\n{'=' * 60}\n")
             f.write(f"[{get_iso_timestamp()}] Event: {event_type}\n")
-            f.write("--- RAW INPUT FROM CLAUDE CODE ---\n")
+            f.write("--- RAW HOOK INPUT ---\n")
             f.write(_redact(json.dumps(raw_data, indent=2, default=str)))
             f.write("\n--- MAPPED PAYLOAD TO BACKEND ---\n")
             f.write(_redact(json.dumps(payload, indent=2, default=str)))
