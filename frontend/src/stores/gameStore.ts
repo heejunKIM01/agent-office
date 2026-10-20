@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import type {
+  Activity,
   Position,
   BubbleContent,
   BossState,
@@ -89,6 +90,7 @@ export interface GameStore {
       backendState: BackendAgentState;
       name: string | null;
       currentTask: string | null;
+      activity?: Activity | null;
     },
   ) => void;
   updateAgentQueueInfo: (
@@ -145,6 +147,7 @@ export interface GameStore {
   // Boss actions
   updateBossBackendState: (state: BossState) => void;
   updateBossTask: (task: string | null) => void;
+  updateBossActivity: (activity: Activity | null) => void;
   setBossInUse: (by: "arrival" | "departure" | null) => void;
   setBossTyping: (typing: boolean) => void;
 

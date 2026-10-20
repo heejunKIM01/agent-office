@@ -14,6 +14,7 @@
 
 export type {
   // Agents
+  Activity,
   Agent,
   AgentState,
   Boss,
