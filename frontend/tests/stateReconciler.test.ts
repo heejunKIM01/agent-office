@@ -270,3 +270,45 @@ describe("reconcileState — pondering inputs", () => {
     );
   });
 });
+
+describe("reconcileState — event history", () => {
+  beforeEach(() => {
+    useGameStore.getState().resetForSessionSwitch();
+  });
+
+  const ctx = (): ReconcilerContext => ({
+    currentSessionId: "session-1",
+    processedAgents: new Set<string>(),
+    lastSeenBubbleText: new Map<string, string>(),
+    initialQueueSyncDone: { current: "session-1" },
+  });
+
+  it("shows a finished session's history in the event log", () => {
+    reconcileState(
+      makeState({
+        history: [
+          {
+            id: "1",
+            type: "session_start",
+            agentId: "main",
+            summary: "Session started",
+            timestamp: "2026-10-20T00:00:01Z",
+            detail: {},
+          },
+          {
+            id: "2",
+            type: "stop",
+            agentId: "main",
+            summary: "Done",
+            timestamp: "2026-10-20T00:00:02Z",
+            detail: {},
+          },
+        ],
+      }),
+      ctx(),
+    );
+    expect(
+      useGameStore.getState().eventLog.map((entry) => entry.summary),
+    ).toEqual(["Done", "Session started"]);
+  });
+});
