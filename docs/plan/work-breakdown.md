@@ -8,6 +8,7 @@
 | 00  | `docs/00-cruise-plan`          | 근거 문서 · 작업 분할 · 보고서 양식                                                                                                                                                                                     | —                   | 머지됨 (#1) |
 | 00a | `docs/00a-agent-office`        | 저장소 이름을 `agent-office` 로 바꾼 것을 문서에 반영, 근거 문서에 「에이전트 범위」(에이전트별 읽기 · 명령 도구) 추가, 다른 에이전트 항목(08–10) 추가                                                                    | 에이전트 범위       | 머지됨 (#2) |
 | 01  | `feat/01-office-rooms`         | 자료실 · 서버실 방: 칸막이 벽과 문, 책장 · 서버 랙(LED) 그림, 방 바닥, 간판(i18n), 프린터 · 화분을 자료실 안으로 이동, 도착 · 퇴근 줄을 책상 사이 통로로 이동, 내비게이션 그리드에 벽 · 가구 장애물 반영                   | 화면 배치           | 대기        |
+| 01a | `fix/01a-event-db-concurrency` | 기존 결함: 이벤트를 백그라운드에서 동시에 처리하는데 DB 연결이 하나(`StaticPool`)라 서로의 트랜잭션을 깨뜨린다. 세션 둘이 거의 동시에 시작하면 한쪽 세션 · 이벤트가 사라진다. 동시 처리에서도 이벤트가 빠지지 않게 고친다 | R5 | 대기 |
 | 02  | `feat/02-activity-contract`    | 백엔드 활동 계약: 도구 → 활동(`reading` · `running`) 매핑을 에이전트 공통 표로(대소문자 무시), 병렬 도구(`tool_use_id`) 추적, Boss · Agent 에 `activity` 노출, 프런트 타입 재생성, 시뮬레이터 시나리오 `errands`          | R1 · R2 · 에이전트 범위 | 대기    |
 | 03  | `feat/03-boss-errands`         | 사장 심부름: 활동에 따라 자료실(책 펴기) · 서버실(랙 앞) 왕복, A* 경로, 머무름 1.5초 · 걷는 중 목적지 변경, 말풍선 · 이름표 따라가기, 압축 연출 우선                                                                        | R1 · R2 · 동선 규칙 | 대기        |
 | 04  | `feat/04-ponder-pose`          | 고민 포즈: `PostToolUseFailure` 훅 등록 · 매핑, 도구 실패 · 권한 대기 · 긴 생각에서 그 자리에서 턱 괴기 + 생각 말풍선(사장 · 직원 공통)                                                                                    | R3                  | 대기        |
@@ -25,4 +26,6 @@
 
 ## 발견한 기존 결함
 
-없음.
+| 발견 | 결함 | 재현 | 항목 |
+| --- | --- | --- | --- |
+| 01 실검증 | 세션 두 개의 이벤트가 몇 ms 간격으로 들어오면 백엔드 로그에 `StaleDataError: UPDATE statement on table 'sessions' expected to update 1 row(s); 0 were matched` · `No row was found when one was required` 가 찍히고 한쪽 세션이 목록에서 사라진다 | 빈 DB 로 백엔드를 띄우고 세션 A · B 의 `session_start` · `user_prompt_submit` 를 간격 없이 POST 한다. 이 브랜치는 백엔드를 건드리지 않았다(원본과 같은 코드) | `fix/01a-event-db-concurrency` |
