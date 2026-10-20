@@ -9,7 +9,10 @@ Characters are keyed by the same id the state machine uses for bubbles:
 ``"main"`` for the boss, the agent id for a subagent.
 """
 
+import re
+import shlex
 from collections.abc import Mapping
+from pathlib import PurePath
 from typing import Any, Literal, NamedTuple, cast
 
 from app.models.agents import Activity
@@ -21,6 +24,7 @@ __all__ = [
     "TODO_TOOLS",
     "ToolActivityTracker",
     "ToolSubject",
+    "activity_for_call",
     "activity_for_tool",
     "tool_subject",
 ]
@@ -127,6 +131,78 @@ def tool_subject(tool_name: str | None, tool_input: Mapping[str, Any] | None) ->
     return ToolSubject("command", command) if command else None
 
 
+# Programs that only read or list files. A shell command made of these alone
+# (pipes and && chains included, no redirection or substitution) counts as
+# reading: Codex CLI reads files with the shell (sed -n, cat, rg) rather than
+# a read tool. sed counts only with -n and without -i; find not with actions.
+READ_ONLY_PROGRAMS: frozenset[str] = frozenset(
+    {
+        "cat",
+        "cd",
+        "echo",
+        "egrep",
+        "fgrep",
+        "file",
+        "find",
+        "grep",
+        "head",
+        "less",
+        "ls",
+        "more",
+        "nl",
+        "printf",
+        "pwd",
+        "rg",
+        "sed",
+        "stat",
+        "tail",
+        "tree",
+        "wc",
+    }
+)
+_SHELLS = frozenset({"bash", "sh", "zsh"})
+_FIND_ACTIONS = frozenset({"-delete", "-exec", "-execdir", "-ok", "-okdir", "-fprint"})
+_COMMAND_SEPARATORS = re.compile(r"\|\||&&|[|;\n]")
+
+
+def _is_read_only_command(command: str) -> bool:
+    """Whether a shell command only reads or lists files."""
+    if not command.strip() or any(mark in command for mark in (">", "`", "$(")):
+        return False
+    for segment in _COMMAND_SEPARATORS.split(command):
+        try:
+            words = shlex.split(segment)
+        except ValueError:
+            return False
+        if not words:
+            continue
+        program = PurePath(words[0]).name
+        if program in _SHELLS and len(words) >= 3 and words[1] in ("-c", "-lc"):
+            if not _is_read_only_command(" ".join(words[2:])):
+                return False
+        elif (
+            program not in READ_ONLY_PROGRAMS
+            or program == "sed"
+            and ("-n" not in words or any(w.startswith("-i") for w in words))
+            or program == "find"
+            and _FIND_ACTIONS.intersection(words)
+        ):
+            return False
+    return True
+
+
+def activity_for_call(
+    tool_name: str | None, tool_input: Mapping[str, Any] | None
+) -> Activity | None:
+    """The office activity of one tool call: a command tool that only reads is reading."""
+    activity = activity_for_tool(tool_name)
+    if activity is Activity.RUNNING:
+        subject = tool_subject(tool_name, tool_input)
+        if subject is not None and _is_read_only_command(subject.value):
+            return Activity.READING
+    return activity
+
+
 def activity_for_tool(tool_name: str | None) -> Activity | None:
     """Map a tool name to the office activity it drives, if any."""
     if not tool_name:
@@ -153,9 +229,15 @@ class ToolActivityTracker:
         self._in_flight: dict[str, dict[str, tuple[str, Activity]]] = {}
         self._next_key = 0
 
-    def start(self, character_id: str, tool_name: str | None, tool_use_id: str | None) -> None:
+    def start(
+        self,
+        character_id: str,
+        tool_name: str | None,
+        tool_use_id: str | None,
+        tool_input: Mapping[str, Any] | None = None,
+    ) -> None:
         """Record a tool start; tools that map to no activity are ignored."""
-        activity = activity_for_tool(tool_name)
+        activity = activity_for_call(tool_name, tool_input)
         if activity is None or tool_name is None:
             return
         key = tool_use_id or self._synthetic_key()
