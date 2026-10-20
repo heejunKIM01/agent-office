@@ -11,6 +11,7 @@ Public surface (unchanged from before the refactor):
 import asyncio
 import contextlib
 import logging
+import weakref
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -194,6 +195,14 @@ class EventProcessor:
         # (see ``_process_event_internal``). Cleared whenever the DB is wiped
         # so wiped sessions are re-checked on their next event.
         self._recovery_checked: set[str] = set()
+        # One lock per session so its events are applied in arrival order.
+        # Events arrive as concurrent background tasks; without this a prompt
+        # could be persisted before its own session_start, which then either
+        # spawns a duplicate "recovered" start or wipes the prompt's row.
+        # Weak values drop a session's lock once no task holds or awaits it.
+        self._session_event_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = (
+            weakref.WeakValueDictionary()
+        )
         # Coalesces Command Center overview broadcasts: bursts of events schedule
         # a single deferred flush instead of rebuilding the full peer-merge once
         # per event (O(N x events/sec)). See ``_schedule_overview_broadcast``.
@@ -382,6 +391,14 @@ class EventProcessor:
     # Public event ingestion
     # ------------------------------------------------------------------
 
+    def _session_event_lock(self, session_id: str) -> asyncio.Lock:
+        """Return the lock that serializes event processing for one session."""
+        lock = self._session_event_locks.get(session_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._session_event_locks[session_id] = lock
+        return lock
+
     async def process_event(self, event: AnyEvent) -> None:
         """Process an incoming event and update session state.
 
@@ -399,7 +416,8 @@ class EventProcessor:
         )
 
         try:
-            await self._process_event_internal(event)
+            async with self._session_event_lock(event.session_id):
+                await self._process_event_internal(event)
         except Exception as e:
             logger.exception(f"Error processing event {event.event_type}: {e}")
             with contextlib.suppress(Exception):

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool, Pool, StaticPool
 
 from app.config import get_settings
 
@@ -18,16 +18,8 @@ logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
-_engine: AsyncEngine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=False,
-    connect_args={"check_same_thread": False, "timeout": 15},
-    poolclass=StaticPool,
-)
 
-
-@event.listens_for(_engine.sync_engine, "connect")
-def _set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:  # pyright: ignore[reportUnusedFunction]
+def _set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
     """Enable WAL mode and busy timeout on every SQLite connection.
 
     WAL mode allows concurrent readers alongside a single writer, which
@@ -38,6 +30,37 @@ def _set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None: 
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
+
+
+def _pool_class_for(url: str) -> type[Pool]:
+    """Pick the connection pool for a SQLite URL.
+
+    Hook events are persisted by concurrent background tasks. Sharing one
+    connection across every session (StaticPool) interleaves their
+    transactions: one task's commit or rollback lands on another task's
+    half-written rows, so sessions and events silently disappear
+    (StaleDataError / NoResultFound). A file database therefore opens a
+    connection per session (NullPool) and lets WAL + busy_timeout serialize
+    the writers; with no pool there is also nothing to exhaust, which was the
+    reason StaticPool replaced QueuePool. An in-memory database only exists on
+    its one connection, so it keeps StaticPool.
+    """
+    return StaticPool if ":memory:" in url else NullPool
+
+
+def create_engine_for(url: str) -> AsyncEngine:
+    """Create the async SQLite engine the app runs on for ``url``."""
+    engine = create_async_engine(
+        url,
+        echo=False,
+        connect_args={"check_same_thread": False, "timeout": 15},
+        poolclass=_pool_class_for(url),
+    )
+    event.listen(engine.sync_engine, "connect", _set_sqlite_pragma)
+    return engine
+
+
+_engine: AsyncEngine = create_engine_for(settings.DATABASE_URL)
 
 
 _session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
