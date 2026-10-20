@@ -190,6 +190,11 @@ const ko: Record<TranslationKey, string> = {
   "office.serverRoom": "서버실",
   "office.unknownAgent": "에이전트",
 
+  // Isometric office
+  "iso.live": "LIVE",
+  "iso.offline": "오프라인",
+  "iso.controlsHint": "드래그로 이동 · 휠로 확대 · 더블클릭으로 원위치",
+
   // Zoom Controls
   "zoom.in": "확대",
   "zoom.out": "축소",

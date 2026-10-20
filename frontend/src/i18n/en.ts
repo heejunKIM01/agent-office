@@ -188,6 +188,11 @@ const en = {
   "office.serverRoom": "SERVER ROOM",
   "office.unknownAgent": "Agent",
 
+  // Isometric office
+  "iso.live": "LIVE",
+  "iso.offline": "OFFLINE",
+  "iso.controlsHint": "Drag to move · Scroll to zoom · Double-click to reset",
+
   // Zoom Controls
   "zoom.in": "Zoom in",
   "zoom.out": "Zoom out",

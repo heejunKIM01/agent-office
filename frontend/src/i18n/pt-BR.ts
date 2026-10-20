@@ -191,6 +191,12 @@ const ptBR: Record<TranslationKey, string> = {
   "office.serverRoom": "SALA DE SERVIDORES",
   "office.unknownAgent": "Agente",
 
+  // Isometric office
+  "iso.live": "LIVE",
+  "iso.offline": "OFFLINE",
+  "iso.controlsHint":
+    "Arraste para mover · Role para ampliar · Clique duplo para redefinir",
+
   // Zoom Controls
   "zoom.in": "Aumentar zoom",
   "zoom.out": "Diminuir zoom",
