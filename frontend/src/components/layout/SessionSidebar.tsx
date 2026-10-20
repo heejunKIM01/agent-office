@@ -12,11 +12,11 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { ptBR as dateFnsPtBR, es as dateFnsEs } from "date-fns/locale";
 import { GitStatusPanel } from "@/components/layout/GitStatusPanel";
 import type { Session } from "@/hooks/useSessions";
 import { useDragResize } from "@/hooks/useDragResize";
 import { useTranslation } from "@/hooks/useTranslation";
+import { dateFnsLocaleFor } from "@/i18n/dateLocale";
 
 // ============================================================================
 // CONSTANTS
@@ -176,12 +176,7 @@ export function SessionSidebar({
   onRenameSession,
 }: SessionSidebarProps): React.ReactNode {
   const { t, language } = useTranslation();
-  const dateFnsLocale =
-    language === "pt-BR"
-      ? dateFnsPtBR
-      : language === "es"
-        ? dateFnsEs
-        : undefined;
+  const dateFnsLocale = dateFnsLocaleFor(language);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);

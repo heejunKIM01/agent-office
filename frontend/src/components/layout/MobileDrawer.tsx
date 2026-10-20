@@ -13,10 +13,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { ptBR as dateFnsPtBR, es as dateFnsEs } from "date-fns/locale";
 import { GitStatusPanel } from "@/components/layout/GitStatusPanel";
 import { EventLog } from "@/components/layout/EventLog";
 import { useTranslation } from "@/hooks/useTranslation";
+import { dateFnsLocaleFor } from "@/i18n/dateLocale";
 import type { Session } from "@/hooks/useSessions";
 
 // ============================================================================
@@ -93,12 +93,7 @@ export function MobileDrawer({
   onClearDB,
 }: MobileDrawerProps): React.ReactNode {
   const { t, language } = useTranslation();
-  const dateFnsLocale =
-    language === "pt-BR"
-      ? dateFnsPtBR
-      : language === "es"
-        ? dateFnsEs
-        : undefined;
+  const dateFnsLocale = dateFnsLocaleFor(language);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 

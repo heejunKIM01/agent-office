@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { getTranslation, isLocale, type TranslationKey } from "../src/i18n";
+import { formatDistanceToNow } from "date-fns";
+import {
+  getTranslation,
+  isLocale,
+  locales,
+  type Locale,
+  type TranslationKey,
+} from "../src/i18n";
+import { dateFnsLocaleFor } from "../src/i18n/dateLocale";
 import en from "../src/i18n/en";
 import ptBR from "../src/i18n/pt-BR";
 import es from "../src/i18n/es";
+import ko from "../src/i18n/ko";
 
 // ─── isLocale() ──────────────────────────────────────────────────────────
 
@@ -11,6 +20,7 @@ describe("isLocale", () => {
     expect(isLocale("en")).toBe(true);
     expect(isLocale("pt-BR")).toBe(true);
     expect(isLocale("es")).toBe(true);
+    expect(isLocale("ko")).toBe(true);
   });
 
   it("rejects invalid strings", () => {
@@ -139,6 +149,7 @@ describe("getTranslation", () => {
     const enKeys = Object.keys(en).sort();
     const ptBRKeys = Object.keys(ptBR).sort();
     const esKeys = Object.keys(es).sort();
+    const koKeys = Object.keys(ko).sort();
 
     it("PT-BR has exactly the same keys as EN", () => {
       expect(ptBRKeys).toEqual(enKeys);
@@ -146,6 +157,21 @@ describe("getTranslation", () => {
 
     it("ES has exactly the same keys as EN", () => {
       expect(esKeys).toEqual(enKeys);
+    });
+
+    it("KO has exactly the same keys as EN", () => {
+      expect(koKeys).toEqual(enKeys);
+    });
+
+    it("KO keeps every {placeholder} of the EN string", () => {
+      const placeholders = (text: string) =>
+        (text.match(/\{\w+\}/g) ?? []).sort();
+      for (const key of enKeys) {
+        const k = key as TranslationKey;
+        expect(placeholders(ko[k]), `ko["${key}"]`).toEqual(
+          placeholders(en[k]),
+        );
+      }
     });
 
     it("no locale has empty string values", () => {
@@ -158,6 +184,9 @@ describe("getTranslation", () => {
       for (const [key, value] of Object.entries(es)) {
         expect(value, `es["${key}"] is empty`).not.toBe("");
       }
+      for (const [key, value] of Object.entries(ko)) {
+        expect(value, `ko["${key}"] is empty`).not.toBe("");
+      }
     });
 
     it("all locales return a non-empty string for every key via getTranslation", () => {
@@ -168,5 +197,28 @@ describe("getTranslation", () => {
         expect(esResult.length, `es t("${key}") is empty`).toBeGreaterThan(0);
       }
     });
+  });
+});
+
+// ─── dateFnsLocaleFor() ──────────────────────────────────────────────────
+
+describe("dateFnsLocaleFor", () => {
+  it("gives every non-English locale a date-fns locale", () => {
+    for (const locale of Object.keys(locales) as Locale[]) {
+      if (locale === "en") continue;
+      expect(dateFnsLocaleFor(locale), locale).toBeDefined();
+    }
+  });
+
+  it("formats Korean relative times in Korean", () => {
+    const text = formatDistanceToNow(new Date(Date.now() - 5 * 60_000), {
+      addSuffix: true,
+      locale: dateFnsLocaleFor("ko"),
+    });
+    expect(text).toBe("5분 전");
+  });
+
+  it("leaves English on the date-fns default", () => {
+    expect(dateFnsLocaleFor("en")).toBeUndefined();
   });
 });
