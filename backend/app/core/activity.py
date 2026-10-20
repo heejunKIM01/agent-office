@@ -18,6 +18,7 @@ __all__ = [
     "READING_TOOLS",
     "RUNNING_TOOLS",
     "SUBAGENT_TOOLS",
+    "TODO_TOOLS",
     "ToolActivityTracker",
     "ToolSubject",
     "activity_for_tool",
@@ -68,6 +69,10 @@ RUNNING_TOOLS: frozenset[str] = frozenset(
 
 # Tools that hand work to a subagent (Claude Code, OpenCode).
 SUBAGENT_TOOLS: frozenset[str] = frozenset({"task", "agent"})
+
+# Tools that rewrite the todo list from a `todos` input (Claude Code and
+# OpenCode `TodoWrite`/`todowrite`, Gemini CLI `write_todos`).
+TODO_TOOLS: frozenset[str] = frozenset({"todowrite", "write_todos"})
 
 # Tool input keys that name what a call works on, most specific first:
 # Claude Code (file_path, notebook_path, pattern, path, url, query), OpenCode

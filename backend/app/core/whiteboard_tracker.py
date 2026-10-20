@@ -6,10 +6,13 @@ drives the whiteboard display in the frontend.
 """
 
 import logging
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 
+from app.core.activity import activity_for_tool, tool_subject
+from app.models.agents import Activity
 from app.models.events import ToolEvent
 from app.models.sessions import AgentLifespan, BackgroundTask, NewsItem
 
@@ -44,19 +47,38 @@ def _empty_background_tasks() -> list[BackgroundTask]:
 # Tool categorisation map (used for the pizza / doughnut chart)
 # ---------------------------------------------------------------------------
 
+# Lowercase tool names of every agent (docs/plan/spec.md "에이전트 범위").
+# Unlisted reading and command tools fall back to "read" and "bash".
 TOOL_CATEGORIES: dict[str, str] = {
-    "Read": "read",
-    "Glob": "read",
-    "Grep": "read",
-    "Write": "write",
-    "Edit": "edit",
-    "Bash": "bash",
-    "Task": "task",
-    "Agent": "task",
-    "TodoWrite": "todo",
-    "WebSearch": "web",
-    "WebFetch": "web",
+    # Claude Code, and OpenCode, which uses the same names in lowercase
+    "read": "read",
+    "glob": "read",
+    "grep": "read",
+    "write": "write",
+    "edit": "edit",
+    "multiedit": "edit",
+    "patch": "edit",
+    "bash": "bash",
+    "task": "task",
+    "agent": "task",
+    "todowrite": "todo",
+    "websearch": "web",
+    "webfetch": "web",
+    # Gemini CLI
+    "write_file": "write",
+    "replace": "edit",
+    "write_todos": "todo",
+    "google_web_search": "web",
+    "web_fetch": "web",
+    # Codex CLI
+    "apply_patch": "edit",
 }
+
+_ACTIVITY_CATEGORIES: dict[Activity, str] = {Activity.READING: "read", Activity.RUNNING: "bash"}
+
+# Tool inputs kept from PRE_TOOL_USE for producers whose POST_TOOL_USE omits
+# them (the OpenCode plugin), bounded in case a POST never arrives.
+MAX_REMEMBERED_TOOL_INPUTS = 200
 
 MAX_NEWS_ITEMS = 20
 MAX_AGENT_LIFESPANS = 10
@@ -91,6 +113,9 @@ class WhiteboardTracker:
     coffee_cups: int = 0
     file_edits: dict[str, int] = field(default_factory=_empty_file_edits)
     background_tasks: list[BackgroundTask] = field(default_factory=_empty_background_tasks)
+    tool_inputs: OrderedDict[str, dict[str, Any]] = field(
+        default_factory=lambda: OrderedDict[str, dict[str, Any]]()
+    )
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -112,6 +137,7 @@ class WhiteboardTracker:
         self.coffee_cups = 0
         self.file_edits = {}
         self.background_tasks = []
+        self.tool_inputs.clear()
 
     # ------------------------------------------------------------------
     # News items
@@ -133,13 +159,29 @@ class WhiteboardTracker:
     # ------------------------------------------------------------------
 
     def categorize_tool(self, tool_name: str) -> str:
-        """Return the broad category for a tool name (used by pizza chart)."""
-        return TOOL_CATEGORIES.get(tool_name, "other")
+        """Return the broad category for any agent's tool name (used by pizza chart)."""
+        category = TOOL_CATEGORIES.get(tool_name.lower())
+        if category is not None:
+            return category
+        activity = activity_for_tool(tool_name)
+        return _ACTIVITY_CATEGORIES[activity] if activity is not None else "other"
+
+    def remember_tool_input(self, event: ToolEvent) -> None:
+        """Keep a PRE_TOOL_USE input until its POST_TOOL_USE arrives."""
+        tool_use_id = event.data.tool_use_id
+        if not tool_use_id or not event.data.tool_input:
+            return
+        self.tool_inputs[tool_use_id] = event.data.tool_input
+        while len(self.tool_inputs) > MAX_REMEMBERED_TOOL_INPUTS:
+            self.tool_inputs.popitem(last=False)
 
     def track_tool_use(self, event: ToolEvent) -> None:
         """Update tool usage statistics from a POST_TOOL_USE event."""
         tool_name = event.data.tool_name or "unknown"
-        tool_input: dict[str, str | int | bool | list[str] | None] = event.data.tool_input or {}
+        remembered = (
+            self.tool_inputs.pop(event.data.tool_use_id, None) if event.data.tool_use_id else None
+        )
+        tool_input: dict[str, Any] = event.data.tool_input or remembered or {}
         success = event.data.success
         error_type = event.data.error_type
 
@@ -156,24 +198,29 @@ class WhiteboardTracker:
             self.recent_success_count += 1
             self.consecutive_successes += 1
 
-        if tool_name in ("Edit", "Write"):
+        subject = tool_subject(tool_name, tool_input)
+
+        if category in ("edit", "write"):
             self.code_written_count += 1
-            file_path = tool_input.get("file_path", "")
-            if isinstance(file_path, str) and file_path:
+            if subject is not None and subject.kind == "path":
+                file_path = subject.value
                 file_name = file_path.split("/")[-1] if "/" in file_path else file_path
                 self.file_edits[file_name] = self.file_edits.get(file_name, 0) + 1
 
-        if tool_name == "Bash":
-            cmd = tool_input.get("command", "")
-            if isinstance(cmd, str) and "fix" in cmd.lower():
-                self.bug_fixed_count += 1
+        if (
+            category == "bash"
+            and subject is not None
+            and subject.kind == "command"
+            and "fix" in subject.value.lower()
+        ):
+            self.bug_fixed_count += 1
 
-        if tool_name == "TodoWrite":
+        if category == "todo":
             todos_data = tool_input.get("todos", [])
             if isinstance(todos_data, list):
                 completed_count = sum(
                     1
-                    for t in todos_data
+                    for t in cast(list[object], todos_data)
                     if isinstance(t, dict) and cast(dict[str, str], t).get("status") == "completed"
                 )
                 self.task_completed_count = completed_count
