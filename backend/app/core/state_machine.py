@@ -8,6 +8,7 @@ from typing import Any, cast
 
 from app.core.activity import (
     SUBAGENT_TOOLS,
+    TODO_TOOLS,
     ToolActivityTracker,
     activity_for_tool,
     tool_subject,
@@ -242,13 +243,15 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle PRE_TOOL_USE: update boss/agent state and process TodoWrite events."""
     assert isinstance(event, ToolEvent)
     tool_name = event.data.tool_name
+    name = (tool_name or "").lower()
+    sm.whiteboard.remember_tool_input(event)
 
-    if tool_name == "TodoWrite":
+    if name in TODO_TOOLS:
         parsed = parse_todos_from_event(event)
         if parsed:
             sm.todos = parsed
 
-    if tool_name in ("Task", "Agent"):
+    if name in SUBAGENT_TOOLS:
         sm.phase = OfficePhase.DELEGATING
         sm.boss_state = BossState.DELEGATING
         sm.elevator_state = ElevatorState.ARRIVING
