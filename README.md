@@ -10,6 +10,32 @@
 
 > **포크 안내 (heejunKIM01/agent-office)** — [paulrobello/claude-office](https://github.com/paulrobello/claude-office) 의 포크다. 원본 사무실에 자료실 · 서버실을 더해, 코딩 에이전트가 파일을 읽으면 자료실에서 책을 펴고 명령을 돌리면 서버실 랙 앞에 서고 막히면 그 자리에서 턱을 괴게 만든다. Claude Code 에만 묶이지 않게 OpenCode · Gemini CLI · Codex CLI 도 같은 사무실에 띄우는 것이 목표다. 무엇을 왜 만드는지는 [근거 문서](docs/plan/spec.md), 진행 상황은 [작업 분할](docs/plan/work-breakdown.md)에 있다.
 
+## 이 포크 실행하기
+
+![자료실에서 책 읽기 · 걷기 · 서버실 콘솔 앞](docs/reports/img/03-poses.png)
+
+| 에이전트가 하는 일 | 사무실에서 보이는 것 |
+|---|---|
+| 파일 · 웹 읽기 (`Read` · `Grep` · `Glob` · `WebFetch` …) | 자료실 책장 앞으로 걸어가 책을 펴 든다 |
+| 명령 실행 (`Bash` …) | 서버실 랙 앞에 등을 돌리고 선다. 콘솔에 글자가 흐른다 |
+| 도구 실패 · 권한 대기 · 오래 생각 | 그 자리에서 턱을 괴고 생각 점이 찬다 |
+| 서브에이전트 | 엘리베이터로 출근해 자기 책상에서 일하고, 자기 도구에 따라 자료실 · 서버실도 다녀온다 |
+
+```bash
+git clone https://github.com/heejunKIM01/agent-office.git
+cd agent-office
+make install     # uv · bun(또는 npm) 필요. Python 3.13 은 uv 가 받는다
+make dev         # 백엔드 :8000 + 프런트 :3000
+```
+
+브라우저로 <http://localhost:3000> 을 연다. 이벤트를 넣는 방법은 셋이다.
+
+1. **실제 Claude Code 에 연결** — `make hooks-install` 이 `~/.claude/settings.json` 에 훅을 등록한다. 원본에서 이미 설치했다면 `make hooks-reinstall` 로 다시 설치해야 실패 훅(`PostToolUseFailure`)이 들어간다.
+2. **전역 설정을 건드리지 않고 한 번 돌려 보기** — `scripts/live_session.sh` 가 임시 프로젝트에서 짧은 Claude Code 세션(haiku, 지출 상한 $0.5)을 돌린다. 훅은 그 세션에만 걸린다.
+3. **시뮬레이터** — `uv run python scripts/simulate_events.py errands` 가 같은 장면을 가짜 이벤트로 재생한다.
+
+백엔드는 기본으로 이벤트마다 요약을 만들려고 `claude -p` 를 부른다. 사용량을 아끼려면 `SUMMARY_BACKEND=disabled make dev` 로 띄운다.
+
 ## Table of Contents
 
 * [Screenshots](#screenshots)

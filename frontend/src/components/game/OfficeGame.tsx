@@ -113,8 +113,9 @@ const ERRAND_BOSS_SORT_OFFSET = 18;
 
 /** Pose of the boss away from the desk */
 function errandPoseFor(errand: BossErrandState): ErrandPose {
-  if (errand.pondering) return "pondering";
+  // A stuck boss still finishes its walk; it ponders once it stands still.
   if (errand.phase !== "working") return "walking";
+  if (errand.pondering) return "pondering";
   return errand.room === "server" ? "operating" : "reading";
 }
 

@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import logging
 import weakref
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -87,6 +88,9 @@ _DISPLAY_NAME_STRIP_PREFIXES = ("repos", "projects", "src", "work", "code", "git
 # cap) and frontend gameStore MAX_EVENT_LOG (the event-log cap) — those are
 # already named; this names the third `sm.history` cap site.
 MAX_HISTORY_ENTRIES = 500
+# Tool events remembered per session for duplicate detection; far more than
+# can overlap between the hook copy and the transcript-poller copy.
+MAX_SEEN_TOOL_EVENTS = 500
 
 
 def _todos_unchanged(old_todos: list[TodoItem], new_todos: list[TodoItem]) -> bool:
@@ -203,6 +207,11 @@ class EventProcessor:
         self._session_event_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = (
             weakref.WeakValueDictionary()
         )
+        # Tool events already applied, per session, keyed by (event type,
+        # tool_use_id). A subagent's tool call arrives twice: from the hook
+        # (attributed by the subagent's native id) and from the subagent
+        # transcript poller. The first copy wins; see _is_duplicate_tool_event.
+        self._seen_tool_events: dict[str, OrderedDict[tuple[str, str], None]] = {}
         # Coalesces Command Center overview broadcasts: bursts of events schedule
         # a single deferred flush instead of rebuilding the full peer-merge once
         # per event (O(N x events/sec)). See ``_schedule_overview_broadcast``.
@@ -309,7 +318,11 @@ class EventProcessor:
         logger.debug(
             f"Polled event: {event.event_type} agent={event.data.agent_id} tool={tool_name}"
         )
-        await self._process_event_internal(event)
+        # Same ordering and dedup as hook events (see process_event).
+        async with self._session_event_lock(event.session_id):
+            if self._is_duplicate_tool_event(event):
+                return
+            await self._process_event_internal(event)
 
     # ------------------------------------------------------------------
     # Session management
@@ -331,6 +344,7 @@ class EventProcessor:
                         del self.orchestrators[sm.room_id]
             self.sessions.pop(session_id, None)
         self._recovery_checked.discard(session_id)
+        self._seen_tool_events.pop(session_id, None)
 
     async def clear_all_sessions(self) -> None:
         """Clear all in-memory session state."""
@@ -339,6 +353,7 @@ class EventProcessor:
         # A wiped DB no longer knows any session_start, so previously checked
         # sessions must be re-evaluated for recovery on their next event.
         self._recovery_checked.clear()
+        self._seen_tool_events.clear()
 
     async def evict_idle_sessions(self, max_idle_seconds: float) -> int:
         """Drop in-memory StateMachines idle longer than ``max_idle_seconds``.
@@ -359,6 +374,7 @@ class EventProcessor:
             ]
             for sid in stale:
                 self.sessions.pop(sid, None)
+                self._seen_tool_events.pop(sid, None)
         return len(stale)
 
     async def get_current_state(self, session_id: str) -> GameState | None:
@@ -391,6 +407,26 @@ class EventProcessor:
     # Public event ingestion
     # ------------------------------------------------------------------
 
+    def _is_duplicate_tool_event(self, event: AnyEvent) -> bool:
+        """True for a tool event whose (type, tool_use_id) was already applied.
+
+        Records the event otherwise. Call while holding the session's event
+        lock so two copies cannot both pass.
+        """
+        if event.event_type not in (EventType.PRE_TOOL_USE, EventType.POST_TOOL_USE):
+            return False
+        tool_use_id = getattr(event.data, "tool_use_id", None)
+        if not tool_use_id:
+            return False
+        seen = self._seen_tool_events.setdefault(event.session_id, OrderedDict())
+        key = (str(event.event_type), tool_use_id)
+        if key in seen:
+            return True
+        seen[key] = None
+        if len(seen) > MAX_SEEN_TOOL_EVENTS:
+            seen.popitem(last=False)
+        return False
+
     def _session_event_lock(self, session_id: str) -> asyncio.Lock:
         """Return the lock that serializes event processing for one session."""
         lock = self._session_event_locks.get(session_id)
@@ -417,6 +453,11 @@ class EventProcessor:
 
         try:
             async with self._session_event_lock(event.session_id):
+                if self._is_duplicate_tool_event(event):
+                    logger.debug(
+                        f"Skipping duplicate {event.event_type} for session {event.session_id}"
+                    )
+                    return
                 await self._process_event_internal(event)
         except Exception as e:
             logger.exception(f"Error processing event {event.event_type}: {e}")
