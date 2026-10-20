@@ -12,6 +12,7 @@ Python package that integrates Claude Code lifecycle events with the Claude Offi
 - [Supported Events](#supported-events)
 - [Debugging](#debugging)
 - [Troubleshooting](#troubleshooting)
+- [Gemini CLI](#gemini-cli)
 - [Related Documentation](#related-documentation)
 
 ## Overview
@@ -275,6 +276,29 @@ CLAUDE_OFFICE_STRIP_PREFIXES="-Users-yourname-YourFolder-"
 ```
 
 Then restart Claude Code.
+
+## Gemini CLI
+
+The same package ships `gemini-office-hook` for [Gemini CLI](https://github.com/google-gemini/gemini-cli) hooks (checked against Gemini CLI 0.64.0).
+
+```bash
+make gemini-hooks-install    # installs the tool and adds entries to ~/.gemini/settings.json
+make gemini-hooks-status
+make gemini-hooks-uninstall  # removes only the agent-office entries
+```
+
+Each Gemini event runs `gemini-office-hook`, which reads the event JSON on stdin, posts it to the backend and prints `{}` (Gemini parses a hook's stdout as JSON). Hooks from other tools in the same file are kept, and a settings file that is not valid JSON is never overwritten. `manage_gemini_hooks.py --settings <path>` targets another file, such as a project's `.gemini/settings.json`.
+
+| Gemini hook | Office event | Notes |
+|---|---|---|
+| `SessionStart` / `SessionEnd` | `session_start` / `session_end` | |
+| `BeforeAgent` | `user_prompt_submit` | |
+| `AfterAgent` | `stop` | `prompt_response` becomes the boss's reply; Gemini's transcript is not read |
+| `BeforeTool` / `AfterTool` | `pre_tool_use` / `post_tool_use` | Gemini's tool names are kept. A tool `error`, or a non-zero `Exit Code:` line in a shell result, marks the call failed |
+| `PreCompress` | `context_compaction` | Only `manual` (`/compress`): Gemini fires `auto` before every turn's compression check |
+| `Notification` (`ToolPermission`) | `permission_request` | Names the command or file waiting for approval |
+
+Limitations: Gemini sends no tool call id, so the backend pairs a tool's end with its start by name; Gemini's subagents have no hooks, so they do not appear as employees.
 
 ## Uninstallation
 
