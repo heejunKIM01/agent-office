@@ -77,6 +77,36 @@ export const SERVER_RACK_SPOTS: Position[] = SERVER_RACK_XS.map((x) => ({
   y: ROOM_FURNITURE_BASE_Y,
 }));
 
+/**
+ * Agent spot y for the two standing rows, in the agent position convention
+ * (bottom-circle center, 22px above the feet). Row 1 shares the boss's feet
+ * line in front of the furniture (boss y 900 + 40 = 940 → 918); row 2 stands
+ * one tile further into the room (feet 1000 → 978).
+ */
+const AGENT_FRONT_ROW_Y = 918;
+const AGENT_BACK_ROW_Y = 978;
+
+/**
+ * Where agents read in the archive: the shelf and printer the boss does not
+ * use, then a second row clear of the plant and the door.
+ */
+export const AGENT_ARCHIVE_SPOTS: Position[] = [
+  { x: ARCHIVE_SHELF_XS[0], y: AGENT_FRONT_ROW_Y },
+  { x: 266, y: AGENT_FRONT_ROW_Y },
+  { x: 110, y: AGENT_BACK_ROW_Y },
+  { x: 200, y: AGENT_BACK_ROW_Y },
+  { x: 288, y: AGENT_BACK_ROW_Y },
+];
+
+/** Where agents run commands: the racks the boss does not use, then a second row */
+export const AGENT_SERVER_SPOTS: Position[] = [
+  { x: SERVER_RACK_XS[1], y: AGENT_FRONT_ROW_Y },
+  { x: SERVER_RACK_XS[2], y: AGENT_FRONT_ROW_Y },
+  { x: 1067, y: AGENT_BACK_ROW_Y },
+  { x: 1157, y: AGENT_BACK_ROW_Y },
+  { x: 1247, y: AGENT_BACK_ROW_Y },
+];
+
 /** Floor footprint of the archive plant (bottom of the pot) */
 export const PLANT_FOOTPRINT = {
   left: PLANT_POSITION.x - 22,

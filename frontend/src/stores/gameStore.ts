@@ -36,6 +36,7 @@ export type {
   BossAnimationState,
   BossErrandPhase,
   BossErrandState,
+  AgentErrandState,
   ErrandRoom,
   EventLogEntry,
   ReplayFrame,
@@ -48,6 +49,7 @@ import type {
   CompactionAnimationPhase,
   BossAnimationState,
   BossErrandState,
+  AgentErrandState,
   EventLogEntry,
   ReplayFrame,
   AgentMovement,
@@ -110,6 +112,8 @@ export interface GameStore {
   ) => void;
   setAgentTyping: (agentId: string, typing: boolean) => void;
   applyAgentMovements: (movements: AgentMovement[]) => void;
+  agentErrands: Map<string, AgentErrandState>;
+  setAgentErrands: (errands: Map<string, AgentErrandState>) => void;
 
   // ========== Queue State ==========
   arrivalQueue: string[]; // Agent IDs in order
@@ -321,6 +325,7 @@ export const useGameStore = create<GameStore>()(
         readyOccupants: { arrival: null, departure: null },
         boss: { ...initialBossState, bubble: createEmptyBubbleState() },
         bossErrand: initialBossErrandState,
+        agentErrands: new Map(),
         sessionId: "None",
         deskCount: MIN_DESK_COUNT,
         elevatorState: "closed",
@@ -449,6 +454,7 @@ export const useGameStore = create<GameStore>()(
 export const selectAgents = (state: GameStore) => state.agents;
 export const selectBoss = (state: GameStore) => state.boss;
 export const selectBossErrand = (state: GameStore) => state.bossErrand;
+export const selectAgentErrands = (state: GameStore) => state.agentErrands;
 export const selectArrivalQueue = (state: GameStore) => state.arrivalQueue;
 export const selectDepartureQueue = (state: GameStore) => state.departureQueue;
 export const selectIsConnected = (state: GameStore) => state.isConnected;

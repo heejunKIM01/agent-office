@@ -43,6 +43,7 @@ export interface PathState {
   waypoints: Position[];
   currentIndex: number;
   progress: number; // 0-1 along current segment
+  speed?: number; // px/s; defaults to the regular agent walking speed
 }
 
 /**
@@ -144,6 +145,21 @@ export interface BossErrandState {
   position: Position;
   path: PathState | null;
   lingerUntil: number | null;
+}
+
+/**
+ * Errand of an agent seated at its desk (systems/agentErrands.ts). The agent
+ * walks with its regular path movement; this tracks where it is going and
+ * which room spot it holds. Phases mirror BossErrandPhase.
+ */
+export interface AgentErrandState {
+  phase: BossErrandPhase;
+  room: ErrandRoom | null;
+  /** Reserved standing spot (agent position convention), null when seated */
+  spot: Position | null;
+  lingerUntil: number | null;
+  /** Stuck at the spot: chin in hand, not leaving */
+  pondering: boolean;
 }
 
 /**

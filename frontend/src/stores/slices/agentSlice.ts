@@ -20,6 +20,7 @@ import type {
   AgentPhase,
   PathState,
   AgentAnimationState,
+  AgentErrandState,
   AgentMovement,
 } from "./types";
 import { DESKS_PER_ROW } from "@/constants/positions";
@@ -51,10 +52,15 @@ export type AgentSlice = {
   ) => void;
   setAgentTyping: (agentId: string, typing: boolean) => void;
   applyAgentMovements: (movements: AgentMovement[]) => void;
+  // Errands of agents seated at their desks, by agent id (replaced, never
+  // mutated in place, so the empty initial map can be shared by resets).
+  agentErrands: Map<string, AgentErrandState>;
+  setAgentErrands: (errands: Map<string, AgentErrandState>) => void;
 };
 
 export const initialAgentState = {
   agents: new Map<string, AgentAnimationState>(),
+  agentErrands: new Map<string, AgentErrandState>(),
 };
 
 export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
@@ -168,6 +174,8 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
       patchAgent(agentId, { queueType, queueIndex }),
 
     setAgentTyping: (agentId, isTyping) => patchAgent(agentId, { isTyping }),
+
+    setAgentErrands: (agentErrands) => set({ agentErrands }),
 
     // ARC-006: apply every moving agent's position/path delta for one animation
     // tick in a single `set()` (one Map clone), instead of one write — and one

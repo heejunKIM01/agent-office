@@ -10,6 +10,8 @@ import { describe, expect, it } from "vitest";
 import { findPath } from "@/systems/astar";
 import { NavigationGrid } from "@/systems/navigationGrid";
 import {
+  AGENT_ARCHIVE_SPOTS,
+  AGENT_SERVER_SPOTS,
   ARCHIVE_READING_SPOTS,
   ARCHIVE_ROOM,
   ROOM_DOOR_BOTTOM,
@@ -24,6 +26,7 @@ import {
   ELEVATOR_PATHFINDING_TARGET,
   getDeskPosition,
 } from "@/systems/queuePositions";
+import { BOSS_ERRAND_SPOTS } from "@/systems/bossErrands";
 import type { Position } from "@/types";
 
 const grid = new NavigationGrid();
@@ -141,5 +144,42 @@ describe("boss errand routing", () => {
     expect(bossTiles[bossTiles.length - 1]).toEqual(
       doorGrid.worldToGrid(spot.x, spot.y),
     );
+  });
+});
+
+describe("agent errand spots", () => {
+  const spots = [...AGENT_ARCHIVE_SPOTS, ...AGENT_SERVER_SPOTS];
+
+  it("are walkable, distinct, and clear of the boss spots", () => {
+    const keys = new Set(spots.map((s) => `${s.x},${s.y}`));
+    expect(keys.size).toBe(spots.length);
+    for (const spot of spots) {
+      expect(walkable(spot)).toBe(true);
+      expect(isInRoom(ARCHIVE_ROOM, spot) || isInRoom(SERVER_ROOM, spot)).toBe(
+        true,
+      );
+    }
+    // The boss stands at its own spot in each room (bossErrands.ts); no
+    // agent spot may share its x on the same front row.
+    for (const bossSpot of Object.values(BOSS_ERRAND_SPOTS)) {
+      expect(
+        spots.some(
+          (s) => s.x === bossSpot.x && Math.abs(s.y - bossSpot.y) < 40,
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("can be reached from every desk", () => {
+    const view = grid.staticView();
+    for (let desk = 1; desk <= 8; desk++) {
+      const from = getDeskPosition(desk);
+      for (const spot of spots) {
+        const tiles = findPath(from, spot, undefined, view);
+        expect(tiles[tiles.length - 1]).toEqual(
+          grid.worldToGrid(spot.x, spot.y),
+        );
+      }
+    }
   });
 });
