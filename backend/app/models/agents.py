@@ -7,6 +7,7 @@ from app.models.common import BubbleContent
 
 __all__ = [
     "Activity",
+    "StuckReason",
     "AgentState",
     "BossState",
     "Agent",
@@ -46,6 +47,13 @@ class Activity(StrEnum):
     RUNNING = "running"
 
 
+class StuckReason(StrEnum):
+    """Why a character is stuck and ponders on the spot (docs/plan/spec.md R3)."""
+
+    TOOL_FAILED = "tool_failed"
+    WAITING_PERMISSION = "waiting_permission"
+
+
 class BossState(StrEnum):
     """Visual states for the boss character."""
 
@@ -77,6 +85,7 @@ class Agent(BaseModel):
     position: dict[str, int] = {"x": 0, "y": 0}
     # Agent Teams character hierarchy (Phase 4)
     activity: Activity | None = None  # set from in-flight tools, see core/activity.py
+    stuck: StuckReason | None = None  # failed tool / permission wait until it moves on
     character_type: str | None = None  # "lead" | "teammate" | "subagent"
     parent_session_id: str | None = None  # session that owns this character
     parent_id: str | None = None  # for subagents: parent lead/teammate id
@@ -91,6 +100,10 @@ class Boss(BaseModel):
     current_task: str | None = None
     bubble: BubbleContent | None = None
     activity: Activity | None = None  # set from in-flight tools, see core/activity.py
+    stuck: StuckReason | None = None  # failed tool / permission wait until it moves on
+    # True from a user prompt until the turn ends; lets the frontend tell a
+    # long think mid-turn (ponder) from an idle session.
+    turn_active: bool = False
     position: dict[str, int] = {"x": 640, "y": 830}
 
 

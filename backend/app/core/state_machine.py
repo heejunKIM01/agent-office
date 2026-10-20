@@ -21,6 +21,7 @@ from app.models.agents import (
     ElevatorState,
     OfficeState,
     PhoneState,
+    StuckReason,
 )
 from app.models.common import BubbleContent, BubbleType, TodoItem, TodoStatus
 from app.models.events import (
@@ -245,6 +246,7 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
         sm.phase = OfficePhase.DELEGATING
         sm.boss_state = BossState.DELEGATING
         sm.elevator_state = ElevatorState.ARRIVING
+        sm.set_stuck("main", None)
     else:
         agent_id = sm.tool_character_id(event)
 
@@ -273,6 +275,7 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
 
         sm.tool_activity.start(agent_id, tool_name, event.data.tool_use_id)
         sm.sync_activity(agent_id)
+        sm.set_stuck(agent_id, None)
 
 
 def _handle_user_prompt_submit(sm: "StateMachine", event: AnyEvent) -> None:
@@ -281,6 +284,7 @@ def _handle_user_prompt_submit(sm: "StateMachine", event: AnyEvent) -> None:
     sm.boss_state = BossState.RECEIVING
     sm.tool_activity.clear("main")
     sm.sync_activity("main")
+    sm.set_stuck("main", None)
     prompt_text = event.data.prompt
     sm.print_report = False
     sm.turn_active = True
@@ -313,6 +317,7 @@ def _handle_permission_request(sm: "StateMachine", event: AnyEvent) -> None:
         if agent_id in sm.agents:
             sm.agents[agent_id].state = AgentState.WAITING_PERMISSION
             sm.agents[agent_id].bubble = waiting_bubble
+    sm.set_stuck(agent_id, StuckReason.WAITING_PERMISSION)
 
 
 def _handle_post_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
@@ -321,6 +326,16 @@ def _handle_post_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     agent_id = sm.tool_character_id(event)
     sm.tool_activity.finish(agent_id, event.data.tool_name, event.data.tool_use_id)
     sm.sync_activity(agent_id)
+    if event.data.success is False:
+        # Stuck until the character starts another tool or its turn ends.
+        sm.set_stuck(agent_id, StuckReason.TOOL_FAILED)
+        failed_bubble = sm.failure_to_thought(event)
+        if agent_id == "main":
+            sm.boss_bubble = failed_bubble
+        elif agent_id in sm.agents:
+            sm.agents[agent_id].bubble = failed_bubble
+    elif sm.stuck_reason(agent_id) == StuckReason.WAITING_PERMISSION:
+        sm.set_stuck(agent_id, None)
     if agent_id == "main":
         sm.boss_state = BossState.IDLE
     elif agent_id in sm.agents and sm.agents[agent_id].state == AgentState.WAITING_PERMISSION:
@@ -375,6 +390,7 @@ def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
         stopping_agent.state = AgentState.WAITING
         sm.tool_activity.clear(agent_id)
         sm.sync_activity(agent_id)
+        sm.set_stuck(agent_id, None)
         if agent_id not in sm.handin_queue:
             sm.handin_queue.append(agent_id)
 
@@ -409,6 +425,7 @@ def _handle_stop(sm: "StateMachine", event: AnyEvent) -> None:
     sm.turn_active = False
     sm.tool_activity.clear("main")
     sm.sync_activity("main")
+    sm.set_stuck("main", None)
 
     speech_text = (
         event.data.speech_content.boss_phone
@@ -433,8 +450,10 @@ def _handle_session_end(sm: "StateMachine", event: AnyEvent) -> None:
     sm.turn_active = False
     sm.tool_activity.clear_all()
     sm.boss_activity = None
+    sm.boss_stuck = None
     for agent in sm.agents.values():
         agent.activity = None
+        agent.stuck = None
 
 
 def _handle_background_task_notification(sm: "StateMachine", event: AnyEvent) -> None:
@@ -577,6 +596,7 @@ class StateMachine:
     boss_bubble: BubbleContent | None = None
     boss_current_task: str | None = None  # Summarized user prompt
     boss_activity: Activity | None = None  # Mirrors tool_activity for "main"
+    boss_stuck: StuckReason | None = None  # Failed tool / permission wait
     elevator_state: ElevatorState = ElevatorState.CLOSED
     agents: dict[str, Agent] = field(default_factory=_empty_agents)
     arrival_queue: list[str] = field(default_factory=_empty_str_list)
@@ -656,6 +676,8 @@ class StateMachine:
             current_task=self.boss_current_task,
             bubble=self.boss_bubble,
             activity=self.boss_activity,
+            stuck=self.boss_stuck,
+            turn_active=self.turn_active,
         )
 
         desk_count = min(
@@ -795,6 +817,28 @@ class StateMachine:
             self.boss_activity = activity
         elif character_id in self.agents:
             self.agents[character_id].activity = activity
+
+    def stuck_reason(self, character_id: str) -> StuckReason | None:
+        """Why the boss or an agent is stuck, if it is."""
+        if character_id == "main":
+            return self.boss_stuck
+        agent = self.agents.get(character_id)
+        return agent.stuck if agent else None
+
+    def set_stuck(self, character_id: str, reason: StuckReason | None) -> None:
+        """Mark the boss or an agent stuck (or clear it with ``None``)."""
+        if character_id == "main":
+            self.boss_stuck = reason
+        elif character_id in self.agents:
+            self.agents[character_id].stuck = reason
+
+    def failure_to_thought(self, event: ToolEvent) -> BubbleContent:
+        """Thought bubble for a failed tool: the tool name and first error line."""
+        tool_name = event.data.tool_name or "Tool"
+        summary = event.data.result_summary
+        text = f"{tool_name} failed: {summary}" if summary else f"{tool_name} failed"
+        text = truncate_long_words(compress_paths_in_text(text), max_len=35)
+        return BubbleContent(type=BubbleType.THOUGHT, text=text, icon="❗")
 
     def tool_to_thought(self, event: ToolEvent) -> BubbleContent:
         """Convert a tool use event to thought bubble content.
