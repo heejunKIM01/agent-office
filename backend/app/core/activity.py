@@ -9,13 +9,19 @@ Characters are keyed by the same id the state machine uses for bubbles:
 ``"main"`` for the boss, the agent id for a subagent.
 """
 
+from collections.abc import Mapping
+from typing import Any, Literal, NamedTuple, cast
+
 from app.models.agents import Activity
 
 __all__ = [
     "READING_TOOLS",
     "RUNNING_TOOLS",
+    "SUBAGENT_TOOLS",
     "ToolActivityTracker",
+    "ToolSubject",
     "activity_for_tool",
+    "tool_subject",
 ]
 
 # Lowercase tool names per agent (see docs/plan/spec.md "에이전트 범위").
@@ -58,6 +64,61 @@ RUNNING_TOOLS: frozenset[str] = frozenset(
         "exec_command",
     }
 )
+
+
+# Tools that hand work to a subagent (Claude Code, OpenCode).
+SUBAGENT_TOOLS: frozenset[str] = frozenset({"task", "agent"})
+
+# Tool input keys that name what a call works on, most specific first:
+# Claude Code (file_path, notebook_path, pattern, path, url, query), OpenCode
+# (filePath), Gemini CLI (absolute_path, dir_path) and Codex CLI (command as
+# an argv list).
+_COMMAND_KEYS = ("command", "cmd")
+_PATH_KEYS = (
+    "file_path",
+    "filePath",
+    "absolute_path",
+    "notebook_path",
+    "pattern",
+    "path",
+    "dir_path",
+)
+_TEXT_KEYS = ("url", "query")
+
+
+class ToolSubject(NamedTuple):
+    """What a tool call works on: a path or pattern, a shell command, or other text."""
+
+    kind: Literal["path", "command", "text"]
+    value: str
+
+
+def _input_text(tool_input: Mapping[str, Any], keys: tuple[str, ...]) -> str | None:
+    """First non-empty string under *keys*; an argv list is joined with spaces."""
+    for key in keys:
+        value: object = tool_input.get(key)
+        if isinstance(value, list):
+            value = " ".join(part for part in cast(list[object], value) if isinstance(part, str))
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
+def tool_subject(tool_name: str | None, tool_input: Mapping[str, Any] | None) -> ToolSubject | None:
+    """What a tool call works on, read from the input keys every agent uses."""
+    if not tool_input:
+        return None
+    if activity_for_tool(tool_name) is Activity.RUNNING:
+        command = _input_text(tool_input, _COMMAND_KEYS)
+        return ToolSubject("command", command) if command else None
+    path = _input_text(tool_input, _PATH_KEYS)
+    if path:
+        return ToolSubject("path", path)
+    text = _input_text(tool_input, _TEXT_KEYS)
+    if text:
+        return ToolSubject("text", text)
+    command = _input_text(tool_input, _COMMAND_KEYS)
+    return ToolSubject("command", command) if command else None
 
 
 def activity_for_tool(tool_name: str | None) -> Activity | None:

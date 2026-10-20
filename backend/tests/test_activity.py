@@ -10,10 +10,11 @@ from typing import Any
 
 import pytest
 
-from app.core.activity import ToolActivityTracker, activity_for_tool
+from app.core.activity import ToolActivityTracker, ToolSubject, activity_for_tool, tool_subject
+from app.core.event_processor import EventProcessor
 from app.core.state_machine import StateMachine
 from app.models.agents import Activity, Agent, AgentState
-from app.models.events import AnyEvent, EventAdapter, EventType
+from app.models.events import AnyEvent, EventAdapter, EventType, ToolEvent
 
 
 def _event(event_type: EventType, **data: Any) -> AnyEvent:
@@ -165,3 +166,94 @@ class TestSubagentAttribution:
             _tool(EventType.POST_TOOL_USE, "Grep", "g1", native_agent_id="b77", success=True)
         )
         assert ghost.activity is None
+
+
+class TestToolSubject:
+    """What a tool call works on, whichever agent sent it."""
+
+    @pytest.mark.parametrize(
+        ("tool_name", "tool_input", "expected"),
+        [
+            ("Read", {"file_path": "/repo/src/auth.py"}, ToolSubject("path", "/repo/src/auth.py")),
+            ("read", {"filePath": "src/auth.ts"}, ToolSubject("path", "src/auth.ts")),
+            ("read_file", {"absolute_path": "/repo/a.py"}, ToolSubject("path", "/repo/a.py")),
+            ("Grep", {"pattern": "TODO", "path": "src"}, ToolSubject("path", "TODO")),
+            ("Bash", {"command": "npm test"}, ToolSubject("command", "npm test")),
+            (
+                "bash",
+                {"command": "npm test", "description": "run"},
+                ToolSubject("command", "npm test"),
+            ),
+            (
+                "shell",
+                {"command": ["bash", "-lc", "npm test"]},
+                ToolSubject("command", "bash -lc npm test"),
+            ),
+            (
+                "WebFetch",
+                {"url": "https://example.com", "prompt": "x"},
+                ToolSubject("text", "https://example.com"),
+            ),
+        ],
+    )
+    def test_reads_each_agents_input_keys(
+        self, tool_name: str, tool_input: dict[str, Any], expected: ToolSubject
+    ) -> None:
+        assert tool_subject(tool_name, tool_input) == expected
+
+    def test_no_input_has_no_subject(self) -> None:
+        assert tool_subject("Read", None) is None
+        assert tool_subject("Read", {}) is None
+
+    def test_command_tool_without_a_command_has_no_subject(self) -> None:
+        assert tool_subject("bash", {"file_path": "a.py"}) is None
+
+
+class TestToolBubble:
+    """Thought bubble text and icon for each agent's tool names."""
+
+    @pytest.mark.parametrize(
+        ("tool_name", "tool_input", "text", "icon"),
+        [
+            ("Read", {"file_path": "src/auth.py"}, "src/auth.py", "📖"),
+            ("read", {"filePath": "src/auth.ts"}, "src/auth.ts", "📖"),
+            ("grep", {"pattern": "TODO"}, "TODO", "🔎"),
+            ("read_file", {"absolute_path": "src/a.py"}, "src/a.py", "📖"),
+            ("Bash", {"command": "npm test"}, "npm test", "💻"),
+            ("bash", {"command": "npm test"}, "npm test", "💻"),
+            ("run_shell_command", {"command": "pytest -q"}, "pytest -q", "💻"),
+            ("task", {"prompt": "look around"}, "Delegating...", "🎯"),
+            ("Agent", {"prompt": "look around"}, "Delegating...", "🎯"),
+            ("TodoWrite", {"todos": []}, "TodoWrite", "⚙️"),
+        ],
+    )
+    def test_text_and_icon(
+        self, tool_name: str, tool_input: dict[str, Any], text: str, icon: str
+    ) -> None:
+        event = _tool(EventType.PRE_TOOL_USE, tool_name, "t1", tool_input=tool_input)
+        assert isinstance(event, ToolEvent)
+        bubble = StateMachine().tool_to_thought(event)
+        assert (bubble.text, bubble.icon) == (text, icon)
+
+
+@pytest.mark.asyncio
+async def test_event_log_summary_names_an_opencode_tools_target() -> None:
+    def event(event_type: EventType, **data: Any) -> AnyEvent:
+        return EventAdapter.validate_python(
+            {"event_type": event_type, "session_id": "summary-oc", "data": data}
+        )
+
+    ep = EventProcessor()
+    await ep.process_event(event(EventType.SESSION_START, coding_agent="opencode"))
+    await ep.process_event(
+        event(
+            EventType.PRE_TOOL_USE,
+            tool_name="read",
+            tool_use_id="c1",
+            agent_id="main",
+            tool_input={"filePath": "src/auth.ts"},
+        )
+    )
+    history = ep.sessions["summary-oc"].history
+    assert history[0]["summary"] == "Session started"
+    assert history[-1]["summary"] == "Using read src/auth.ts"

@@ -6,7 +6,12 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, cast
 
-from app.core.activity import ToolActivityTracker
+from app.core.activity import (
+    SUBAGENT_TOOLS,
+    ToolActivityTracker,
+    activity_for_tool,
+    tool_subject,
+)
 from app.core.coding_agent import coding_agent_of
 from app.core.path_utils import compress_path, compress_paths_in_text, truncate_long_words
 from app.core.quotes import get_random_job_completion_quote
@@ -571,6 +576,21 @@ _TOOL_ICONS: dict[str, str] = {
     "WebFetch": "📥",
     "Task": "🎯",
 }
+# Lookup for any agent's casing (OpenCode sends "read", "bash", ...).
+_TOOL_ICONS_LOWER: dict[str, str] = {name.lower(): icon for name, icon in _TOOL_ICONS.items()}
+_ACTIVITY_ICONS: dict[Activity, str] = {Activity.READING: "📖", Activity.RUNNING: "💻"}
+
+
+def _tool_icon(tool_name: str) -> str:
+    """Icon for a tool: by name in any casing, else by the office activity it drives."""
+    name = tool_name.lower()
+    if name in SUBAGENT_TOOLS:
+        return "🎯"
+    icon = _TOOL_ICONS_LOWER.get(name)
+    if icon is not None:
+        return icon
+    activity = activity_for_tool(tool_name)
+    return _ACTIVITY_ICONS[activity] if activity is not None else "⚙️"
 
 
 @dataclass
@@ -861,26 +881,26 @@ class StateMachine:
             A BubbleContent with type THOUGHT, a short description, and an icon.
         """
         tool_name = event.data.tool_name or ""
-        icon = _TOOL_ICONS.get(tool_name, "⚙️")
-        tool_input = event.data.tool_input or {}
+        icon = _tool_icon(tool_name)
+        subject = tool_subject(tool_name, event.data.tool_input)
 
         text: str = tool_name
 
-        if tool_name in ["Read", "Glob", "Grep", "Write", "Edit"]:
-            path = tool_input.get("file_path") or tool_input.get("pattern", "")
-            text = compress_path(path, max_len=35) if isinstance(path, str) and path else tool_name
-
-        elif tool_name == "Bash":
-            cmd = tool_input.get("command", "")
-            if isinstance(cmd, str) and cmd:
-                cmd_clean = cmd.strip().split("\n")[0]
-                cmd_clean = compress_paths_in_text(cmd_clean)
-                if len(cmd_clean) > 45:
-                    cmd_clean = cmd_clean[:42] + "..."
-                text = cmd_clean
-
-        elif tool_name in ("Task", "Agent"):
+        if tool_name.lower() in SUBAGENT_TOOLS:
             text = "Delegating..."
+
+        elif subject is not None and subject.kind == "command":
+            cmd_clean = subject.value.strip().split("\n")[0]
+            cmd_clean = compress_paths_in_text(cmd_clean)
+            if len(cmd_clean) > 45:
+                cmd_clean = cmd_clean[:42] + "..."
+            text = cmd_clean
+
+        elif subject is not None and subject.kind == "path":
+            text = compress_path(subject.value, max_len=35)
+
+        elif subject is not None:
+            text = subject.value if len(subject.value) <= 35 else subject.value[:32] + "..."
 
         text = compress_paths_in_text(text)
         text = truncate_long_words(text, max_len=35)
