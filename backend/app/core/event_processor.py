@@ -23,6 +23,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.config import get_settings
+from app.core.activity import tool_subject
 from app.core.beads_poller import get_beads_poller, has_beads, init_beads_poller
 from app.core.broadcast_service import (
     broadcast_error,
@@ -1246,21 +1247,16 @@ class EventProcessor:
         # family-specific fields (tool_name, prompt, task_id, ...) typecheck.
         match event.event_type:
             case EventType.SESSION_START:
-                return "Claude Office session started"
+                return "Session started"
             case EventType.SESSION_END:
-                return "Claude Office session ended"
+                return "Session ended"
             case EventType.PRE_TOOL_USE:
                 assert isinstance(event, ToolEvent)
                 tool = event.data.tool_name or "Unknown tool"
-                target = ""
-                if event.data.tool_input:
-                    target = (
-                        event.data.tool_input.get("file_path")
-                        or event.data.tool_input.get("command")
-                        or ""
-                    )
-                    if len(target) > 30:
-                        target = f"...{target[-27:]}"
+                subject = tool_subject(event.data.tool_name, event.data.tool_input)
+                target = subject.value if subject else ""
+                if len(target) > 30:
+                    target = f"...{target[-27:]}"
                 return f"Using {tool} {target}".strip()
             case EventType.POST_TOOL_USE:
                 assert isinstance(event, ToolEvent)
