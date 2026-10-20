@@ -15,6 +15,7 @@
 | 05  | `feat/05-agent-errands`        | 직원 심부름: 서브에이전트도 같은 규칙으로 자료실 · 서버실 다녀오기(에이전트 상태 기계 단계 추가), 방 자리 예약(겹침 방지), 엘리베이터 출근 흐름 회귀 확인                                                                  | R1 · R2 · R4        | 머지됨 (#8) |
 | 06  | `feat/06-live-e2e`             | 실시간 연동: 실제 Claude Code 헤드리스 세션에 프로젝트 범위 훅을 걸어 읽기 · 명령 · 실패 · 서브에이전트가 화면에 그대로 나오는지 끝까지 확인, 찾은 버그 수정, 설치 · 사용 안내(README 포크 절)                             | R5                  | 머지됨 (#9) |
 | 07  | `feat/07-ko-locale`            | 한국어 로케일(`ko`): 설정에서 고를 수 있게 추가, 간판 `자료실` · `서버실`                                                                                                                                               | 화면 배치           | 대기        |
+| 07a | `fix/07a-event-log-history`   | 기존 결함: 끝난 세션을 열거나 새로고침하면 이벤트 로그가 비어 있다(세션 목록에는 이벤트 수가 보인다). 백엔드는 상태에 최근 500건(`history`)을 실어 보내는데 화면은 실시간 이벤트만 쌓는다. 그 기록으로 이벤트 로그를 채운다 | R5 | 대기 |
 | 08  | `feat/08-agent-identity`       | 에이전트 이름: 사장 이름표 · 세션 목록에 세션을 띄운 에이전트(Claude · OpenCode · Gemini · Codex)를 보여 주고, 앱 제목을 `Agent Office` 로. OpenCode 플러그인 세션에서 R1 · R2 동작 확인                                  | 에이전트 범위       | 대기        |
 | 09  | `feat/09-gemini-cli-hooks`     | Gemini CLI 연동: 원본 설계(ENH-012)대로 훅 어댑터 · 설치기 · 이벤트 매핑을 만들고 R1 · R2 · R3 가 나오는지 확인                                                                                                          | 에이전트 범위       | 대기        |
 | 10  | `feat/10-codex-hooks`          | Codex CLI 연동: 현재 Codex 훅 문서로 잡을 수 있는 이벤트를 다시 확인하고, 되는 만큼 어댑터를 붙인다. 안 되는 동작은 보고서에 남긴다                                                                                       | 에이전트 범위       | 대기        |
@@ -29,3 +30,4 @@
 | 발견 | 결함 | 재현 | 항목 |
 | --- | --- | --- | --- |
 | 01 실검증 | 세션 두 개의 이벤트가 몇 ms 간격으로 들어오면 백엔드 로그에 `StaleDataError: UPDATE statement on table 'sessions' expected to update 1 row(s); 0 were matched` · `No row was found when one was required` 가 찍히고 한쪽 세션이 목록에서 사라진다 | 빈 DB 로 백엔드를 띄우고 세션 A · B 의 `session_start` · `user_prompt_submit` 를 간격 없이 POST 한다. 이 브랜치는 백엔드를 건드리지 않았다(원본과 같은 코드) | `fix/01a-event-db-concurrency` |
+| 07 실검증 | 끝난 세션을 열면 이벤트 로그가 「이벤트를 기다리는 중...」 으로 비어 있다. 같은 화면의 세션 목록에는 이벤트 38개가 보인다 | 시뮬레이터로 세션을 끝까지 돌린 뒤 페이지를 연다. 이벤트 로그는 웹소켓 `event` 메시지로만 채워지고(`useWebSocketEvents.ts` 의 `addEventLog`), 상태에 실려 오는 `history` 는 아무도 읽지 않는다. 두 파일 모두 원본과 같다 | `fix/07a-event-log-history` |
