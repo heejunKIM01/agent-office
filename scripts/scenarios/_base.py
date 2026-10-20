@@ -109,7 +109,8 @@ class SimulationContext:
             "event_type": event_type,
             "session_id": self.session_id,
             "timestamp": datetime.now(UTC).isoformat(),
-            "data": data or {},
+            # Scenarios replay Claude Code sessions.
+            "data": {"coding_agent": "claude-code", **(data or {})},
         }
         try:
             response = requests.post(API_URL, json=payload, timeout=10)

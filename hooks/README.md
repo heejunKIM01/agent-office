@@ -178,6 +178,7 @@ The hook extracts and maps key fields:
 | `CLAUDE_PROJECT_DIR` | `project_dir` | Stable project root |
 | `agent_id` | `native_agent_id` | Claude's internal agent ID |
 | (derived) | `agent_transcript_path` | Path to subagent transcript |
+| (constant) | `coding_agent` | Always `claude-code`: names the coding agent on the boss's name tag and in the session list (OpenCode sends `opencode`; other producers should send their own) |
 
 ## Debugging
 

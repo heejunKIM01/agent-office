@@ -237,3 +237,18 @@ class TestPostToolUseFailure:
         assert result["data"]["error_type"] == "interrupt"
         assert result["data"]["native_agent_id"] == "a5a60c7"
         assert "result_summary" not in result["data"]
+
+
+class TestCodingAgent:
+    """Every hook event names Claude Code as the session's coding agent."""
+
+    def test_tool_event_is_tagged_claude_code(self) -> None:
+        result = map_event("pre_tool_use", _pre_tool_use_task(), SESSION_ID)
+        assert result is not None
+        assert result["data"]["coding_agent"] == "claude-code"
+
+    def test_session_start_is_tagged_claude_code(self) -> None:
+        raw = {"session_id": SESSION_ID, "source": "startup", "cwd": "/tmp/p"}
+        result = map_event("session_start", raw, SESSION_ID)
+        assert result is not None
+        assert result["data"]["coding_agent"] == "claude-code"

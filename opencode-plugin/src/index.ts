@@ -148,6 +148,7 @@ type EventType =
 
 interface EventData {
   source?: string;
+  coding_agent?: string;
   project_name?: string;
   project_dir?: string;
   working_dir?: string;
@@ -307,11 +308,12 @@ const plugin: Plugin = async (ctx: PluginInput): Promise<Hooks> => {
    * tells the backend these are plugin events: their child @agent sessions
    * start without a session_start BY DESIGN and must stay excluded from the
    * backend's session-start recovery (they would otherwise surface in the
-   * sidebar).
+   * sidebar). `coding_agent` names OpenCode on the boss's name tag.
    */
   function baseData(): EventData {
     return {
       source: "opencode",
+      coding_agent: "opencode",
       project_name: projectName,
       project_dir: projectDir,
       working_dir: worktree,

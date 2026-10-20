@@ -378,6 +378,7 @@ def map_event(
     transcript_path: str | None = raw_data.get("transcript_path")
 
     data: dict[str, Any] = {
+        "coding_agent": "claude-code",
         "project_name": project_name,
         "project_dir": project_dir,
         "working_dir": working_dir,
