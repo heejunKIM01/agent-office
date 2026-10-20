@@ -131,3 +131,58 @@ async def test_tool_burst_in_one_session_persists_every_event() -> None:
     ids, events = await _counts()
     assert ids == {"burst"}
     assert events == 1 + len(reads)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("file_db")
+async def test_subagent_tool_from_hook_and_transcript_is_applied_once() -> None:
+    """A subagent's tool arrives from the hook (native id) and from the
+    transcript poller (office agent id) with the same tool_use_id."""
+    ep = EventProcessor()
+    sid = "dup-session"
+    await ep.process_event(_make_event(EventType.SESSION_START, sid, project_name="dup"))
+    await ep.process_event(_make_event(EventType.SUBAGENT_START, sid, agent_id="subagent_tu_task"))
+    sm = ep.sessions[sid]
+    sm.agents["subagent_tu_task"].native_id = "nat-1"
+
+    hook_pre = _make_event(
+        EventType.PRE_TOOL_USE, sid, tool_name="Grep", tool_use_id="tu_g", native_agent_id="nat-1"
+    )
+    hook_post = _make_event(
+        EventType.POST_TOOL_USE,
+        sid,
+        tool_name="Grep",
+        tool_use_id="tu_g",
+        native_agent_id="nat-1",
+        success=True,
+    )
+    polled_pre = _make_event(
+        EventType.PRE_TOOL_USE,
+        sid,
+        tool_name="Grep",
+        tool_use_id="tu_g",
+        agent_id="subagent_tu_task",
+    )
+    polled_post = _make_event(
+        EventType.POST_TOOL_USE,
+        sid,
+        tool_use_id="tu_g",
+        agent_id="subagent_tu_task",
+        success=True,
+    )
+    await ep.process_event(hook_pre)
+    await ep.process_event(hook_post)
+    await ep._handle_polled_event(polled_pre)  # pyright: ignore[reportPrivateUsage]
+    await ep._handle_polled_event(polled_post)  # pyright: ignore[reportPrivateUsage]
+
+    assert sm.tool_uses_since_compaction == 1
+    async with database.AsyncSessionLocal() as db:
+        tool_events = (
+            await db.execute(
+                select(func.count())
+                .select_from(EventRecord)
+                .where(EventRecord.session_id == sid)
+                .where(EventRecord.event_type.in_(["pre_tool_use", "post_tool_use"]))
+            )
+        ).scalar_one()
+    assert tool_events == 2
