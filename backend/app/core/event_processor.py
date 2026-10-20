@@ -541,8 +541,8 @@ class EventProcessor:
 
         This is the core processing pipeline:
         1. Resolve floor/room assignment from building config
-        2. Persist the event to the database
-        3. Restore or create the session StateMachine
+        2. Restore (from earlier stored events) or create the session StateMachine
+        3. Persist the event to the database
         4. Run ``sm.transition(event)`` via the dispatch table
         5. Build a HistoryEntry and append to the session history
         6. Delegate to typed handler functions for enrichment
@@ -588,15 +588,20 @@ class EventProcessor:
                 resolved_floor_id = assignment.floor_id
                 resolved_room_id = assignment.room_id
 
-        await self._persist_event(event, resolved_floor_id, resolved_room_id)
-
+        # Rebuild a session that is not in memory from its stored events BEFORE
+        # this event is stored, so the replay holds only earlier events and this
+        # one is applied once, below. A real session_start wipes the stored
+        # events, so it starts from a fresh machine instead.
         # Replay from DB *before* acquiring the lock: the restore is async I/O
         # that can take hundreds of ms for a long session, and holding the lock
         # across it stalls the debounced overview broadcast and /ws/overview
         # connects. Only the dict insertion below needs the lock.
         sm_preexisting = event.session_id in self.sessions
+        wipes_stored_events = (
+            event.event_type == EventType.SESSION_START and event.data.source != "recovered"
+        )
         restored: StateMachine | None = None
-        if event.session_id not in self.sessions:
+        if not sm_preexisting and not wipes_stored_events:
             restored = await self._build_restored_state_machine(event.session_id)
 
         async with self._sessions_lock:
@@ -612,6 +617,8 @@ class EventProcessor:
             # Refresh idle-eviction watermark (ARC-015) under the same lock so
             # ``evict_idle_sessions`` sees a consistent timestamp for this slot.
             sm.last_event_at = datetime.now(UTC)
+
+        await self._persist_event(event, resolved_floor_id, resolved_room_id)
 
         # A recovered session_start must not reset a live session's in-memory
         # state (upgrade scenario: the DB already knows the session, only the
@@ -992,7 +999,9 @@ class EventProcessor:
         sm = await self._build_restored_state_machine(session_id)
         if sm is not None:
             async with self._sessions_lock:
-                self.sessions[session_id] = sm
+                # An event may have created the session while this one replayed;
+                # that machine is newer, so keep it.
+                self.sessions.setdefault(session_id, sm)
 
     async def _persist_event(
         self,
