@@ -23,6 +23,7 @@ __all__ = [
     "handle_user_prompt_submit",
     "handle_stop",
     "extract_and_set_boss_speech",
+    "set_boss_speech",
     "detect_and_set_print_report",
 ]
 
@@ -87,6 +88,11 @@ async def handle_stop(
     )
 
     full_response = await extract_and_set_boss_speech(sm, event.data.transcript_path)
+    # Producers whose transcript the backend cannot read (Gemini CLI) send the
+    # reply itself as the boss's speech.
+    reply = event.data.speech_content.boss if event.data.speech_content else None
+    if full_response is None and reply:
+        full_response = await set_boss_speech(sm, reply)
 
     logger.info(
         f"STOP event: boss_bubble after extract = "
@@ -138,6 +144,15 @@ async def extract_and_set_boss_speech(
     if not response:
         return None
 
+    return await set_boss_speech(sm, response)
+
+
+async def set_boss_speech(sm: StateMachine, response: str) -> str:
+    """Show a summary of the assistant's *response* as the boss speech bubble.
+
+    Returns:
+        The full response text.
+    """
     summary_service = get_summary_service()
     summary = await summary_service.summarize_response(response)
 

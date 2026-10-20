@@ -190,6 +190,11 @@ class TestToolSubject:
                 ToolSubject("command", "bash -lc npm test"),
             ),
             (
+                "read_many_files",
+                {"include": ["src/a.py", "src/b.py"]},
+                ToolSubject("path", "src/a.py src/b.py"),
+            ),
+            (
                 "WebFetch",
                 {"url": "https://example.com", "prompt": "x"},
                 ToolSubject("text", "https://example.com"),

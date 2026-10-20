@@ -118,3 +118,30 @@ def test_remembered_inputs_are_bounded() -> None:
 
     assert len(tracker.tool_inputs) == MAX_REMEMBERED_TOOL_INPUTS
     assert "c0" not in tracker.tool_inputs
+
+
+def test_gemini_write_todos_fills_the_todo_board() -> None:
+    # Gemini CLI sends no tool call id and repeats the input after the call.
+    sm = StateMachine()
+    todos = [
+        {"description": "Find the off-by-one", "status": "completed"},
+        {"description": "Fix is_expired", "status": "in_progress"},
+    ]
+    for event_type in (EventType.PRE_TOOL_USE, EventType.POST_TOOL_USE):
+        sm.transition(
+            EventAdapter.validate_python(
+                {
+                    "event_type": event_type,
+                    "session_id": "s1",
+                    "data": {
+                        "tool_name": "write_todos",
+                        "tool_input": {"todos": todos},
+                        "agent_id": "main",
+                        "success": True,
+                    },
+                }
+            )
+        )
+
+    assert [todo.content for todo in sm.todos] == ["Find the off-by-one", "Fix is_expired"]
+    assert sm.whiteboard.task_completed_count == 1
