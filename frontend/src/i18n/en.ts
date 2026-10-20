@@ -1,6 +1,5 @@
 const en = {
   // App
-  "app.title": "Office Visualizer",
   "app.initializingSystems": "Initializing Systems...",
 
   // Header Controls
@@ -160,14 +159,13 @@ const en = {
   "conversation.thinking": "Thinking",
   "conversation.showMore": "Show more",
   "conversation.collapse": "Collapse",
-  "conversation.claude": "Claude",
   "conversation.showFullResponse": "Show full response",
   "conversation.hideToolCalls": "Hide tool calls",
   "conversation.showToolCalls": "Show tool calls",
   "conversation.expandConversation": "Expand conversation",
   "conversation.close": "Close",
   "conversation.noConversation":
-    "No conversation yet. Start a Claude Code session.",
+    "No conversation yet. Start a coding agent session.",
 
   // Event Detail Modal
   "eventDetail.summary": "Summary",
@@ -188,6 +186,7 @@ const en = {
   // Office rooms
   "office.archive": "ARCHIVE",
   "office.serverRoom": "SERVER ROOM",
+  "office.unknownAgent": "Agent",
 
   // Zoom Controls
   "zoom.in": "Zoom in",
@@ -228,9 +227,9 @@ const en = {
   "tour.steps.welcome.title": "Welcome",
   "tour.steps.welcome.description":
     "This is your command center. Click a floor to explore.",
-  "tour.steps.singleWelcome.title": "Welcome to Claude Office",
+  "tour.steps.singleWelcome.title": "Welcome to Agent Office",
   "tour.steps.singleWelcome.description":
-    "This pixel art office shows your Claude Code sessions in real time. Let's take a quick look around.",
+    "This pixel art office shows your coding agent sessions in real time. Let's take a quick look around.",
   "tour.steps.simulate.title": "Start Simulation",
   "tour.steps.simulate.description":
     "Click Simulate to bring the office to life.",
@@ -242,7 +241,7 @@ const en = {
     "Click on any character to inspect them.",
   "tour.steps.focusPopup.title": "Focus Popup",
   "tour.steps.focusPopup.description":
-    "From here you can copy a message to clipboard and jump to your terminal. The office updates in real time as Claude works.",
+    "From here you can copy a message to clipboard and jump to your terminal. The office updates in real time as your agent works.",
   "tour.steps.zoomOut.title": "Zoom Out",
   "tour.steps.zoomOut.description":
     "Try zooming back out to see the big picture.",

@@ -15,6 +15,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { GitStatusPanel } from "@/components/layout/GitStatusPanel";
 import { EventLog } from "@/components/layout/EventLog";
+import { CodingAgentTag } from "@/components/layout/CodingAgentTag";
 import { useTranslation } from "@/hooks/useTranslation";
 import { dateFnsLocaleFor } from "@/i18n/dateLocale";
 import type { Session } from "@/hooks/useSessions";
@@ -248,6 +249,7 @@ export function MobileDrawer({
                         </div>
                         <div className="flex justify-between text-[10px] text-slate-500">
                           <span>
+                            <CodingAgentTag codingAgent={primary.codingAgent} />
                             {t("sessions.events", {
                               count: primary.eventCount,
                             })}

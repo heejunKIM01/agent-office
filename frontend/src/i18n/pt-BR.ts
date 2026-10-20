@@ -2,7 +2,6 @@ import type { TranslationKey } from "./en";
 
 const ptBR: Record<TranslationKey, string> = {
   // App
-  "app.title": "Visualizador do Escritório",
   "app.initializingSystems": "Inicializando Sistemas...",
 
   // Header Controls
@@ -162,14 +161,13 @@ const ptBR: Record<TranslationKey, string> = {
   "conversation.thinking": "Pensando",
   "conversation.showMore": "Mostrar mais",
   "conversation.collapse": "Recolher",
-  "conversation.claude": "Claude",
   "conversation.showFullResponse": "Mostrar resposta completa",
   "conversation.hideToolCalls": "Ocultar chamadas de ferramentas",
   "conversation.showToolCalls": "Mostrar chamadas de ferramentas",
   "conversation.expandConversation": "Expandir conversa",
   "conversation.close": "Fechar",
   "conversation.noConversation":
-    "Sem conversa ainda. Inicie uma sessão do Claude Code.",
+    "Sem conversa ainda. Inicie uma sessão de um agente de programação.",
 
   // Event Detail Modal
   "eventDetail.summary": "Resumo",
@@ -191,6 +189,7 @@ const ptBR: Record<TranslationKey, string> = {
   // Office rooms
   "office.archive": "ARQUIVO",
   "office.serverRoom": "SALA DE SERVIDORES",
+  "office.unknownAgent": "Agente",
 
   // Zoom Controls
   "zoom.in": "Aumentar zoom",
@@ -231,9 +230,9 @@ const ptBR: Record<TranslationKey, string> = {
   "tour.steps.welcome.title": "Bem-vindo",
   "tour.steps.welcome.description":
     "Este é seu centro de comando. Clique em um andar para explorar.",
-  "tour.steps.singleWelcome.title": "Bem-vindo ao Claude Office",
+  "tour.steps.singleWelcome.title": "Bem-vindo ao Agent Office",
   "tour.steps.singleWelcome.description":
-    "Este escritório em pixel art mostra suas sessões do Claude Code em tempo real. Vamos dar uma olhada rápida.",
+    "Este escritório em pixel art mostra as sessões dos seus agentes de programação em tempo real. Vamos dar uma olhada rápida.",
   "tour.steps.simulate.title": "Iniciar Simulação",
   "tour.steps.simulate.description":
     "Clique em Simular para dar vida ao escritório.",
@@ -245,7 +244,7 @@ const ptBR: Record<TranslationKey, string> = {
     "Clique em qualquer personagem para inspecioná-lo.",
   "tour.steps.focusPopup.title": "Popup de Foco",
   "tour.steps.focusPopup.description":
-    "Daqui você pode copiar uma mensagem para a área de transferência e ir para o terminal. O escritório atualiza em tempo real enquanto o Claude trabalha.",
+    "Daqui você pode copiar uma mensagem para a área de transferência e ir para o terminal. O escritório atualiza em tempo real enquanto o seu agente trabalha.",
   "tour.steps.zoomOut.title": "Afastar",
   "tour.steps.zoomOut.description": "Tente afastar para ver a visão geral.",
   "tour.steps.settings.title": "Configurar Andares",

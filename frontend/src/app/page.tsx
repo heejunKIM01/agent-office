@@ -419,8 +419,7 @@ export default function V2TestPage(): React.ReactNode {
               isMobile ? "text-lg" : "text-2xl"
             }`}
           >
-            <span className="text-orange-500">Claude</span>{" "}
-            {!isMobile && t("app.title")}
+            <span className="text-orange-500">Agent</span> Office
             {!isMobile && (
               <span className="text-xs font-mono font-normal px-2 py-0.5 bg-slate-800 rounded text-slate-400 border border-slate-700">
                 v0.25.0

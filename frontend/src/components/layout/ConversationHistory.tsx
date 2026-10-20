@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import type { ConversationEntry } from "@/types";
+import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
 
 // Tool icon mapping
@@ -191,6 +192,7 @@ function MarkdownContent({ text }: { text: string }) {
 
 function AssistantEntry({ entry }: { entry: ConversationEntry }) {
   const { t } = useTranslation();
+  const agentName = useCodingAgentName();
   const [expanded, setExpanded] = useState(false);
   const isLong = entry.text.length > 600;
   const preview = isLong ? entry.text.slice(0, 600) + "…" : entry.text;
@@ -199,7 +201,7 @@ function AssistantEntry({ entry }: { entry: ConversationEntry }) {
     <div className="flex flex-col items-start max-w-[90%] w-full">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
-          {t("conversation.claude")}
+          {agentName}
         </span>
         {entry.agentId && entry.agentId !== "main" && (
           <span className="text-[9px] px-1.5 py-0.5 bg-blue-900/40 border border-blue-700/30 rounded text-blue-400 font-mono">

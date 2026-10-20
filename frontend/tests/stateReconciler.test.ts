@@ -312,3 +312,24 @@ describe("reconcileState — event history", () => {
     ).toEqual(["Done", "Session started"]);
   });
 });
+
+describe("reconcileState — coding agent", () => {
+  beforeEach(() => {
+    useGameStore.getState().resetForSessionSwitch();
+  });
+
+  const ctx = (): ReconcilerContext => ({
+    currentSessionId: "session-1",
+    processedAgents: new Set<string>(),
+    lastSeenBubbleText: new Map<string, string>(),
+    initialQueueSyncDone: { current: "session-1" },
+  });
+
+  it("copies the session's coding agent for the boss's name tag", () => {
+    reconcileState(makeState({ codingAgent: "opencode" }), ctx());
+    expect(useGameStore.getState().codingAgent).toBe("opencode");
+
+    reconcileState(makeState(), ctx());
+    expect(useGameStore.getState().codingAgent).toBeNull();
+  });
+});

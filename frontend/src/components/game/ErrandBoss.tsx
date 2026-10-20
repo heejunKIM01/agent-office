@@ -42,6 +42,7 @@ export type ErrandPose = "walking" | "reading" | "operating" | "pondering";
 
 export interface ErrandBossProps {
   position: Position;
+  name: string; // Name tag: the coding agent running the session
   pose: ErrandPose;
   sunglassesTexture: Texture | null;
   headsetTexture: Texture | null;
@@ -64,6 +65,7 @@ const BODY_HALF_WIDTH = (BOSS_WIDTH - STROKE_WIDTH) / 2;
 
 function ErrandBossComponent({
   position,
+  name,
   pose,
   sunglassesTexture,
   headsetTexture,
@@ -175,7 +177,7 @@ function ErrandBossComponent({
       {/* Boss label */}
       <pixiContainer y={-63} scale={0.5}>
         <pixiText
-          text="Claude"
+          text={name}
           anchor={0.5}
           style={{
             fontFamily: "monospace",

@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Claude Office Visualizer",
+  title: "Agent Office",
   description:
-    "Real-time pixel art visualization of Claude Code operations in a virtual office",
+    "Real-time pixel art office for coding agents: Claude Code, OpenCode, Gemini CLI and Codex",
 };
 
 export default function RootLayout({

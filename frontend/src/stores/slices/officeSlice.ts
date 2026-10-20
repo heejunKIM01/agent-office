@@ -50,6 +50,7 @@ export type OfficeSlice = {
   todos: TodoItem[];
   gitStatus: GitStatus | null;
   eventLog: EventLogEntry[];
+  codingAgent: string | null;
   conversation: ConversationEntry[];
 
   setSessionId: (id: string) => void;
@@ -66,6 +67,7 @@ export type OfficeSlice = {
   setGitStatus: (status: GitStatus | null) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
+  setCodingAgent: (codingAgent: string | null) => void;
   setConversation: (conversation: ConversationEntry[]) => void;
 };
 
@@ -82,6 +84,7 @@ export const initialOfficeState = {
   todos: [] as TodoItem[],
   gitStatus: null as GitStatus | null,
   eventLog: [] as EventLogEntry[],
+  codingAgent: null as string | null,
   conversation: [] as ConversationEntry[],
 };
 
@@ -151,6 +154,8 @@ export const createOfficeSlice: StateCreator<GameStore, [], [], OfficeSlice> = (
           .slice(0, MAX_EVENT_LOG),
       };
     }),
+
+  setCodingAgent: (codingAgent) => set({ codingAgent }),
 
   setConversation: (conversation) => set({ conversation }),
 });
