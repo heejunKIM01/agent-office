@@ -7,7 +7,7 @@
  */
 import type { StateCreator } from "zustand";
 import type { GameStore } from "../gameStore";
-import type { Activity, BossState } from "@/types";
+import type { Activity, BossState, StuckReason } from "@/types";
 import type { BossAnimationState, BossErrandState } from "./types";
 import { initialBossErrandState, initialBossState } from "./shared";
 
@@ -20,6 +20,11 @@ export type BossSlice = {
   updateBossBackendState: (state: BossState) => void;
   updateBossTask: (task: string | null) => void;
   updateBossActivity: (activity: Activity | null) => void;
+  updateBossTurn: (turn: {
+    stuck: StuckReason | null;
+    turnActive: boolean;
+    quietSince: number | null;
+  }) => void;
   setBossInUse: (by: "arrival" | "departure" | null) => void;
   setBossTyping: (typing: boolean) => void;
 };
@@ -51,6 +56,15 @@ export const createBossSlice: StateCreator<GameStore, [], [], BossSlice> = (
       state.boss.activity === activity
         ? state
         : { boss: { ...state.boss, activity } },
+    ),
+
+  updateBossTurn: ({ stuck, turnActive, quietSince }) =>
+    set((state) =>
+      state.boss.stuck === stuck &&
+      state.boss.turnActive === turnActive &&
+      state.boss.quietSince === quietSince
+        ? state
+        : { boss: { ...state.boss, stuck, turnActive, quietSince } },
     ),
 
   setBossInUse: (by) =>

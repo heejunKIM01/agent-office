@@ -274,6 +274,8 @@ class AnimationSystem {
           store.arrivalQueue.length > 0 ||
           store.departureQueue.length > 0,
         isCompacting: store.compactionPhase !== "idle",
+        isStuck: store.boss.stuck !== null,
+        quietSince: store.boss.quietSince,
         now: performance.now(),
         deltaSeconds,
       },

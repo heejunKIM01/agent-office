@@ -9,6 +9,7 @@ import {
   BOSS_ERRAND_SPEED,
   BOSS_ERRAND_SPOTS,
   ERRAND_LINGER_MS,
+  PONDER_AFTER_MS,
   stepBossErrand,
   type BossErrandInput,
   type ErrandPathFinder,
@@ -49,6 +50,8 @@ function run(
         activity: null,
         deskDuty: false,
         isCompacting: false,
+        isStuck: false,
+        quietSince: null,
         ...inputs,
         now: s.now,
         deltaSeconds: TICK,
@@ -160,5 +163,71 @@ describe("stepBossErrand", () => {
     const s = run(sim(), 0.5, reading, unreachable);
     expect(s.state.phase).toBe("working");
     expect(s.state.position).toEqual(DESK);
+  });
+
+  it("ponders where it is when stuck, then resumes", () => {
+    const s = run(sim(), walkSeconds(BOSS_ERRAND_SPOTS.server) + 0.2, running);
+    // The command fails: no activity, stuck
+    run(s, 3.0, { isStuck: true });
+    expect(s.state.pondering).toBe(true);
+    expect(s.state.phase).toBe("working");
+    expect(s.state.position).toEqual(BOSS_ERRAND_SPOTS.server);
+
+    // Unstuck with nothing to do: the usual linger, then back to the desk
+    run(s, 0.1);
+    expect(s.state.pondering).toBe(false);
+    expect(s.state.phase).toBe("working");
+    run(s, ERRAND_LINGER_MS / 1000 + 0.1);
+    expect(s.state.phase).toBe("returning");
+  });
+
+  it("finishes the walk before pondering at the spot", () => {
+    // A permission prompt right after the command starts
+    const s = run(sim(), 0.1, running);
+    run(s, walkSeconds(BOSS_ERRAND_SPOTS.server), {
+      ...running,
+      isStuck: true,
+    });
+    expect(s.state.pondering).toBe(true);
+    expect(s.state.phase).toBe("working");
+    expect(s.state.position).toEqual(BOSS_ERRAND_SPOTS.server);
+
+    // Still waiting, the command is over for the boss: it stays put
+    run(s, ERRAND_LINGER_MS / 1000 + 1, { isStuck: true });
+    expect(s.state.position).toEqual(BOSS_ERRAND_SPOTS.server);
+  });
+
+  it("waits for a permission prompt at the rack even if it came at once", () => {
+    // Tool start and permission prompt in the same frame, boss seated
+    const s = run(sim(), walkSeconds(BOSS_ERRAND_SPOTS.server) + 0.2, {
+      ...running,
+      isStuck: true,
+    });
+    expect(s.state.pondering).toBe(true);
+    expect(s.state.position).toEqual(BOSS_ERRAND_SPOTS.server);
+  });
+
+  it("does not leave the spot while stuck with no tool running", () => {
+    const s = run(sim(), walkSeconds(BOSS_ERRAND_SPOTS.archive) + 0.2, reading);
+    run(s, ERRAND_LINGER_MS / 1000 + 2, { isStuck: true });
+    expect(s.state.room).toBe("archive");
+    expect(s.state.phase).toBe("working");
+    expect(s.state.position).toEqual(BOSS_ERRAND_SPOTS.archive);
+  });
+
+  it("ponders at the desk after a long quiet spell mid-turn", () => {
+    const s = sim();
+    run(s, 0.1, { quietSince: s.now });
+    expect(s.state.pondering).toBe(false);
+    run(s, 0.1, { quietSince: s.now - PONDER_AFTER_MS });
+    expect(s.state.pondering).toBe(true);
+    expect(s.state.phase).toBe("seated");
+  });
+
+  it("answers queued agents instead of pondering", () => {
+    const s = run(sim(), walkSeconds(BOSS_ERRAND_SPOTS.archive) + 0.2, reading);
+    run(s, 0.1, { isStuck: true, deskDuty: true });
+    expect(s.state.pondering).toBe(false);
+    expect(s.state.phase).toBe("returning");
   });
 });

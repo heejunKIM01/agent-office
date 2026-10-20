@@ -18,6 +18,7 @@ import { isInElevatorZone } from "@/systems/queuePositions";
 import { ICON_MAP } from "./shared/iconMap";
 import { drawBubble, drawIconBadge } from "./shared/drawBubble";
 import { drawRightArm, drawLeftArm } from "./shared/drawArm";
+import { drawThinkingDots } from "./shared/drawThinkingDots";
 import { truncateBubbleText } from "@/utils/bubbleText";
 
 // ============================================================================
@@ -258,24 +259,43 @@ function AgentSpriteComponent({
 export interface AgentArmsProps {
   position: Position;
   isTyping: boolean;
+  /** Stuck (failed tool, permission prompt): chin in hand, thinking dots */
+  isPondering?: boolean;
 }
 
-function AgentArmsComponent({ position, isTyping }: AgentArmsProps): ReactNode {
+// Pondering: the right hand rests under the chin (sunglasses sit at y=-37)
+const AGENT_PONDER_CHIN_Y = -26;
+// Top of the agent's head relative to its position (body center is 18 above)
+const AGENT_HEAD_TOP_Y = -18 - AGENT_HEIGHT / 2;
+
+function AgentArmsComponent({
+  position,
+  isTyping,
+  isPondering = false,
+}: AgentArmsProps): ReactNode {
   // Animation state for typing
   const [typingTime, setTypingTime] = useState(0);
+  // Animation clock for the pondering dots (ms)
+  const [ponderTime, setPonderTime] = useState(0);
+  const typing = isTyping && !isPondering;
 
   // Animate typing - oscillate hands up/down
   useTick((ticker) => {
-    if (isTyping) {
+    if (typing) {
       setTypingTime((t) => t + ticker.deltaTime * 0.15);
     } else if (typingTime !== 0) {
       setTypingTime(0);
     }
+    if (isPondering) {
+      setPonderTime((t) => t + ticker.deltaMS);
+    } else if (ponderTime !== 0) {
+      setPonderTime(0);
+    }
   });
 
   // Calculate arm animation offsets (subtle, out of phase for natural look)
-  const rightArmOffset = isTyping ? Math.sin(typingTime * 8) * 2 : 0;
-  const leftArmOffset = isTyping
+  const rightArmOffset = typing ? Math.sin(typingTime * 8) * 2 : 0;
+  const leftArmOffset = typing
     ? Math.sin(typingTime * 8 + Math.PI * 0.7) * 2
     : 0;
 
@@ -290,11 +310,21 @@ function AgentArmsComponent({ position, isTyping }: AgentArmsProps): ReactNode {
     [],
   );
 
-  // Arm draw callbacks
+  // Arm draw callbacks (pondering raises the right hand to the chin)
   const drawRightArmCallback = useCallback(
     (g: Graphics) =>
-      drawRightArm(g, { ...agentArmParams, animOffset: rightArmOffset }),
-    [agentArmParams, rightArmOffset],
+      drawRightArm(
+        g,
+        isPondering
+          ? { ...agentArmParams, endY: AGENT_PONDER_CHIN_Y }
+          : { ...agentArmParams, animOffset: rightArmOffset },
+      ),
+    [agentArmParams, rightArmOffset, isPondering],
+  );
+
+  const drawThinkingDotsCallback = useCallback(
+    (g: Graphics) => drawThinkingDots(g, ponderTime, AGENT_HEAD_TOP_Y),
+    [ponderTime],
   );
 
   const drawLeftArmCallback = useCallback(
@@ -307,6 +337,7 @@ function AgentArmsComponent({ position, isTyping }: AgentArmsProps): ReactNode {
     <pixiContainer x={position.x} y={position.y}>
       <pixiGraphics draw={drawRightArmCallback} />
       <pixiGraphics draw={drawLeftArmCallback} />
+      {isPondering && <pixiGraphics draw={drawThinkingDotsCallback} />}
     </pixiContainer>
   );
 }

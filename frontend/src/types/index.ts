@@ -15,6 +15,7 @@
 export type {
   // Agents
   Activity,
+  StuckReason,
   Agent,
   AgentState,
   Boss,

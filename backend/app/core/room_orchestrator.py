@@ -223,6 +223,7 @@ class RoomOrchestrator:
                     bubble=tm_state.boss.bubble,
                     current_task=tm_state.boss.current_task,
                     activity=tm_state.boss.activity,
+                    stuck=tm_state.boss.stuck,
                     character_type="teammate",
                     parent_session_id=session_id,
                 )

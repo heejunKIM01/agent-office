@@ -6,6 +6,8 @@
  * - reading: holds an open book in the archive, turning pages
  * - operating: faces the server rack (back to the viewer, so no face or
  *   hands), swaying slightly while the rack console scrolls (OfficeRooms)
+ * - pondering: stands still, chin in hand, thinking dots (stuck or thinking
+ *   long, docs/plan/spec.md R3)
  */
 
 "use client";
@@ -21,14 +23,21 @@ import {
 import { useTick } from "@pixi/react";
 import { Graphics, Texture } from "pixi.js";
 import type { Position } from "@/types";
-import { BOSS_WIDTH, STROKE_WIDTH, drawBossBody } from "./BossSprite";
+import {
+  BOSS_HEIGHT,
+  BOSS_WIDTH,
+  PONDER_CHIN_Y,
+  STROKE_WIDTH,
+  drawBossBody,
+} from "./BossSprite";
 import { drawLeftArm, drawRightArm } from "./shared/drawArm";
+import { drawThinkingDots } from "./shared/drawThinkingDots";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type ErrandPose = "walking" | "reading" | "operating";
+export type ErrandPose = "walking" | "reading" | "operating" | "pondering";
 
 export interface ErrandBossProps {
   position: Position;
@@ -140,6 +149,20 @@ function ErrandBossComponent({
     [pageTurn],
   );
 
+  // Pondering: right hand under the chin, left hand resting at the waist
+  const drawPonderRight = useCallback(
+    (g: Graphics) => drawRightArm(g, { ...armParams, endY: PONDER_CHIN_Y }),
+    [armParams],
+  );
+  const drawPonderLeft = useCallback(
+    (g: Graphics) => drawLeftArm(g, { ...armParams, endY: 20 }),
+    [armParams],
+  );
+  const drawDots = useCallback(
+    (g: Graphics) => drawThinkingDots(g, time, -(BOSS_HEIGHT / 2)),
+    [time],
+  );
+
   // From the back (operating) neither the face nor the hands are visible
   const showFace = pose !== "operating";
 
@@ -174,6 +197,14 @@ function ErrandBossComponent({
           <pixiGraphics draw={drawBook} />
           <pixiGraphics draw={drawRight} />
           <pixiGraphics draw={drawLeft} />
+        </>
+      )}
+
+      {pose === "pondering" && (
+        <>
+          <pixiGraphics draw={drawPonderRight} />
+          <pixiGraphics draw={drawPonderLeft} />
+          <pixiGraphics draw={drawDots} />
         </>
       )}
 

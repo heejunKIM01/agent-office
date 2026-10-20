@@ -52,6 +52,13 @@ export type Text = string;
 export type Icon = string | null;
 export type Persistent = boolean;
 export type Currenttask = string | null;
+/**
+ * Why a character is stuck and ponders on the spot (docs/plan/spec.md R3).
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "StuckReason".
+ */
+export type StuckReason = "tool_failed" | "waiting_permission";
 export type Charactertype = string | null;
 export type Parentsessionid = string | null;
 export type Parentid = string | null;
@@ -134,6 +141,7 @@ export type BossState =
   | "reviewing"
   | "completing";
 export type Currenttask1 = string | null;
+export type Turnactive = boolean;
 export type Path = string;
 /**
  * Git file status codes.
@@ -505,6 +513,7 @@ export interface Agent {
   currentTask?: Currenttask;
   position?: Position;
   activity?: Activity | null;
+  stuck?: StuckReason | null;
   characterType?: Charactertype;
   parentSessionId?: Parentsessionid;
   parentId?: Parentid;
@@ -651,6 +660,8 @@ export interface Boss1 {
   currentTask?: Currenttask1;
   bubble?: BubbleContent | null;
   activity?: Activity | null;
+  stuck?: StuckReason | null;
+  turnActive?: Turnactive;
   position?: Position1;
   [k: string]: unknown;
 }
