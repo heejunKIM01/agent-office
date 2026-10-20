@@ -303,4 +303,9 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
   if (state.conversation) {
     store.setConversation(state.conversation);
   }
+  // Fill the event log from recent history: live `event` messages only cover
+  // events that happen while this page is connected.
+  if (state.history) {
+    store.mergeEventHistory(state.history);
+  }
 }

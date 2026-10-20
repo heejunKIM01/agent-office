@@ -13,6 +13,7 @@ import type {
   PhoneState,
   TodoItem,
   GitStatus,
+  HistoryEntry,
   WebSocketMessage,
   Agent as BackendAgent,
   GameState as BackendGameState,
@@ -212,6 +213,7 @@ export interface GameStore {
   setPrintReport: (printReport: boolean) => void;
   setGitStatus: (status: GitStatus | null) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
+  mergeEventHistory: (history: HistoryEntry[]) => void;
   conversation: ConversationEntry[];
   setConversation: (conversation: ConversationEntry[]) => void;
 

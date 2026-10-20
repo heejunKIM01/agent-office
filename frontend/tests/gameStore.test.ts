@@ -12,7 +12,14 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { useGameStore } from "@/stores/gameStore";
-import type { Agent, BubbleContent, Position } from "@/types";
+import type {
+  Agent,
+  BubbleContent,
+  EventType,
+  HistoryEntry,
+  Position,
+  WebSocketMessage,
+} from "@/types";
 
 // ---------------------------------------------------------------------------
 // FIXTURES
@@ -565,4 +572,86 @@ describe("updateAgentMeta", () => {
   // the old `||` fallback made it a known bug (empty string treated as falsy,
   // silently keeping the previous task). QA-012 switched to `??` and added
   // the explicit empty-string test above to pin the corrected behavior.
+});
+
+// ---------------------------------------------------------------------------
+// EVENT LOG
+// ---------------------------------------------------------------------------
+
+describe("event log", () => {
+  /** Backend history entry; the same shape arrives as a live `event`. */
+  function makeEntry(
+    second: number,
+    overrides: Partial<HistoryEntry> = {},
+  ): HistoryEntry {
+    const timestamp = new Date(Date.UTC(2026, 9, 20, 0, 0, second));
+    return {
+      id: String(timestamp.getTime() / 1000),
+      type: "pre_tool_use",
+      agentId: "main",
+      summary: `event ${second}`,
+      timestamp: timestamp.toISOString(),
+      detail: {},
+      ...overrides,
+    };
+  }
+
+  function asLiveEvent(
+    entry: HistoryEntry,
+  ): NonNullable<WebSocketMessage["event"]> {
+    return { ...entry, type: entry.type as EventType };
+  }
+
+  const summaries = (): string[] =>
+    useGameStore.getState().eventLog.map((entry) => entry.summary);
+
+  it("fills an empty log from history, newest first", () => {
+    useGameStore
+      .getState()
+      .mergeEventHistory([makeEntry(1), makeEntry(2), makeEntry(3)]);
+    expect(summaries()).toEqual(["event 3", "event 2", "event 1"]);
+  });
+
+  it("does not repeat a live event that the snapshot already added", () => {
+    // The backend broadcasts the state snapshot before the event message.
+    const store = useGameStore.getState();
+    store.mergeEventHistory([makeEntry(1), makeEntry(2)]);
+    store.addEventLog(asLiveEvent(makeEntry(2)));
+    expect(summaries()).toEqual(["event 2", "event 1"]);
+  });
+
+  it("adds older history behind live events without repeating them", () => {
+    const store = useGameStore.getState();
+    store.addEventLog(asLiveEvent(makeEntry(5)));
+    store.mergeEventHistory([makeEntry(3), makeEntry(4), makeEntry(5)]);
+    expect(summaries()).toEqual(["event 5", "event 4", "event 3"]);
+  });
+
+  it("keeps the same log array when history has nothing new", () => {
+    const store = useGameStore.getState();
+    store.mergeEventHistory([makeEntry(1)]);
+    const before = useGameStore.getState().eventLog;
+    store.mergeEventHistory([makeEntry(1)]);
+    expect(useGameStore.getState().eventLog).toBe(before);
+  });
+
+  it("keeps two events that share a timestamp", () => {
+    const first = makeEntry(1);
+    useGameStore
+      .getState()
+      .mergeEventHistory([
+        first,
+        { ...first, type: "post_tool_use", summary: "done" },
+      ]);
+    expect(summaries()).toHaveLength(2);
+  });
+
+  it("caps the log at 500 entries, dropping the oldest", () => {
+    const history = Array.from({ length: 520 }, (_, i) => makeEntry(i));
+    useGameStore.getState().mergeEventHistory(history);
+    const log = summaries();
+    expect(log).toHaveLength(500);
+    expect(log[0]).toBe("event 519");
+    expect(log[499]).toBe("event 20");
+  });
 });
