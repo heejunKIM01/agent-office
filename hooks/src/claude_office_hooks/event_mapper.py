@@ -102,6 +102,21 @@ def _handle_pre_compact(payload: dict[str, Any], data: dict[str, Any]) -> None:
     data["summary"] = "Context window compacting"
 
 
+def _attribute_tool_event(raw_data: dict[str, Any], data: dict[str, Any]) -> None:
+    """Attribute a non-Task tool event to the boss or the subagent that ran it.
+
+    Claude Code adds ``agent_id`` to tool hooks fired inside a subagent. It is
+    the subagent's native id, not the office agent id, so it is forwarded as
+    ``native_agent_id`` for the backend to resolve; main-thread tools stay on
+    the boss (``agent_id="main"``).
+    """
+    native_agent_id = raw_data.get("agent_id")
+    if native_agent_id:
+        data["native_agent_id"] = native_agent_id
+    else:
+        data["agent_id"] = "main"
+
+
 def _handle_pre_tool_use(
     raw_data: dict[str, Any],
     payload: dict[str, Any],
@@ -132,7 +147,7 @@ def _handle_pre_tool_use(
         # instead of del so this is safe even if tool_input was never set.
         data.pop("tool_input", None)
     else:
-        data["agent_id"] = "main"
+        _attribute_tool_event(raw_data, data)
 
 
 def _handle_post_tool_use(
@@ -194,7 +209,28 @@ def _handle_post_tool_use(
                     if agent_path:
                         data["agent_transcript_path"] = agent_path
     else:
-        data["agent_id"] = "main"
+        _attribute_tool_event(raw_data, data)
+
+
+def _handle_post_tool_use_failure(
+    raw_data: dict[str, Any],
+    payload: dict[str, Any],
+    data: dict[str, Any],
+) -> None:
+    """Populate *data* for a failed tool call (sent as a failed post_tool_use).
+
+    Only the first line of the error is forwarded (e.g. ``Exit code 1``): the
+    rest is tool output, and the payload must stay small.
+    """
+    payload["event_type"] = "post_tool_use"
+    data["tool_name"] = raw_data.get("tool_name")
+    data["tool_input"] = raw_data.get("tool_input")
+    data["success"] = False
+    data["error_type"] = "interrupt" if raw_data.get("is_interrupt") else "tool_error"
+    error = raw_data.get("error")
+    if isinstance(error, str) and error.strip():
+        data["result_summary"] = error.strip().splitlines()[0][:120]
+    _attribute_tool_event(raw_data, data)
 
 
 def _handle_native_subagent_start(
@@ -293,7 +329,7 @@ def _handle_permission_request(raw_data: dict[str, Any], data: dict[str, Any]) -
     """Populate *data* for a permission_request event."""
     data["tool_name"] = raw_data.get("tool_name")
     data["tool_input"] = raw_data.get("tool_input")
-    data["agent_id"] = "main"
+    _attribute_tool_event(raw_data, data)
 
 
 def _handle_notification(raw_data: dict[str, Any], data: dict[str, Any]) -> None:
@@ -380,6 +416,9 @@ def map_event(
 
     elif event_type == "post_tool_use":
         _handle_post_tool_use(raw_data, payload, data, transcript_path)
+
+    elif event_type == "post_tool_use_failure":
+        _handle_post_tool_use_failure(raw_data, payload, data)
 
     elif event_type == "subagent_start":
         result = _handle_native_subagent_start(raw_data, payload, data, transcript_path)
