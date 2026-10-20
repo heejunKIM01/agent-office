@@ -38,15 +38,16 @@ export interface AgentSpriteProps {
   renderBubble?: boolean; // Whether to render bubble (default true)
   renderLabel?: boolean; // Whether to render name label (default true)
   isTyping?: boolean; // Whether agent is typing (animates arms)
+  facingAway?: boolean; // Back to the viewer (at a server rack): no sunglasses
 }
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const AGENT_WIDTH = 48; // 1.5 blocks × 32px (matches boss)
-const AGENT_HEIGHT = 80; // 2.5 blocks × 32px (matches boss)
-const STROKE_WIDTH = 4;
+export const AGENT_WIDTH = 48; // 1.5 blocks × 32px (matches boss)
+export const AGENT_HEIGHT = 80; // 2.5 blocks × 32px (matches boss)
+export const STROKE_WIDTH = 4;
 
 // ============================================================================
 // DRAWING FUNCTIONS
@@ -180,6 +181,7 @@ function AgentSpriteComponent({
   renderBubble = true,
   renderLabel = true,
   isTyping: _isTyping = false,
+  facingAway = false,
 }: AgentSpriteProps): ReactNode {
   const clickToFocusEnabled = usePreferencesStore((s) => s.clickToFocusEnabled);
   const openFocusPopup = useAttentionStore((s) => s.openFocusPopup);
@@ -215,8 +217,8 @@ function AgentSpriteComponent({
       {/* Agent capsule body */}
       <pixiGraphics draw={drawCallback} />
 
-      {/* Sunglasses */}
-      {sunglassesTexture && (
+      {/* Sunglasses - only from the front */}
+      {sunglassesTexture && !facingAway && (
         <pixiSprite
           texture={sunglassesTexture}
           anchor={0.5}
@@ -264,9 +266,9 @@ export interface AgentArmsProps {
 }
 
 // Pondering: the right hand rests under the chin (sunglasses sit at y=-37)
-const AGENT_PONDER_CHIN_Y = -26;
+export const AGENT_PONDER_CHIN_Y = -26;
 // Top of the agent's head relative to its position (body center is 18 above)
-const AGENT_HEAD_TOP_Y = -18 - AGENT_HEIGHT / 2;
+export const AGENT_HEAD_TOP_Y = -18 - AGENT_HEIGHT / 2;
 
 function AgentArmsComponent({
   position,

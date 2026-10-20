@@ -20,8 +20,15 @@ import {
   getNavigationGrid,
   updateAgentObstacle,
 } from "./pathfinding";
-import { BOSS_POSITION } from "./queuePositions";
+import { BOSS_POSITION, getDeskPosition } from "./queuePositions";
 import { stepBossErrand, type ErrandPathFinder } from "./bossErrands";
+import {
+  AGENT_ERRAND_SPEED,
+  SEATED_AGENT_ERRAND,
+  freeSpotsFor,
+  stepAgentErrand,
+} from "./agentErrands";
+import type { PathGrid } from "./navigationGrid";
 import { collisionManager } from "./agentCollision";
 import { advanceAlongPath } from "./pathFollow";
 import type { Position } from "@/types";
@@ -109,8 +116,17 @@ class AnimationSystem {
   /**
    * Calculate and set a path for an agent.
    * Skips recalculation if agent is already moving to the same destination.
+   *
+   * @param grid - Grid to route on (defaults to the office grid with other
+   *   agents as obstacles; errands pass the static view)
+   * @param speed - Walking speed for this path (px/s; default MOVEMENT_SPEED)
    */
-  setAgentPath(agentId: string, target: Position): void {
+  setAgentPath(
+    agentId: string,
+    target: Position,
+    grid?: PathGrid,
+    speed?: number,
+  ): void {
     const store = useGameStore.getState();
     const agent = store.agents.get(agentId);
     if (!agent) return;
@@ -139,7 +155,12 @@ class AnimationSystem {
     // Register agent for collision tracking if not already
     collisionManager.registerAgent(agentId, agent.currentPosition);
 
-    const waypoints = calculatePath(agent.currentPosition, target, agentId);
+    const waypoints = calculatePath(
+      agent.currentPosition,
+      target,
+      agentId,
+      grid,
+    );
 
     if (waypoints.length > 1) {
       store.updateAgentTarget(agentId, target);
@@ -147,6 +168,7 @@ class AnimationSystem {
         waypoints,
         currentIndex: 0,
         progress: 0,
+        speed,
       });
     } else {
       // Path calculation returned no valid path or single point - treat as arrival
@@ -184,6 +206,7 @@ class AnimationSystem {
     // Update all systems
     this.updateAgentPositions(deltaSeconds);
     this.updateBossErrand(deltaSeconds);
+    this.updateAgentErrands();
     this.updateBubbleTimers();
     this.checkQueueAdvancement();
 
@@ -286,6 +309,53 @@ class AnimationSystem {
     if (sat) this.listener?.notifyBossAvailable();
   }
 
+  /**
+   * Send agents seated at their desks on errands (agentErrands.ts). Agents
+   * that left their desk phase are handed back to their state machines.
+   */
+  private updateAgentErrands(): void {
+    const store = useGameStore.getState();
+    const now = performance.now();
+    const errands = new Map(store.agentErrands);
+    let changed = false;
+
+    for (const id of errands.keys()) {
+      if (store.agents.get(id)?.phase !== "idle") {
+        errands.delete(id);
+        changed = true;
+      }
+    }
+
+    for (const [id, agent] of store.agents) {
+      if (agent.phase !== "idle" || agent.desk === null) continue;
+      const current = errands.get(id) ?? SEATED_AGENT_ERRAND;
+      const { state, walkTo } = stepAgentErrand(current, {
+        activity: agent.activity,
+        isStuck: agent.stuck !== null,
+        position: agent.currentPosition,
+        isMoving: agent.path !== null,
+        desk: getDeskPosition(agent.desk),
+        freeSpots: freeSpotsFor(errands, id),
+        now,
+      });
+      if (state !== current) {
+        if (state === SEATED_AGENT_ERRAND) errands.delete(id);
+        else errands.set(id, state);
+        changed = true;
+      }
+      if (walkTo) {
+        this.setAgentPath(
+          id,
+          walkTo,
+          getNavigationGrid().staticView(),
+          AGENT_ERRAND_SPEED,
+        );
+      }
+    }
+
+    if (changed) store.setAgentErrands(errands);
+  }
+
   private updatePathProgress(
     agent: {
       currentPosition: Position;
@@ -300,7 +370,7 @@ class AnimationSystem {
   } | null {
     const { position, path, arrived } = advanceAlongPath(
       agent.path,
-      MOVEMENT_SPEED * deltaSeconds,
+      (agent.path.speed ?? MOVEMENT_SPEED) * deltaSeconds,
     );
     return { newPosition: position, newPath: path, arrived };
   }

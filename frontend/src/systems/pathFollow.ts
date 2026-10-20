@@ -83,7 +83,7 @@ export function advanceAlongPath(
       x: current.x + (next.x - current.x) * progress,
       y: current.y + (next.y - current.y) * progress,
     },
-    path: { waypoints, currentIndex, progress },
+    path: { ...path, currentIndex, progress },
     arrived: false,
   };
 }

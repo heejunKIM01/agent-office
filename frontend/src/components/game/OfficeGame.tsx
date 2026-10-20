@@ -43,6 +43,8 @@ import {
   selectIsCompacting,
   selectPrintReport,
   selectBossErrand,
+  selectAgentErrands,
+  type AgentErrandState,
   type BossErrandState,
 } from "@/stores/gameStore";
 import { useAnimationSystem } from "@/systems/animationSystem";
@@ -79,6 +81,7 @@ import {
 } from "./AgentSprite";
 import { BossSprite, BossBubble, MobileBoss } from "./BossSprite";
 import { ErrandBoss, type ErrandPose } from "./ErrandBoss";
+import { AgentErrandPose, type AgentErrandPoseKind } from "./AgentErrandPose";
 import { useNavigationStore } from "@/stores/navigationStore";
 import { LOBBY_FLOOR_ID } from "@/types/navigation";
 import { ELEVATOR_POSITION, isInElevatorZone } from "@/systems/queuePositions";
@@ -113,6 +116,27 @@ function errandPoseFor(errand: BossErrandState): ErrandPose {
   if (errand.pondering) return "pondering";
   if (errand.phase !== "working") return "walking";
   return errand.room === "server" ? "operating" : "reading";
+}
+
+/** True when an agent seated at its desk is away on an errand */
+function isAway(errand: AgentErrandState | undefined): boolean {
+  return errand !== undefined && errand.phase !== "seated";
+}
+
+/** Hands/props drawn over an agent working in a side room, if any */
+function agentErrandPoseFor(
+  errand: AgentErrandState | undefined,
+): AgentErrandPoseKind | null {
+  if (!errand || errand.phase !== "working") return null;
+  if (errand.pondering) return "pondering";
+  return errand.room === "archive" ? "reading" : null;
+}
+
+/** An agent at a server rack shows its back */
+function isAgentAtRack(errand: AgentErrandState | undefined): boolean {
+  return (
+    errand?.phase === "working" && errand.room === "server" && !errand.pondering
+  );
 }
 
 // Bubble height above the boss. At the server rack it rises above the rack
@@ -245,6 +269,12 @@ export function OfficeGame(): ReactNode {
   const isCompacting = useGameStore(selectIsCompacting);
   const printReport = useGameStore(selectPrintReport);
   const bossErrand = useGameStore(selectBossErrand);
+  const agentErrands = useGameStore(selectAgentErrands);
+  const isServerBusy =
+    (bossErrand.phase === "working" &&
+      bossErrand.room === "server" &&
+      !bossErrand.pondering) ||
+    Array.from(agentErrands.values()).some((errand) => isAgentAtRack(errand));
   const isBossOnErrand = bossErrand.phase !== "seated";
   const bossBubbleYOffset =
     bossErrand.phase === "working" && bossErrand.room === "server"
@@ -389,13 +419,7 @@ export function OfficeGame(): ReactNode {
                   <OfficeBackground floorTileTexture={textures.floorTile} />
 
                   {/* Archive and server room (floors, partitions, furniture) */}
-                  <OfficeRooms
-                    isServerBusy={
-                      bossErrand.phase === "working" &&
-                      bossErrand.room === "server" &&
-                      !bossErrand.pondering
-                    }
-                  />
+                  <OfficeRooms isServerBusy={isServerBusy} />
 
                   {/* Boss area rug - rendered right after floor */}
                   {textures.bossRug && (
@@ -544,27 +568,38 @@ export function OfficeGame(): ReactNode {
                             agent.currentPosition.y,
                           ),
                       )
-                      .map((agent) => (
-                        <pixiContainer
-                          key={agent.id}
-                          zIndex={agent.currentPosition.y}
-                        >
-                          <AgentSprite
-                            id={agent.id}
-                            name={agent.name}
-                            color={agent.color}
-                            number={agent.number}
-                            position={agent.currentPosition}
-                            phase={agent.phase}
-                            bubble={agent.bubble.content}
-                            headsetTexture={textures.headset}
-                            sunglassesTexture={textures.sunglasses}
-                            renderBubble={false}
-                            renderLabel={false}
-                            isTyping={agent.isTyping}
-                          />
-                        </pixiContainer>
-                      ))}
+                      .map((agent) => {
+                        const errand = agentErrands.get(agent.id);
+                        const errandPose = agentErrandPoseFor(errand);
+                        return (
+                          <pixiContainer
+                            key={agent.id}
+                            zIndex={agent.currentPosition.y}
+                          >
+                            <AgentSprite
+                              id={agent.id}
+                              name={agent.name}
+                              color={agent.color}
+                              number={agent.number}
+                              position={agent.currentPosition}
+                              phase={agent.phase}
+                              bubble={agent.bubble.content}
+                              headsetTexture={textures.headset}
+                              sunglassesTexture={textures.sunglasses}
+                              renderBubble={false}
+                              renderLabel={false}
+                              isTyping={agent.isTyping}
+                              facingAway={isAgentAtRack(errand)}
+                            />
+                            {errandPose && (
+                              <AgentErrandPose
+                                position={agent.currentPosition}
+                                pose={errandPose}
+                              />
+                            )}
+                          </pixiContainer>
+                        );
+                      })}
 
                     {/* Boss away from the desk on an errand */}
                     {isBossOnErrand && (
@@ -591,7 +626,11 @@ export function OfficeGame(): ReactNode {
 
                   {/* Agent arms - rendered after desk/keyboard, before headsets */}
                   {Array.from(agents.values())
-                    .filter((agent) => agent.phase === "idle")
+                    .filter(
+                      (agent) =>
+                        agent.phase === "idle" &&
+                        !isAway(agentErrands.get(agent.id)),
+                    )
                     .map((agent) => (
                       <AgentArms
                         key={`arms-${agent.id}`}
@@ -604,7 +643,11 @@ export function OfficeGame(): ReactNode {
                   {/* Agent headsets - rendered after arms so they appear on top */}
                   {textures.headset &&
                     Array.from(agents.values())
-                      .filter((agent) => agent.phase === "idle")
+                      .filter(
+                        (agent) =>
+                          agent.phase === "idle" &&
+                          !isAway(agentErrands.get(agent.id)),
+                      )
                       .map((agent) => (
                         <AgentHeadset
                           key={`headset-${agent.id}`}
