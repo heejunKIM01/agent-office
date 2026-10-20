@@ -15,6 +15,7 @@ export const createEmptyBubbleState = (): BubbleState => ({
 
 export const initialBossErrandState: BossErrandState = {
   phase: "seated",
+  pondering: false,
   room: null,
   position: BOSS_POSITION,
   path: null,
@@ -28,5 +29,8 @@ export const initialBossState: BossAnimationState = {
   inUseBy: null,
   currentTask: null,
   activity: null,
+  stuck: null,
+  turnActive: false,
+  quietSince: null,
   isTyping: false,
 };

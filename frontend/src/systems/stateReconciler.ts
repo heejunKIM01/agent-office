@@ -189,6 +189,7 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
         name: backendAgent.name ?? null,
         currentTask: backendAgent.currentTask ?? null,
         activity: backendAgent.activity ?? null,
+        stuck: backendAgent.stuck ?? null,
       });
 
       // Enqueue bubbles for agents who are at their desk working.
@@ -232,6 +233,20 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
   store.updateBossBackendState(state.boss.state);
   store.updateBossTask(state.boss.currentTask ?? null);
   store.updateBossActivity(state.boss.activity ?? null);
+
+  // Quiet spell: mid-turn, no tool running, not stuck. Kept from its first
+  // snapshot so a long think can be told from a short pause (bossErrands).
+  const turnActive = state.boss.turnActive ?? false;
+  const isQuiet =
+    turnActive &&
+    !state.boss.activity &&
+    !state.boss.stuck &&
+    (state.boss.state === "idle" || state.boss.state === "receiving");
+  store.updateBossTurn({
+    stuck: state.boss.stuck ?? null,
+    turnActive,
+    quietSince: isQuiet ? (store.boss.quietSince ?? performance.now()) : null,
+  });
 
   // Enqueue boss bubble if present.
   if (state.boss.bubble) {

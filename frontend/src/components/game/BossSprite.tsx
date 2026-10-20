@@ -15,6 +15,7 @@ import { MarqueeText } from "./MarqueeText";
 import { ICON_MAP } from "./shared/iconMap";
 import { drawBubble, drawIconBadge } from "./shared/drawBubble";
 import { drawRightArm, drawLeftArm } from "./shared/drawArm";
+import { drawThinkingDots } from "./shared/drawThinkingDots";
 import { truncateBubbleText } from "@/utils/bubbleText";
 
 // ============================================================================
@@ -37,6 +38,7 @@ export interface BossSpriteProps {
   renderBubble?: boolean; // Whether to render bubble (default true)
   isTyping?: boolean; // Whether boss is typing (animates arms)
   isAway?: boolean; // Whether boss is away from desk (hides body, shows only furniture)
+  isPondering?: boolean; // Chin in hand with thinking dots (stuck or thinking long)
 }
 
 // ============================================================================
@@ -46,6 +48,9 @@ export interface BossSpriteProps {
 export const BOSS_WIDTH = 48; // 1.5 blocks × 32px
 export const BOSS_HEIGHT = 80; // 2.5 blocks × 32px
 export const STROKE_WIDTH = 4;
+
+// Pondering: the right hand rests under the chin (just below the sunglasses)
+export const PONDER_CHIN_Y = -8;
 
 // State colors for the boss (kept for reference, not currently used)
 const _STATE_COLORS: Record<BossState, number> = {
@@ -204,22 +209,31 @@ function BossSpriteComponent({
   renderBubble = true,
   isTyping = false,
   isAway = false,
+  isPondering = false,
 }: BossSpriteProps): ReactNode {
   // Animation state for typing
   const [typingTime, setTypingTime] = useState(0);
+  // Animation clock for the pondering dots (ms)
+  const [ponderTime, setPonderTime] = useState(0);
+  const typing = isTyping && !isPondering;
 
   // Animate typing - oscillate hands up/down
   useTick((ticker) => {
-    if (isTyping) {
+    if (typing) {
       setTypingTime((t) => t + ticker.deltaTime * 0.15);
     } else if (typingTime !== 0) {
       setTypingTime(0);
     }
+    if (isPondering) {
+      setPonderTime((t) => t + ticker.deltaMS);
+    } else if (ponderTime !== 0) {
+      setPonderTime(0);
+    }
   });
 
   // Calculate arm animation offsets (subtle, out of phase for natural look)
-  const rightArmOffset = isTyping ? Math.sin(typingTime * 8) * 2 : 0;
-  const leftArmOffset = isTyping
+  const rightArmOffset = typing ? Math.sin(typingTime * 8) * 2 : 0;
+  const leftArmOffset = typing
     ? Math.sin(typingTime * 8 + Math.PI * 0.7) * 2
     : 0;
 
@@ -240,17 +254,28 @@ function BossSpriteComponent({
     [],
   );
 
-  // Arm draw callbacks need to be recreated when animation changes
+  // Arm draw callbacks need to be recreated when animation changes.
+  // Pondering raises the right hand to the chin.
   const drawRightArmCallback = useCallback(
     (g: Graphics) =>
-      drawRightArm(g, { ...bossArmParams, animOffset: rightArmOffset }),
-    [bossArmParams, rightArmOffset],
+      drawRightArm(
+        g,
+        isPondering
+          ? { ...bossArmParams, endY: PONDER_CHIN_Y }
+          : { ...bossArmParams, animOffset: rightArmOffset },
+      ),
+    [bossArmParams, rightArmOffset, isPondering],
   );
 
   const drawLeftArmCallback = useCallback(
     (g: Graphics) =>
       drawLeftArm(g, { ...bossArmParams, animOffset: leftArmOffset }),
     [bossArmParams, leftArmOffset],
+  );
+
+  const drawThinkingDotsCallback = useCallback(
+    (g: Graphics) => drawThinkingDots(g, ponderTime, -(BOSS_HEIGHT / 2)),
+    [ponderTime],
   );
 
   const bubbleOffset = -80;
@@ -318,6 +343,7 @@ function BossSpriteComponent({
         <pixiContainer y={6}>
           <pixiGraphics draw={drawRightArmCallback} />
           <pixiGraphics draw={drawLeftArmCallback} />
+          {isPondering && <pixiGraphics draw={drawThinkingDotsCallback} />}
         </pixiContainer>
       )}
 

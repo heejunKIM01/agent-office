@@ -207,3 +207,66 @@ describe("reconcileState — tool activity", () => {
     expect(useGameStore.getState().agents.get("agent-7")?.activity).toBeNull();
   });
 });
+
+describe("reconcileState — pondering inputs", () => {
+  beforeEach(() => {
+    useGameStore.getState().resetForSessionSwitch();
+  });
+
+  const ctx = (): ReconcilerContext => ({
+    currentSessionId: "session-1",
+    processedAgents: new Set<string>(),
+    lastSeenBubbleText: new Map<string, string>(),
+    initialQueueSyncDone: { current: "session-1" },
+  });
+
+  it("starts a quiet spell mid-turn and keeps its start across updates", () => {
+    const context = ctx();
+    reconcileState(
+      makeState({ boss: { state: "idle", turnActive: true } }),
+      context,
+    );
+    const since = useGameStore.getState().boss.quietSince;
+    expect(since).not.toBeNull();
+
+    reconcileState(
+      makeState({ boss: { state: "idle", turnActive: true } }),
+      context,
+    );
+    expect(useGameStore.getState().boss.quietSince).toBe(since);
+  });
+
+  it("is not quiet outside a turn, while a tool runs, or when stuck", () => {
+    for (const boss of [
+      { state: "idle" as const, turnActive: false },
+      {
+        state: "working" as const,
+        turnActive: true,
+        activity: "running" as const,
+      },
+      {
+        state: "idle" as const,
+        turnActive: true,
+        stuck: "tool_failed" as const,
+      },
+    ]) {
+      reconcileState(makeState({ boss }), ctx());
+      expect(useGameStore.getState().boss.quietSince).toBeNull();
+    }
+    expect(useGameStore.getState().boss.stuck).toBe("tool_failed");
+  });
+
+  it("copies an agent's stuck reason", () => {
+    const agent = makeAgent({ id: "agent-9" });
+    useGameStore.getState().addAgent(agent, { x: 0, y: 0 });
+    const context = ctx();
+    context.processedAgents.add("agent-9");
+    reconcileState(
+      makeState({ agents: [{ ...agent, stuck: "waiting_permission" }] }),
+      context,
+    );
+    expect(useGameStore.getState().agents.get("agent-9")?.stuck).toBe(
+      "waiting_permission",
+    );
+  });
+});

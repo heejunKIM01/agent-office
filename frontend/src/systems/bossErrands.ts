@@ -14,6 +14,11 @@
  *    call the boss back to the desk.
  * 6. Compaction owns the boss: an errand in progress is dropped and the
  *    compaction animation starts from the desk.
+ * 7. A stuck boss (failed tool, permission prompt) or one thinking long
+ *    mid-turn ponders where it is (spec R3) and does not leave until it
+ *    moves on. The one walk it still takes is to the room of the tool it is
+ *    waiting on: a permission prompt arrives the moment the tool starts, and
+ *    the boss waits for approval at the rack. Desk duty still calls it back.
  *
  * `stepBossErrand` is pure (the path finder is injected) and is ticked from
  * the single animation loop in animationSystem.
@@ -35,6 +40,9 @@ export const BOSS_ERRAND_SPEED = 260;
 /** How long the boss stays in a room after its tool ends (ms) */
 export const ERRAND_LINGER_MS = 1500;
 
+/** A quiet spell mid-turn longer than this reads as thinking hard (ms) */
+export const PONDER_AFTER_MS = 6000;
+
 /** Where the boss stands in each room: the spot nearest the room's door */
 export const BOSS_ERRAND_SPOTS: Record<ErrandRoom, Position> = {
   archive: ARCHIVE_READING_SPOTS[ARCHIVE_READING_SPOTS.length - 1],
@@ -52,6 +60,10 @@ export interface BossErrandInput {
   deskDuty: boolean;
   /** The compaction animation owns the boss */
   isCompacting: boolean;
+  /** Backend marks the boss stuck (failed tool, permission prompt) */
+  isStuck: boolean;
+  /** Start of the current quiet spell mid-turn (same clock as `now`) */
+  quietSince: number | null;
   /** Current time (ms, same clock as lingerUntil) */
   now: number;
   /** Time since the previous step */
@@ -132,6 +144,21 @@ export function stepBossErrand(
     };
   }
 
+  const isPondering =
+    !input.deskDuty &&
+    (input.isStuck ||
+      (input.quietSince !== null &&
+        input.now - input.quietSince >= PONDER_AFTER_MS));
+  if (isPondering) {
+    let next = state.pondering ? state : { ...state, pondering: true };
+    const toolRoom = errandRoomFor(input.activity);
+    if (toolRoom && (next.room !== toolRoom || !isOnErrand(next))) {
+      next = walkTo(next, toolRoom, deskPosition, findPath);
+    }
+    return move(next, input);
+  }
+  if (state.pondering) state = { ...state, pondering: false };
+
   // Linger clock: starts once the boss is at the spot with no activity
   // left, and is cleared whenever an activity is running.
   let lingerUntil = state.lingerUntil;
@@ -156,23 +183,42 @@ export function stepBossErrand(
       };
     }
   } else if (next.room !== destination || !isOnErrand(next)) {
-    const from =
-      next.phase === "seated" ? { ...next, position: deskPosition } : next;
-    next = {
-      ...from,
-      phase: "walking",
-      room: destination,
-      path: walk(from, BOSS_ERRAND_SPOTS[destination], findPath),
-    };
+    next = walkTo(next, destination, deskPosition, findPath);
   }
 
+  return move(next, input);
+}
+
+/** Start walking to a room's spot (from the desk when seated) */
+function walkTo(
+  state: BossErrandState,
+  room: ErrandRoom,
+  deskPosition: Position,
+  findPath: ErrandPathFinder,
+): BossErrandState {
+  const from =
+    state.phase === "seated" ? { ...state, position: deskPosition } : state;
+  return {
+    ...from,
+    phase: "walking",
+    room,
+    lingerUntil: null,
+    path: walk(from, BOSS_ERRAND_SPOTS[room], findPath),
+  };
+}
+
+/** Advance along the current path; arriving settles at the spot or desk */
+function move(next: BossErrandState, input: BossErrandInput): BossErrandStep {
+  const seated: BossErrandState = {
+    ...initialBossErrandState,
+    pondering: next.pondering,
+  };
   if (!next.path) {
     // Arrived earlier, or the target is unreachable: settle where we are.
-    if (next.phase === "returning") {
-      return { state: initialBossErrandState, sat: true };
-    }
-    if (next.phase === "walking")
+    if (next.phase === "returning") return { state: seated, sat: true };
+    if (next.phase === "walking") {
       return { state: { ...next, phase: "working" }, sat: false };
+    }
     return { state: next, sat: false };
   }
 
@@ -186,9 +232,7 @@ export function stepBossErrand(
       sat: false,
     };
   }
-  if (next.phase === "returning") {
-    return { state: initialBossErrandState, sat: true };
-  }
+  if (next.phase === "returning") return { state: seated, sat: true };
   return {
     state: { ...next, phase: "working", position: step.position, path: null },
     sat: false,

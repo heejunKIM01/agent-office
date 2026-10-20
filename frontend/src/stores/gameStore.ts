@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import type {
   Activity,
+  StuckReason,
   Position,
   BubbleContent,
   BossState,
@@ -99,6 +100,7 @@ export interface GameStore {
       name: string | null;
       currentTask: string | null;
       activity?: Activity | null;
+      stuck?: StuckReason | null;
     },
   ) => void;
   updateAgentQueueInfo: (
@@ -156,6 +158,11 @@ export interface GameStore {
   updateBossBackendState: (state: BossState) => void;
   updateBossTask: (task: string | null) => void;
   updateBossActivity: (activity: Activity | null) => void;
+  updateBossTurn: (turn: {
+    stuck: StuckReason | null;
+    turnActive: boolean;
+    quietSince: number | null;
+  }) => void;
   bossErrand: BossErrandState;
   setBossErrand: (errand: BossErrandState) => void;
   setBossInUse: (by: "arrival" | "departure" | null) => void;

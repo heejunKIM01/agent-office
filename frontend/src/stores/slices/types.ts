@@ -8,6 +8,7 @@
  */
 import type {
   Activity,
+  StuckReason,
   Position,
   BubbleContent,
   BossState,
@@ -66,6 +67,7 @@ export interface AgentAnimationState {
   backendState: BackendAgentState;
   currentTask: string | null;
   activity: Activity | null; // Backend tool activity (archive / server room)
+  stuck: StuckReason | null; // Failed tool / permission wait: ponder at the desk
   characterType: string | null;
   parentSessionId: string | null;
   parentId: string | null;
@@ -108,6 +110,11 @@ export interface BossAnimationState {
   inUseBy: "arrival" | "departure" | null;
   currentTask: string | null;
   activity: Activity | null; // Backend tool activity (archive / server room)
+  stuck: StuckReason | null; // Failed tool / permission wait: ponder on the spot
+  turnActive: boolean; // A user prompt is being worked on
+  // When the boss went quiet mid-turn (no tool, not stuck), from
+  // performance.now(); a long quiet spell means it is thinking hard.
+  quietSince: number | null;
   isTyping: boolean; // True when boss is actively using tools (typing animation)
 }
 
@@ -131,6 +138,8 @@ export type BossErrandPhase = "seated" | "walking" | "working" | "returning";
  */
 export interface BossErrandState {
   phase: BossErrandPhase;
+  /** Pondering on the spot (stuck or thinking long): the boss does not move */
+  pondering: boolean;
   room: ErrandRoom | null;
   position: Position;
   path: PathState | null;

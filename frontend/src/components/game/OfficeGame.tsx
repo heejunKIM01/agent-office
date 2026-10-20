@@ -43,6 +43,7 @@ import {
   selectIsCompacting,
   selectPrintReport,
   selectBossErrand,
+  type BossErrandState,
 } from "@/stores/gameStore";
 import { useAnimationSystem } from "@/systems/animationSystem";
 import { wireGameRuntime, unwireGameRuntime } from "@/systems/gameRuntime";
@@ -106,6 +107,13 @@ extend({ Container, Text, Graphics, Sprite });
 // The errand boss sorts with agents by feet: agents sort by their bottom-circle
 // center (feet - 22), the boss position is its body center (feet - 40).
 const ERRAND_BOSS_SORT_OFFSET = 18;
+
+/** Pose of the boss away from the desk */
+function errandPoseFor(errand: BossErrandState): ErrandPose {
+  if (errand.pondering) return "pondering";
+  if (errand.phase !== "working") return "walking";
+  return errand.room === "server" ? "operating" : "reading";
+}
 
 // Bubble height above the boss. At the server rack it rises above the rack
 // console the boss is looking at, so the console stays visible.
@@ -242,12 +250,7 @@ export function OfficeGame(): ReactNode {
     bossErrand.phase === "working" && bossErrand.room === "server"
       ? BOSS_AT_RACK_BUBBLE_Y_OFFSET
       : BOSS_BUBBLE_Y_OFFSET;
-  const errandPose: ErrandPose =
-    bossErrand.phase !== "working"
-      ? "walking"
-      : bossErrand.room === "server"
-        ? "operating"
-        : "reading";
+  const errandPose = errandPoseFor(bossErrand);
 
   // Floor info for elevator label
   const floorId = useNavigationStore((s) => s.floorId);
@@ -389,7 +392,8 @@ export function OfficeGame(): ReactNode {
                   <OfficeRooms
                     isServerBusy={
                       bossErrand.phase === "working" &&
-                      bossErrand.room === "server"
+                      bossErrand.room === "server" &&
+                      !bossErrand.pondering
                     }
                   />
 
@@ -593,6 +597,7 @@ export function OfficeGame(): ReactNode {
                         key={`arms-${agent.id}`}
                         position={agent.currentPosition}
                         isTyping={agent.isTyping}
+                        isPondering={agent.stuck !== null}
                       />
                     ))}
 
@@ -643,6 +648,7 @@ export function OfficeGame(): ReactNode {
                     isAway={
                       compactionAnimation.phase !== "idle" || isBossOnErrand
                     }
+                    isPondering={bossErrand.pondering}
                   />
 
                   {/* Mobile Boss (when walking to/from trash can) */}

@@ -11,6 +11,7 @@ import type { StateCreator } from "zustand";
 import type { GameStore } from "../gameStore";
 import type {
   Activity,
+  StuckReason,
   Position,
   AgentState as BackendAgentState,
   Agent as BackendAgent,
@@ -40,6 +41,7 @@ export type AgentSlice = {
       name: string | null;
       currentTask: string | null;
       activity?: Activity | null;
+      stuck?: StuckReason | null;
     },
   ) => void;
   updateAgentQueueInfo: (
@@ -92,6 +94,7 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
           backendState: backendAgent.state,
           currentTask: backendAgent.currentTask ?? null,
           activity: backendAgent.activity ?? null,
+          stuck: backendAgent.stuck ?? null,
           characterType: backendAgent.characterType ?? null,
           parentSessionId: backendAgent.parentSessionId ?? null,
           parentId: backendAgent.parentId ?? null,
@@ -158,6 +161,7 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
         // Activity mirrors the backend: null means no tool is running, and
         // callers that do not know it (undefined) leave it unchanged.
         activity: meta.activity === undefined ? agent.activity : meta.activity,
+        stuck: meta.stuck === undefined ? agent.stuck : meta.stuck,
       })),
 
     updateAgentQueueInfo: (agentId, queueType, queueIndex) =>
