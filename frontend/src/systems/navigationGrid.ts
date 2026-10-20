@@ -406,6 +406,35 @@ export class NavigationGrid {
    * Supports 8-directional movement.
    */
   getNeighbors(gx: number, gy: number): GridPosition[] {
+    return this.neighborsOf(gx, gy, (x, y) => this.isWalkable(x, y));
+  }
+
+  /**
+   * A view of this grid that sees only static obstacles (walls, desks, room
+   * furniture). The boss walks through agents the same way agents walk
+   * through each other, so its errands route with this view and an agent
+   * standing in a doorway cannot shut the boss out of a room.
+   */
+  staticView(): PathGrid {
+    const isStaticWalkable = (gx: number, gy: number): boolean =>
+      TILE_COSTS[this.getStaticTile(gx, gy)] !== Infinity;
+    return {
+      worldToGrid: (x, y) => this.worldToGrid(x, y),
+      gridToWorld: (gx, gy) => this.gridToWorld(gx, gy),
+      isWalkable: isStaticWalkable,
+      getCost: (gx, gy) => TILE_COSTS[this.getStaticTile(gx, gy)],
+      getNeighbors: (gx, gy) => this.neighborsOf(gx, gy, isStaticWalkable),
+    };
+  }
+
+  /**
+   * 8-directional neighbors of a tile under a walkability predicate.
+   */
+  private neighborsOf(
+    gx: number,
+    gy: number,
+    isWalkable: (gx: number, gy: number) => boolean,
+  ): GridPosition[] {
     const neighbors: GridPosition[] = [];
     const directions = [
       { dx: 0, dy: -1 }, // Up
@@ -426,7 +455,7 @@ export class NavigationGrid {
         // For diagonal movement, ensure both adjacent cardinal tiles are walkable
         // to prevent corner cutting
         if (dx !== 0 && dy !== 0) {
-          if (!this.isWalkable(gx + dx, gy) || !this.isWalkable(gx, gy + dy)) {
+          if (!isWalkable(gx + dx, gy) || !isWalkable(gx, gy + dy)) {
             continue;
           }
         }

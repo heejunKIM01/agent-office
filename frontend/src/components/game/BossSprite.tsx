@@ -43,9 +43,9 @@ export interface BossSpriteProps {
 // CONSTANTS
 // ============================================================================
 
-const BOSS_WIDTH = 48; // 1.5 blocks × 32px
-const BOSS_HEIGHT = 80; // 2.5 blocks × 32px
-const STROKE_WIDTH = 4;
+export const BOSS_WIDTH = 48; // 1.5 blocks × 32px
+export const BOSS_HEIGHT = 80; // 2.5 blocks × 32px
+export const STROKE_WIDTH = 4;
 
 // State colors for the boss (kept for reference, not currently used)
 const _STATE_COLORS: Record<BossState, number> = {
@@ -64,7 +64,7 @@ const _STATE_COLORS: Record<BossState, number> = {
 // DRAWING FUNCTIONS
 // ============================================================================
 
-function drawBossBody(g: Graphics, _state: BossState): void {
+export function drawBossBody(g: Graphics, _state: BossState): void {
   g.clear();
   // Boss body (black capsule - state color changes were distracting)
   // Inset by half stroke width so total size matches BOSS_WIDTH × BOSS_HEIGHT

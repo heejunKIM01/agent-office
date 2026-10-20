@@ -9,7 +9,7 @@ import { Position, AgentState } from "@/types";
 import { AgentPhase } from "@/stores/gameStore";
 import { findWorldPath } from "./astar";
 import { smoothPath } from "./pathSmoothing";
-import { getNavigationGrid } from "./navigationGrid";
+import { getNavigationGrid, type PathGrid } from "./navigationGrid";
 
 /**
  * Determine movement routing type based on agent phase or state.
@@ -45,12 +45,14 @@ export function getMovementType(phase: AgentPhase | AgentState): string {
  * @param start - Starting position in pixels
  * @param end - Target position in pixels
  * @param agentId - Optional agent ID to ignore self as obstacle
+ * @param grid - Grid to route on (defaults to the office navigation grid)
  * @returns Array of waypoints from start to end
  */
 export function calculatePath(
   start: Position,
   end: Position,
   agentId?: string,
+  grid: PathGrid = getNavigationGrid(),
 ): Position[] {
   // Quick check: already at destination
   const dx = end.x - start.x;
@@ -62,7 +64,7 @@ export function calculatePath(
   }
 
   // Find path using A*
-  const rawPath = findWorldPath(start, end, agentId);
+  const rawPath = findWorldPath(start, end, agentId, grid);
 
   // If A* returns empty or very short path, return minimal path
   // DO NOT fallback to direct path as it may go through obstacles
@@ -72,7 +74,7 @@ export function calculatePath(
   }
 
   // Smooth the path for natural movement
-  const smoothed = smoothPath(rawPath);
+  const smoothed = smoothPath(rawPath, grid);
 
   // Ensure we start and end at exact positions
   if (smoothed.length >= 2) {

@@ -8,11 +8,15 @@
 import type { StateCreator } from "zustand";
 import type { GameStore } from "../gameStore";
 import type { Activity, BossState } from "@/types";
-import type { BossAnimationState } from "./types";
-import { initialBossState } from "./shared";
+import type { BossAnimationState, BossErrandState } from "./types";
+import { initialBossErrandState, initialBossState } from "./shared";
 
 export type BossSlice = {
   boss: BossAnimationState;
+  // Kept beside `boss` (not inside it) so 60fps walking updates do not
+  // re-render every `selectBoss` subscriber.
+  bossErrand: BossErrandState;
+  setBossErrand: (errand: BossErrandState) => void;
   updateBossBackendState: (state: BossState) => void;
   updateBossTask: (task: string | null) => void;
   updateBossActivity: (activity: Activity | null) => void;
@@ -22,6 +26,7 @@ export type BossSlice = {
 
 export const initialBossSliceState = {
   boss: initialBossState,
+  bossErrand: initialBossErrandState,
 };
 
 export const createBossSlice: StateCreator<GameStore, [], [], BossSlice> = (
@@ -38,6 +43,8 @@ export const createBossSlice: StateCreator<GameStore, [], [], BossSlice> = (
     set((state) => ({
       boss: { ...state.boss, currentTask: task },
     })),
+
+  setBossErrand: (errand) => set({ bossErrand: errand }),
 
   updateBossActivity: (activity) =>
     set((state) =>
