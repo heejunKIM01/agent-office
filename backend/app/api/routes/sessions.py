@@ -61,6 +61,7 @@ class SessionSummary(TypedDict):
     eventCount: int
     floorId: str | None
     roomId: str | None
+    codingAgent: str | None
 
 
 class ReplayEvent(TypedDict):
@@ -180,6 +181,7 @@ async def list_sessions(
                 "eventCount": count,
                 "floorId": rec.floor_id,
                 "roomId": rec.room_id,
+                "codingAgent": rec.coding_agent,
             }
         )
     return sessions

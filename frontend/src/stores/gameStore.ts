@@ -198,6 +198,7 @@ export interface GameStore {
   todos: TodoItem[];
   gitStatus: GitStatus | null;
   eventLog: EventLogEntry[];
+  codingAgent: string | null; // Coding agent running the session (name tag)
 
   // Office actions
   setSessionId: (id: string) => void;
@@ -214,6 +215,7 @@ export interface GameStore {
   setGitStatus: (status: GitStatus | null) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
+  setCodingAgent: (codingAgent: string | null) => void;
   conversation: ConversationEntry[];
   setConversation: (conversation: ConversationEntry[]) => void;
 
@@ -339,6 +341,7 @@ export const useGameStore = create<GameStore>()(
         todos: [],
         gitStatus: null,
         eventLog: [], // Clear event log for new session
+        codingAgent: null,
         whiteboardData: { ...initialWhiteboardState.whiteboardData },
         // Keep whiteboardMode - user preference
         // Keep connection-related state
@@ -477,6 +480,7 @@ export const selectCompactionPhase = (state: GameStore) =>
 export const selectTodos = (state: GameStore) => state.todos;
 export const selectGitStatus = (state: GameStore) => state.gitStatus;
 export const selectEventLog = (state: GameStore) => state.eventLog;
+export const selectCodingAgent = (state: GameStore) => state.codingAgent;
 export const selectToolUsesSinceCompaction = (state: GameStore) =>
   state.toolUsesSinceCompaction;
 export const selectPrintReport = (state: GameStore) => state.printReport;

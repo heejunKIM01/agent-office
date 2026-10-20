@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { CodingAgentTag } from "@/components/layout/CodingAgentTag";
 import { GitStatusPanel } from "@/components/layout/GitStatusPanel";
 import type { Session } from "@/hooks/useSessions";
 import { useDragResize } from "@/hooks/useDragResize";
@@ -343,6 +344,7 @@ export function SessionSidebar({
                             </button>
                           </div>
                           <div className="text-[10px] text-slate-500 font-mono truncate mb-1">
+                            <CodingAgentTag codingAgent={primary.codingAgent} />
                             {primary.id}
                           </div>
                           <div className="flex justify-between text-[10px] text-slate-500">
@@ -405,6 +407,9 @@ export function SessionSidebar({
                                       className="text-slate-600 flex-shrink-0"
                                     />
                                     <span className="text-[10px] text-slate-500 font-mono truncate flex-1">
+                                      <CodingAgentTag
+                                        codingAgent={session.codingAgent}
+                                      />
                                       {session.displayName ??
                                         session.id.slice(0, 12)}
                                     </span>

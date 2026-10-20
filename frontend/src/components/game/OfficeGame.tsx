@@ -50,6 +50,7 @@ import {
 import { useAnimationSystem } from "@/systems/animationSystem";
 import { wireGameRuntime, unwireGameRuntime } from "@/systems/gameRuntime";
 import { useCompactionAnimation } from "@/systems/compactionAnimation";
+import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useOfficeTextures } from "@/hooks/useOfficeTextures";
 import {
   CANVAS_WIDTH,
@@ -259,6 +260,7 @@ export function OfficeGame(): ReactNode {
   // Subscribe to store state
   const agents = useGameStore(useShallow(selectAgents));
   const boss = useGameStore(selectBoss);
+  const bossName = useCodingAgentName();
   const todos = useGameStore(selectTodos);
   const debugMode = useGameStore(selectDebugMode);
   const showPaths = useGameStore(selectShowPaths);
@@ -609,6 +611,7 @@ export function OfficeGame(): ReactNode {
                       >
                         <ErrandBoss
                           position={bossErrand.position}
+                          name={bossName}
                           pose={errandPose}
                           sunglassesTexture={textures.sunglasses}
                           headsetTexture={textures.headset}
@@ -676,6 +679,7 @@ export function OfficeGame(): ReactNode {
                   {/* Boss */}
                   <BossSprite
                     position={boss.position}
+                    name={bossName}
                     state={boss.backendState}
                     bubble={boss.bubble.content}
                     inUseBy={boss.inUseBy}
@@ -699,6 +703,7 @@ export function OfficeGame(): ReactNode {
                   {compactionAnimation.bossPosition && (
                     <MobileBoss
                       position={compactionAnimation.bossPosition}
+                      name={bossName}
                       jumpOffset={compactionAnimation.jumpOffset}
                       scale={compactionAnimation.bossScale}
                       sunglassesTexture={textures.sunglasses}

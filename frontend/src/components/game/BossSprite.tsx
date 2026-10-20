@@ -24,6 +24,7 @@ import { truncateBubbleText } from "@/utils/bubbleText";
 
 export interface BossSpriteProps {
   position: Position;
+  name: string; // Name tag: the coding agent running the session
   state: BossState;
   bubble: BubbleContent | null;
   inUseBy: "arrival" | "departure" | null;
@@ -195,6 +196,7 @@ function Bubble({ content, yOffset }: BubbleProps): ReactNode {
 
 function BossSpriteComponent({
   position,
+  name,
   state,
   bubble,
   inUseBy: _inUseBy,
@@ -373,7 +375,7 @@ function BossSpriteComponent({
       {!isAway && (
         <pixiContainer y={-63} scale={0.5}>
           <pixiText
-            text="Claude"
+            text={name}
             anchor={0.5}
             style={{
               fontFamily: "monospace",
@@ -413,6 +415,7 @@ export { Bubble as BossBubble };
 
 export interface MobileBossProps {
   position: Position;
+  name: string; // Name tag: the coding agent running the session
   jumpOffset?: number; // Vertical offset for jump animation
   scale?: number; // Scale factor for boss body
   sunglassesTexture: Texture | null;
@@ -421,6 +424,7 @@ export interface MobileBossProps {
 
 function MobileBossComponent({
   position,
+  name,
   jumpOffset = 0,
   scale = 1.0,
   sunglassesTexture,
@@ -462,7 +466,7 @@ function MobileBossComponent({
       {/* Boss label */}
       <pixiContainer y={-63} scale={0.5}>
         <pixiText
-          text="Claude"
+          text={name}
           anchor={0.5}
           style={{
             fontFamily: "monospace",

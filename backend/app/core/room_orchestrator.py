@@ -283,6 +283,7 @@ class RoomOrchestrator:
             departure_queue=lead_state.departure_queue,
             whiteboard_data=merged_whiteboard,
             conversation=lead_state.conversation,
+            coding_agent=lead_state.coding_agent,
         )
 
     def _infer_in_progress(self, tasks: dict[str, KanbanTask]) -> None:

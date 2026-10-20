@@ -430,6 +430,7 @@ describe("reset variants", () => {
     useGameStore.getState().setDebugMode(true);
     useGameStore.getState().setWhiteboardMode(5);
     useGameStore.getState().setReplaying(true);
+    useGameStore.getState().setCodingAgent("opencode");
   }
 
   describe("reset()", () => {
@@ -442,6 +443,11 @@ describe("reset variants", () => {
       expect(s.arrivalQueue).toEqual([]);
       expect(s.sessionId).toBe("None");
       expect(s.deskCount).toBe(8);
+    });
+
+    it("forgets the coding agent", () => {
+      useGameStore.getState().reset();
+      expect(useGameStore.getState().codingAgent).toBeNull();
     });
 
     it("clears debugMode and whiteboardMode back to defaults", () => {
@@ -482,6 +488,11 @@ describe("reset variants", () => {
       expect(s.departureQueue).toEqual([]);
       expect(s.sessionId).toBe("None");
       expect(s.deskCount).toBe(8);
+    });
+
+    it("forgets the previous session's coding agent", () => {
+      useGameStore.getState().resetForSessionSwitch();
+      expect(useGameStore.getState().codingAgent).toBeNull();
     });
 
     it("PRESERVES debugMode and debug overlay toggles (user preference)", () => {

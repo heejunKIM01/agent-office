@@ -303,6 +303,7 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
   if (state.conversation) {
     store.setConversation(state.conversation);
   }
+  store.setCodingAgent(state.codingAgent ?? null);
   // Fill the event log from recent history: live `event` messages only cover
   // events that happen while this page is connected.
   if (state.history) {

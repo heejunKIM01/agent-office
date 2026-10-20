@@ -2,7 +2,6 @@ import type { TranslationKey } from "./en";
 
 const ko: Record<TranslationKey, string> = {
   // App
-  "app.title": "오피스 시각화",
   "app.initializingSystems": "시스템 준비 중...",
 
   // Header Controls
@@ -162,14 +161,13 @@ const ko: Record<TranslationKey, string> = {
   "conversation.thinking": "생각",
   "conversation.showMore": "더 보기",
   "conversation.collapse": "접기",
-  "conversation.claude": "Claude",
   "conversation.showFullResponse": "전체 응답 보기",
   "conversation.hideToolCalls": "도구 호출 숨기기",
   "conversation.showToolCalls": "도구 호출 보기",
   "conversation.expandConversation": "대화 펼치기",
   "conversation.close": "닫기",
   "conversation.noConversation":
-    "아직 대화가 없어요. Claude Code 세션을 시작해 보세요.",
+    "아직 대화가 없어요. 코딩 에이전트 세션을 시작해 보세요.",
 
   // Event Detail Modal
   "eventDetail.summary": "요약",
@@ -190,6 +188,7 @@ const ko: Record<TranslationKey, string> = {
   // Office rooms
   "office.archive": "자료실",
   "office.serverRoom": "서버실",
+  "office.unknownAgent": "에이전트",
 
   // Zoom Controls
   "zoom.in": "확대",
@@ -230,7 +229,7 @@ const ko: Record<TranslationKey, string> = {
   "tour.steps.welcome.title": "환영해요",
   "tour.steps.welcome.description":
     "여기가 지휘 센터예요. 층을 눌러 둘러보세요.",
-  "tour.steps.singleWelcome.title": "사무실에 오신 걸 환영해요",
+  "tour.steps.singleWelcome.title": "Agent Office 에 오신 걸 환영해요",
   "tour.steps.singleWelcome.description":
     "이 픽셀 사무실은 코딩 에이전트 세션을 실시간으로 보여 줘요. 한번 둘러볼까요?",
   "tour.steps.simulate.title": "시뮬레이션 시작",

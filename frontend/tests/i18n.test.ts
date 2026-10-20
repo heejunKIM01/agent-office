@@ -48,9 +48,9 @@ describe("getTranslation", () => {
   describe("basic translation", () => {
     it("returns values from the correct locale dictionary", () => {
       // Compare against imported dicts — NOT hardcoded strings
-      expect(tEn("app.title")).toBe(en["app.title"]);
-      expect(tPtBR("app.title")).toBe(ptBR["app.title"]);
-      expect(tEs("app.title")).toBe(es["app.title"]);
+      expect(tEn("header.settings")).toBe(en["header.settings"]);
+      expect(tPtBR("header.settings")).toBe(ptBR["header.settings"]);
+      expect(tEs("header.settings")).toBe(es["header.settings"]);
     });
 
     it("returns different values for different locales", () => {
@@ -107,17 +107,17 @@ describe("getTranslation", () => {
     });
 
     it("ignores extra params with no matching placeholder", () => {
-      const result = tEn("app.title", { unused: "value", another: 42 });
-      expect(result).toBe(en["app.title"]);
+      const result = tEn("header.settings", { unused: "value", another: 42 });
+      expect(result).toBe(en["header.settings"]);
     });
 
     it("leaves text unchanged when empty params object provided", () => {
-      expect(tEn("app.title", {})).toBe(tEn("app.title"));
+      expect(tEn("header.settings", {})).toBe(tEn("header.settings"));
     });
 
     it("escapes regex metacharacters in param keys", () => {
       expect(() =>
-        tEn("app.title", { "key.with+special$chars": "val" }),
+        tEn("header.settings", { "key.with+special$chars": "val" }),
       ).not.toThrow();
     });
 
@@ -141,7 +141,7 @@ describe("getTranslation", () => {
       const t = (getTranslation as (locale: string) => (key: string) => string)(
         "fr",
       );
-      expect(t("app.title")).toBe(en["app.title"]);
+      expect(t("header.settings")).toBe(en["header.settings"]);
     });
   });
 
