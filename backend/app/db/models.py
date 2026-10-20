@@ -33,6 +33,7 @@ class SessionRecord(Base):
     team_name: Mapped[str | None] = mapped_column(String, nullable=True)
     teammate_name: Mapped[str | None] = mapped_column(String, nullable=True)
     is_lead: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    coding_agent: Mapped[str | None] = mapped_column(String, nullable=True)
 
     events: Mapped[list[EventRecord]] = relationship(
         "EventRecord", back_populates="session", cascade="all, delete-orphan"

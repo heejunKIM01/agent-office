@@ -31,6 +31,7 @@ from app.core.broadcast_service import (
     broadcast_room_state,
     broadcast_state,
 )
+from app.core.coding_agent import coding_agent_of
 from app.core.connection_manager import get_manager
 from app.core.floor_config import get_cached_building_config
 from app.core.handlers import (
@@ -1011,6 +1012,7 @@ class EventProcessor:
             working_dir = event.data.working_dir
             team_name = event.data.team_name
             teammate_name = event.data.teammate_name
+            coding_agent = coding_agent_of(event.data)
 
             source_dir = project_dir or working_dir
             project_root = derive_git_root(source_dir) if source_dir else None
@@ -1031,6 +1033,7 @@ class EventProcessor:
                 id=event.session_id,
                 project_name=project_name,
                 project_root=project_root,
+                coding_agent=coding_agent,
                 status=status,
                 created_at=now,
                 updated_at=now,
@@ -1057,6 +1060,8 @@ class EventProcessor:
             # Update project info if not yet set on the existing record.
             if project_name and not session_rec.project_name:
                 session_rec.project_name = project_name
+            if coding_agent and not session_rec.coding_agent:
+                session_rec.coding_agent = coding_agent
             if project_root and not session_rec.project_root:
                 session_rec.project_root = project_root
                 logger.info(f"Cached project_root for session {event.session_id}: {project_root}")

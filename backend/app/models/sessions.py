@@ -156,3 +156,4 @@ class GameState(BaseModel):
     )
     floor_id: str | None = None
     room_id: str | None = None
+    coding_agent: str | None = None

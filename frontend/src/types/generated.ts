@@ -66,6 +66,7 @@ export type ProjectName = string | null;
 export type ProjectDir = string | null;
 export type WorkingDir = string | null;
 export type Source = string | null;
+export type CodingAgent = string | null;
 export type AgentId = string | null;
 export type NativeAgentId = string | null;
 export type TranscriptPath = string | null;
@@ -105,6 +106,7 @@ export type ProjectName1 = string | null;
 export type ProjectDir1 = string | null;
 export type WorkingDir1 = string | null;
 export type Source1 = string | null;
+export type CodingAgent1 = string | null;
 export type AgentId1 = string | null;
 export type NativeAgentId1 = string | null;
 export type TranscriptPath1 = string | null;
@@ -214,6 +216,7 @@ export type ProjectName2 = string | null;
 export type ProjectDir2 = string | null;
 export type WorkingDir2 = string | null;
 export type Source2 = string | null;
+export type CodingAgent2 = string | null;
 export type ToolName = string | null;
 export type ToolUseId1 = string | null;
 export type ToolInput = {
@@ -254,6 +257,7 @@ export type ProjectName3 = string | null;
 export type ProjectDir3 = string | null;
 export type WorkingDir3 = string | null;
 export type Source3 = string | null;
+export type CodingAgent3 = string | null;
 export type AgentId3 = string | null;
 export type NativeAgentId3 = string | null;
 export type TranscriptPath3 = string | null;
@@ -337,6 +341,7 @@ export type Backgroundtasks = BackgroundTask[];
 export type Conversation = ConversationEntry[];
 export type Floorid = string | null;
 export type Roomid = string | null;
+export type Codingagent = string | null;
 /**
  * Current branch name
  */
@@ -363,6 +368,7 @@ export type ProjectName4 = string | null;
 export type ProjectDir4 = string | null;
 export type WorkingDir4 = string | null;
 export type Source4 = string | null;
+export type CodingAgent4 = string | null;
 export type AgentId4 = string | null;
 export type NativeAgentId4 = string | null;
 export type TranscriptPath4 = string | null;
@@ -400,6 +406,7 @@ export type ProjectName5 = string | null;
 export type ProjectDir5 = string | null;
 export type WorkingDir5 = string | null;
 export type Source5 = string | null;
+export type CodingAgent5 = string | null;
 export type AgentId5 = string | null;
 export type NativeAgentId5 = string | null;
 export type TranscriptPath5 = string | null;
@@ -426,6 +433,7 @@ export type ProjectName6 = string | null;
 export type ProjectDir6 = string | null;
 export type WorkingDir6 = string | null;
 export type Source6 = string | null;
+export type CodingAgent6 = string | null;
 export type AgentId6 = string | null;
 export type NativeAgentId6 = string | null;
 export type TranscriptPath6 = string | null;
@@ -446,6 +454,7 @@ export type ProjectName7 = string | null;
 export type ProjectDir7 = string | null;
 export type WorkingDir7 = string | null;
 export type Source7 = string | null;
+export type CodingAgent7 = string | null;
 export type AgentId7 = string | null;
 export type NativeAgentId7 = string | null;
 export type TranscriptPath7 = string | null;
@@ -467,6 +476,7 @@ export type ProjectName8 = string | null;
 export type ProjectDir8 = string | null;
 export type WorkingDir8 = string | null;
 export type Source8 = string | null;
+export type CodingAgent8 = string | null;
 export type AgentId8 = string | null;
 export type NativeAgentId8 = string | null;
 export type TranscriptPath8 = string | null;
@@ -551,6 +561,7 @@ export interface AgentEventData {
   project_dir?: ProjectDir;
   working_dir?: WorkingDir;
   source?: Source;
+  coding_agent?: CodingAgent;
   agent_id?: AgentId;
   native_agent_id?: NativeAgentId;
   transcript_path?: TranscriptPath;
@@ -628,6 +639,7 @@ export interface BackgroundTaskEventData {
   project_dir?: ProjectDir1;
   working_dir?: WorkingDir1;
   source?: Source1;
+  coding_agent?: CodingAgent1;
   agent_id?: AgentId1;
   native_agent_id?: NativeAgentId1;
   transcript_path?: TranscriptPath1;
@@ -746,6 +758,7 @@ export interface EventData {
   project_dir?: ProjectDir2;
   working_dir?: WorkingDir2;
   source?: Source2;
+  coding_agent?: CodingAgent2;
   tool_name?: ToolName;
   tool_use_id?: ToolUseId1;
   tool_input?: ToolInput;
@@ -798,6 +811,7 @@ export interface EventDataBase {
   project_dir?: ProjectDir3;
   working_dir?: WorkingDir3;
   source?: Source3;
+  coding_agent?: CodingAgent3;
   agent_id?: AgentId3;
   native_agent_id?: NativeAgentId3;
   transcript_path?: TranscriptPath3;
@@ -846,6 +860,7 @@ export interface GameState {
   conversation?: Conversation;
   floorId?: Floorid;
   roomId?: Roomid;
+  codingAgent?: Codingagent;
   [k: string]: unknown;
 }
 /**
@@ -984,6 +999,7 @@ export interface LifecycleEventData {
   project_dir?: ProjectDir4;
   working_dir?: WorkingDir4;
   source?: Source4;
+  coding_agent?: CodingAgent4;
   agent_id?: AgentId4;
   native_agent_id?: NativeAgentId4;
   transcript_path?: TranscriptPath4;
@@ -1044,6 +1060,7 @@ export interface PromptEventData {
   project_dir?: ProjectDir5;
   working_dir?: WorkingDir5;
   source?: Source5;
+  coding_agent?: CodingAgent5;
   agent_id?: AgentId5;
   native_agent_id?: NativeAgentId5;
   transcript_path?: TranscriptPath5;
@@ -1088,6 +1105,7 @@ export interface SessionEventData {
   project_dir?: ProjectDir6;
   working_dir?: WorkingDir6;
   source?: Source6;
+  coding_agent?: CodingAgent6;
   agent_id?: AgentId6;
   native_agent_id?: NativeAgentId6;
   transcript_path?: TranscriptPath6;
@@ -1117,6 +1135,7 @@ export interface TaskEventData {
   project_dir?: ProjectDir7;
   working_dir?: WorkingDir7;
   source?: Source7;
+  coding_agent?: CodingAgent7;
   agent_id?: AgentId7;
   native_agent_id?: NativeAgentId7;
   transcript_path?: TranscriptPath7;
@@ -1147,6 +1166,7 @@ export interface ToolEventData {
   project_dir?: ProjectDir8;
   working_dir?: WorkingDir8;
   source?: Source8;
+  coding_agent?: CodingAgent8;
   agent_id?: AgentId8;
   native_agent_id?: NativeAgentId8;
   transcript_path?: TranscriptPath8;

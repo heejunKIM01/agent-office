@@ -83,6 +83,8 @@ class EventData(BaseModel):
     working_dir: str | None = None
     # Producer tag (mirrors EventDataBase.source; see that class for values).
     source: str | None = None
+    # Mirrors EventDataBase.coding_agent.
+    coding_agent: str | None = None
     tool_name: str | None = None
     tool_use_id: str | None = None
     tool_input: dict[str, Any] | None = None
@@ -194,6 +196,9 @@ class EventDataBase(BaseModel):
     # "opencode" marks plugin events, whose child @agent sessions must stay
     # excluded from that recovery. Old producers omit it (extra="ignore").
     source: str | None = None
+    # Coding agent that produced the event: "claude-code", "opencode",
+    # "gemini-cli" or "codex" (see app.core.coding_agent).
+    coding_agent: str | None = None
     # Agent identity (read across many event types).
     agent_id: str | None = None
     native_agent_id: str | None = None

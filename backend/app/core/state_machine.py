@@ -7,6 +7,7 @@ from enum import Enum, auto
 from typing import Any, cast
 
 from app.core.activity import ToolActivityTracker
+from app.core.coding_agent import coding_agent_of
 from app.core.path_utils import compress_path, compress_paths_in_text, truncate_long_words
 from app.core.quotes import get_random_job_completion_quote
 from app.core.summary_service import get_summary_service
@@ -619,6 +620,9 @@ class StateMachine:
     floor_id: str | None = None
     room_id: str | None = None
 
+    # Coding agent running the session (first event that names one wins)
+    coding_agent: str | None = None
+
     # Agent Teams support (used by RoomOrchestrator)
     is_lead: bool = True
     teammate_name: str | None = None
@@ -737,6 +741,7 @@ class StateMachine:
             conversation=self.conversation.copy(),
             floor_id=self.floor_id,
             room_id=self.room_id,
+            coding_agent=self.coding_agent,
         )
 
     def remove_agent(self, agent_id: str) -> None:
@@ -773,6 +778,9 @@ class StateMachine:
         # a thread would break replay token accounting, which relies on this
         # call being synchronous and deterministic.
         self.token_tracker.update_from_event(event)
+
+        if self.coding_agent is None:
+            self.coding_agent = coding_agent_of(event.data)
 
         handler = _DISPATCH_TABLE.get(event.event_type)
         if handler is not None:
