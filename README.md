@@ -28,11 +28,12 @@ make install     # uv · bun(또는 npm) 필요. Python 3.13 은 uv 가 받는�
 make dev         # 백엔드 :8000 + 프런트 :3000
 ```
 
-브라우저로 <http://localhost:3000> 을 연다. 이벤트를 넣는 방법은 셋이다.
+브라우저로 <http://localhost:3000> 을 연다. 이벤트를 넣는 방법은 넷이다.
 
 1. **실제 Claude Code 에 연결** — `make hooks-install` 이 `~/.claude/settings.json` 에 훅을 등록한다. 원본에서 이미 설치했다면 `make hooks-reinstall` 로 다시 설치해야 실패 훅(`PostToolUseFailure`)이 들어간다.
-2. **전역 설정을 건드리지 않고 한 번 돌려 보기** — `scripts/live_session.sh` 가 임시 프로젝트에서 짧은 Claude Code 세션(haiku, 지출 상한 $0.5)을 돌린다. 훅은 그 세션에만 걸린다.
-3. **시뮬레이터** — `uv run python scripts/simulate_events.py errands` 가 같은 장면을 가짜 이벤트로 재생한다.
+2. **Gemini CLI · OpenCode 에 연결** — `make gemini-hooks-install` 이 `~/.gemini/settings.json` 에 훅을 넣는다(다른 도구의 훅은 그대로 둔다, [훅 README](hooks/README.md#gemini-cli)). OpenCode 는 원본의 `make opencode-install`.
+3. **전역 설정을 건드리지 않고 한 번 돌려 보기** — `scripts/live_session.sh` 가 임시 프로젝트에서 짧은 Claude Code 세션(haiku, 지출 상한 $0.5)을 돌린다. 훅은 그 세션에만 걸린다. Gemini CLI 는 `scripts/gemini_session.sh` 가 계정 없이 가짜 모델로 진짜 Gemini CLI 를 돌린다.
+4. **시뮬레이터** — `uv run python scripts/simulate_events.py errands` 가 같은 장면을 가짜 이벤트로 재생한다.
 
 백엔드는 기본으로 이벤트마다 요약을 만들려고 `claude -p` 를 부른다. 사용량을 아끼려면 `SUMMARY_BACKEND=disabled make dev` 로 띄운다.
 

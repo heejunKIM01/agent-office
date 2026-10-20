@@ -2,6 +2,7 @@
 	hooks-install hooks-uninstall hooks-reinstall hooks-status hooks-logs hooks-logs-follow hooks-logs-clear \
 	hooks-debug-on hooks-debug-off clean clean-db clean-all \
 	opencode-install opencode-uninstall opencode-reinstall opencode-build \
+	gemini-hooks-install gemini-hooks-uninstall gemini-hooks-status \
 	dev-tmux dev-tmux-kill dev-tmux-backend dev-tmux-frontend \
 	build-static frontend-build-static \
 	docker-build docker-up docker-down docker-logs docker-shell docker-config \
@@ -107,6 +108,16 @@ hooks-debug-on:
 hooks-debug-off:
 	@sed -i '' 's/CLAUDE_OFFICE_DEBUG=1/CLAUDE_OFFICE_DEBUG=0/' ~/.claude/claude-office-config.env 2>/dev/null || true
 	@echo "Hook debug logging disabled"
+
+# Gemini CLI hook management targets (~/.gemini/settings.json)
+gemini-hooks-install:	# Install the hook tool and register it for Gemini CLI
+	cd hooks && uv tool install --force -p 3.14 . && uv run -p 3.14 manage_gemini_hooks.py install
+
+gemini-hooks-uninstall:	# Remove the Agent Office entries from Gemini CLI settings
+	cd hooks && uv run -p 3.14 manage_gemini_hooks.py uninstall
+
+gemini-hooks-status:	# Show which Gemini CLI events run the hook
+	@cd hooks && uv run -p 3.14 manage_gemini_hooks.py status
 
 # OpenCode plugin management targets
 opencode-install:
