@@ -188,6 +188,10 @@ const es: Record<TranslationKey, string> = {
   // Loading Screen
   "loading.office": "Cargando oficina...",
 
+  // Office rooms
+  "office.archive": "ARCHIVO",
+  "office.serverRoom": "SALA DE SERVIDORES",
+
   // Zoom Controls
   "zoom.in": "Acercar",
   "zoom.out": "Alejar",

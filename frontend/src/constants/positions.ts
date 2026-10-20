@@ -36,11 +36,14 @@ export const COFFEE_MACHINE_POSITION = { x: 1081, y: 191 };
 // FLOOR ELEMENTS
 // ============================================================================
 
-/** Printer station position (bottom left corner) */
-export const PRINTER_STATION_POSITION = { x: 50, y: 945 };
+/**
+ * Printer station position — against the archive's top partition, right of
+ * the bookshelves (see constants/rooms.ts). Top-center anchor of the stand.
+ */
+export const PRINTER_STATION_POSITION = { x: 266, y: 826 };
 
-/** Plant position (to the right of printer) */
-export const PLANT_POSITION = { x: 118, y: 970 };
+/** Plant position (archive's bottom-left corner) */
+export const PLANT_POSITION = { x: 30, y: 990 };
 
 // ============================================================================
 // BOSS AREA
