@@ -42,6 +42,7 @@ import {
   selectContextUtilization,
   selectIsCompacting,
   selectPrintReport,
+  selectBossErrand,
 } from "@/stores/gameStore";
 import { useAnimationSystem } from "@/systems/animationSystem";
 import { wireGameRuntime, unwireGameRuntime } from "@/systems/gameRuntime";
@@ -76,6 +77,7 @@ import {
   Bubble as AgentBubble,
 } from "./AgentSprite";
 import { BossSprite, BossBubble, MobileBoss } from "./BossSprite";
+import { ErrandBoss, type ErrandPose } from "./ErrandBoss";
 import { useNavigationStore } from "@/stores/navigationStore";
 import { LOBBY_FLOOR_ID } from "@/types/navigation";
 import { ELEVATOR_POSITION, isInElevatorZone } from "@/systems/queuePositions";
@@ -100,6 +102,15 @@ import { OfficeRooms } from "./OfficeRooms";
 
 // Register PixiJS components
 extend({ Container, Text, Graphics, Sprite });
+
+// The errand boss sorts with agents by feet: agents sort by their bottom-circle
+// center (feet - 22), the boss position is its body center (feet - 40).
+const ERRAND_BOSS_SORT_OFFSET = 18;
+
+// Bubble height above the boss. At the server rack it rises above the rack
+// console the boss is looking at, so the console stays visible.
+const BOSS_BUBBLE_Y_OFFSET = -80;
+const BOSS_AT_RACK_BUBBLE_Y_OFFSET = -122;
 
 // ============================================================================
 // SUB-COMPONENTS
@@ -225,6 +236,18 @@ export function OfficeGame(): ReactNode {
   const contextUtilization = useGameStore(selectContextUtilization);
   const isCompacting = useGameStore(selectIsCompacting);
   const printReport = useGameStore(selectPrintReport);
+  const bossErrand = useGameStore(selectBossErrand);
+  const isBossOnErrand = bossErrand.phase !== "seated";
+  const bossBubbleYOffset =
+    bossErrand.phase === "working" && bossErrand.room === "server"
+      ? BOSS_AT_RACK_BUBBLE_Y_OFFSET
+      : BOSS_BUBBLE_Y_OFFSET;
+  const errandPose: ErrandPose =
+    bossErrand.phase !== "working"
+      ? "walking"
+      : bossErrand.room === "server"
+        ? "operating"
+        : "reading";
 
   // Floor info for elevator label
   const floorId = useNavigationStore((s) => s.floorId);
@@ -363,7 +386,12 @@ export function OfficeGame(): ReactNode {
                   <OfficeBackground floorTileTexture={textures.floorTile} />
 
                   {/* Archive and server room (floors, partitions, furniture) */}
-                  <OfficeRooms />
+                  <OfficeRooms
+                    isServerBusy={
+                      bossErrand.phase === "working" &&
+                      bossErrand.room === "server"
+                    }
+                  />
 
                   {/* Boss area rug - rendered right after floor */}
                   {textures.bossRug && (
@@ -533,6 +561,20 @@ export function OfficeGame(): ReactNode {
                           />
                         </pixiContainer>
                       ))}
+
+                    {/* Boss away from the desk on an errand */}
+                    {isBossOnErrand && (
+                      <pixiContainer
+                        zIndex={bossErrand.position.y + ERRAND_BOSS_SORT_OFFSET}
+                      >
+                        <ErrandBoss
+                          position={bossErrand.position}
+                          pose={errandPose}
+                          sunglassesTexture={textures.sunglasses}
+                          headsetTexture={textures.headset}
+                        />
+                      </pixiContainer>
+                    )}
                   </pixiContainer>
 
                   {/* Desk surfaces and keyboards (behind agent arms) */}
@@ -598,7 +640,9 @@ export function OfficeGame(): ReactNode {
                     sunglassesTexture={textures.sunglasses}
                     renderBubble={false}
                     isTyping={boss.isTyping}
-                    isAway={compactionAnimation.phase !== "idle"}
+                    isAway={
+                      compactionAnimation.phase !== "idle" || isBossOnErrand
+                    }
                   />
 
                   {/* Mobile Boss (when walking to/from trash can) */}
@@ -751,8 +795,18 @@ export function OfficeGame(): ReactNode {
                       </pixiContainer>
                     ))}
                   {boss.bubble.content && (
-                    <pixiContainer x={boss.position.x} y={boss.position.y}>
-                      <BossBubble content={boss.bubble.content} yOffset={-80} />
+                    <pixiContainer
+                      x={
+                        isBossOnErrand ? bossErrand.position.x : boss.position.x
+                      }
+                      y={
+                        isBossOnErrand ? bossErrand.position.y : boss.position.y
+                      }
+                    >
+                      <BossBubble
+                        content={boss.bubble.content}
+                        yOffset={bossBubbleYOffset}
+                      />
                     </pixiContainer>
                   )}
                 </>

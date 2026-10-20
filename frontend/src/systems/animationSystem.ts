@@ -15,8 +15,15 @@ import {
   type PathState,
   type AgentMovement,
 } from "@/stores/gameStore";
-import { calculatePath, updateAgentObstacle } from "./pathfinding";
+import {
+  calculatePath,
+  getNavigationGrid,
+  updateAgentObstacle,
+} from "./pathfinding";
+import { BOSS_POSITION } from "./queuePositions";
+import { stepBossErrand, type ErrandPathFinder } from "./bossErrands";
 import { collisionManager } from "./agentCollision";
+import { advanceAlongPath } from "./pathFollow";
 import type { Position } from "@/types";
 
 // ============================================================================
@@ -25,6 +32,11 @@ import type { Position } from "@/types";
 
 const MOVEMENT_SPEED = 200; // pixels per second
 const BUBBLE_DURATION_MS = 3000; // 3 seconds per bubble
+
+// The boss routes around walls and furniture only; it walks through agents
+// the same way agents walk through each other.
+const bossErrandPath: ErrandPathFinder = (from, to) =>
+  calculatePath(from, to, undefined, getNavigationGrid().staticView());
 
 // ============================================================================
 // ANIMATION SYSTEM CLASS
@@ -171,6 +183,7 @@ class AnimationSystem {
 
     // Update all systems
     this.updateAgentPositions(deltaSeconds);
+    this.updateBossErrand(deltaSeconds);
     this.updateBubbleTimers();
     this.checkQueueAdvancement();
 
@@ -246,6 +259,31 @@ class AnimationSystem {
     }
   }
 
+  /**
+   * Walk the boss to the archive / server room and back (bossErrands.ts).
+   * Sitting back down frees the boss for the next queued agent.
+   */
+  private updateBossErrand(deltaSeconds: number): void {
+    const store = useGameStore.getState();
+    const { state, sat } = stepBossErrand(
+      store.bossErrand,
+      {
+        activity: store.boss.activity,
+        deskDuty:
+          store.boss.inUseBy !== null ||
+          store.arrivalQueue.length > 0 ||
+          store.departureQueue.length > 0,
+        isCompacting: store.compactionPhase !== "idle",
+        now: performance.now(),
+        deltaSeconds,
+      },
+      BOSS_POSITION,
+      bossErrandPath,
+    );
+    if (state !== store.bossErrand) store.setBossErrand(state);
+    if (sat) this.listener?.notifyBossAvailable();
+  }
+
   private updatePathProgress(
     agent: {
       currentPosition: Position;
@@ -258,84 +296,11 @@ class AnimationSystem {
     newPath: PathState | null;
     arrived: boolean;
   } | null {
-    const { waypoints } = agent.path;
-    let { currentIndex, progress } = agent.path;
-
-    // Safety check
-    if (currentIndex >= waypoints.length - 1) {
-      return {
-        newPosition: waypoints[waypoints.length - 1],
-        newPath: null,
-        arrived: true,
-      };
-    }
-
-    // Calculate total distance to move this frame
-    let remainingDistance = MOVEMENT_SPEED * deltaSeconds;
-
-    // Advance through waypoints until we've used all our movement distance
-    while (remainingDistance > 0 && currentIndex < waypoints.length - 1) {
-      const current = waypoints[currentIndex];
-      const next = waypoints[currentIndex + 1];
-
-      // Calculate segment length
-      const segmentDx = next.x - current.x;
-      const segmentDy = next.y - current.y;
-      const segmentLength = Math.sqrt(
-        segmentDx * segmentDx + segmentDy * segmentDy,
-      );
-
-      // Skip zero-length segments
-      if (segmentLength < 0.1) {
-        currentIndex++;
-        progress = 0;
-        continue;
-      }
-
-      // Calculate remaining distance in current segment
-      const remainingInSegment = (1 - progress) * segmentLength;
-
-      if (remainingDistance >= remainingInSegment) {
-        // Move past this waypoint to the next segment
-        remainingDistance -= remainingInSegment;
-        currentIndex++;
-        progress = 0;
-      } else {
-        // Stay within this segment - calculate final position
-        progress += remainingDistance / segmentLength;
-        remainingDistance = 0;
-      }
-    }
-
-    // Check if we've reached the end
-    if (currentIndex >= waypoints.length - 1) {
-      return {
-        newPosition: waypoints[waypoints.length - 1],
-        newPath: null,
-        arrived: true,
-      };
-    }
-
-    // Calculate final interpolated position along current segment
-    const current = waypoints[currentIndex];
-    const next = waypoints[currentIndex + 1];
-    const segmentDx = next.x - current.x;
-    const segmentDy = next.y - current.y;
-
-    const newPosition: Position = {
-      x: current.x + segmentDx * progress,
-      y: current.y + segmentDy * progress,
-    };
-
-    return {
-      newPosition,
-      newPath: {
-        waypoints,
-        currentIndex,
-        progress,
-      },
-      arrived: false,
-    };
+    const { position, path, arrived } = advanceAlongPath(
+      agent.path,
+      MOVEMENT_SPEED * deltaSeconds,
+    );
+    return { newPosition: position, newPath: path, arrived };
   }
 
   private handleArrival(agentId: string, phase: AgentPhase): void {
@@ -417,10 +382,12 @@ class AnimationSystem {
   private checkQueueAdvancement(): void {
     const store = useGameStore.getState();
 
-    // The queue must not advance while the boss is busy with an agent. With
-    // single-writer queue ownership (ARC-004) the boss lock can no longer leak,
-    // so the previous 3-second "stuck boss" auto-release watchdog is gone.
-    if (store.boss.inUseBy !== null) {
+    // The queue must not advance while the boss is busy with an agent or away
+    // from the desk on an errand (it is called back and notifies on sitting
+    // down). With single-writer queue ownership (ARC-004) the boss lock can no
+    // longer leak, so the previous 3-second "stuck boss" auto-release watchdog
+    // is gone.
+    if (store.boss.inUseBy !== null || store.bossErrand.phase !== "seated") {
       this.lastNotifiedAgentId = null;
       return;
     }

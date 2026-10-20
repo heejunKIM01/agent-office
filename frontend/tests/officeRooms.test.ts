@@ -113,3 +113,33 @@ describe("queue lines after the room move", () => {
     }
   });
 });
+
+describe("boss errand routing", () => {
+  it("routes the boss through agents standing in the archive door", () => {
+    const doorGrid = new NavigationGrid();
+    const doorX = ARCHIVE_ROOM.right - 5;
+    // Both door tiles occupied by agents
+    doorGrid.updateAgentPosition("blocker-1", {
+      x: doorX,
+      y: ROOM_DOOR_BOTTOM - 16,
+    });
+    doorGrid.updateAgentPosition("blocker-2", {
+      x: doorX,
+      y: ROOM_DOOR_BOTTOM - 48,
+    });
+    const spot = ARCHIVE_READING_SPOTS[0];
+
+    // Agents treat each other as obstacles: no way into the archive…
+    expect(findPath(BOSS_FRONT, spot, undefined, doorGrid)).toEqual([]);
+    // …the static view the boss routes with ignores agents entirely.
+    const bossTiles = findPath(
+      BOSS_FRONT,
+      spot,
+      undefined,
+      doorGrid.staticView(),
+    );
+    expect(bossTiles[bossTiles.length - 1]).toEqual(
+      doorGrid.worldToGrid(spot.x, spot.y),
+    );
+  });
+});

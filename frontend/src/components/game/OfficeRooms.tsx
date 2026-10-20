@@ -3,7 +3,8 @@
  *
  * Renders the two side rooms characters walk to (docs/plan/spec.md):
  * - Archive (bottom-left): parquet floor, bookshelves, room sign
- * - Server room (bottom-right): raised floor, server racks with blinking LEDs
+ * - Server room (bottom-right): raised floor, server racks with blinking LEDs,
+ *   and a console on the first rack that scrolls while a command runs
  *
  * Everything here is static floor/wall/furniture art drawn below the Y-sorted
  * character layer, so characters standing in front of a shelf or rack overlap
@@ -56,6 +57,14 @@ const RACK_UNITS = 8;
 const RACK_UNIT_HEIGHT = 11;
 const RACK_UNIT_GAP = 2;
 const LED_BLINK_INTERVAL_MS = 180;
+const LED_BUSY_BLINK_INTERVAL_MS = 60;
+const CONSOLE_SCROLL_INTERVAL_MS = 120;
+const CONSOLE_IDLE_BLINK_INTERVAL_MS = 500;
+// Console screen on the first rack, above the head of whoever stands there
+const CONSOLE_WIDTH = 44;
+const CONSOLE_HEIGHT = 30;
+const CONSOLE_TOP = ROOM_FURNITURE_BASE_Y - RACK_HEIGHT + 9;
+const CONSOLE_LINES = 5;
 const LED_COLORS = [0x22c55e, 0xf59e0b, 0x38bdf8];
 
 // ============================================================================
@@ -311,23 +320,80 @@ function drawRackLeds(
   }
 }
 
+/** Rack-mounted console: scrolling output while busy, a blinking cursor when idle */
+function drawRackConsole(
+  g: Graphics,
+  cx: number,
+  isBusy: boolean,
+  frame: number,
+): void {
+  g.clear();
+  const left = cx - CONSOLE_WIDTH / 2;
+  g.rect(left - 2, CONSOLE_TOP - 2, CONSOLE_WIDTH + 4, CONSOLE_HEIGHT + 4);
+  g.fill(0x0b0f14);
+  g.rect(left, CONSOLE_TOP, CONSOLE_WIDTH, CONSOLE_HEIGHT);
+  g.fill(isBusy ? 0x052e16 : 0x0a1a10);
+  if (!isBusy) {
+    if (frame % 2 === 0) {
+      g.rect(left + 3, CONSOLE_TOP + 4, 4, 5);
+      g.fill(0x22c55e);
+    }
+    return;
+  }
+  for (let line = 0; line < CONSOLE_LINES; line++) {
+    const width = 8 + (ledHash(line + frame, 7, 3) % (CONSOLE_WIDTH - 12));
+    g.rect(left + 3, CONSOLE_TOP + 3 + line * 5, width, 2);
+    g.fill({ color: 0x4ade80, alpha: line === CONSOLE_LINES - 1 ? 1 : 0.7 });
+  }
+}
+
 // ============================================================================
 // SUB-COMPONENTS
 // ============================================================================
 
-function RackLeds({
+function RackConsole({
   cx,
-  rackIndex,
+  isBusy,
 }: {
   cx: number;
-  rackIndex: number;
+  isBusy: boolean;
 }): ReactNode {
   const [frame, setFrame] = useState(0);
   const elapsedRef = useRef(0);
+  const interval = isBusy
+    ? CONSOLE_SCROLL_INTERVAL_MS
+    : CONSOLE_IDLE_BLINK_INTERVAL_MS;
 
   useTick((ticker) => {
     elapsedRef.current += ticker.deltaMS;
-    if (elapsedRef.current >= LED_BLINK_INTERVAL_MS) {
+    if (elapsedRef.current >= interval) {
+      elapsedRef.current = 0;
+      setFrame((f) => f + 1);
+    }
+  });
+
+  const draw = useCallback(
+    (g: Graphics) => drawRackConsole(g, cx, isBusy, frame),
+    [cx, isBusy, frame],
+  );
+
+  return <pixiGraphics draw={draw} />;
+}
+
+interface RackLedsProps {
+  cx: number;
+  rackIndex: number;
+  isBusy: boolean;
+}
+
+function RackLeds({ cx, rackIndex, isBusy }: RackLedsProps): ReactNode {
+  const [frame, setFrame] = useState(0);
+  const elapsedRef = useRef(0);
+  const interval = isBusy ? LED_BUSY_BLINK_INTERVAL_MS : LED_BLINK_INTERVAL_MS;
+
+  useTick((ticker) => {
+    elapsedRef.current += ticker.deltaMS;
+    if (elapsedRef.current >= interval) {
       elapsedRef.current = 0;
       setFrame((f) => f + 1);
     }
@@ -387,7 +453,14 @@ function RoomSign({ x, y, label, accent }: RoomSignProps): ReactNode {
 // MAIN COMPONENT
 // ============================================================================
 
-function OfficeRoomsComponent(): ReactNode {
+interface OfficeRoomsProps {
+  /** Someone is running a command at the racks: LEDs flicker faster */
+  isServerBusy?: boolean;
+}
+
+function OfficeRoomsComponent({
+  isServerBusy = false,
+}: OfficeRoomsProps): ReactNode {
   const { t } = useTranslation();
 
   const drawFloors = useCallback((g: Graphics) => {
@@ -417,8 +490,14 @@ function OfficeRoomsComponent(): ReactNode {
       <pixiGraphics draw={drawWalls} />
       <pixiGraphics draw={drawFurniture} />
       {SERVER_RACK_XS.map((x, i) => (
-        <RackLeds key={`rack-leds-${i}`} cx={x} rackIndex={i} />
+        <RackLeds
+          key={`rack-leds-${i}`}
+          cx={x}
+          rackIndex={i}
+          isBusy={isServerBusy}
+        />
       ))}
+      <RackConsole cx={SERVER_RACK_XS[0]} isBusy={isServerBusy} />
       <RoomSign
         x={(ARCHIVE_ROOM.left + ARCHIVE_ROOM.right) / 2}
         y={signY}

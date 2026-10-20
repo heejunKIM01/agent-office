@@ -33,6 +33,9 @@ export type {
   AgentAnimationState,
   CompactionAnimationPhase,
   BossAnimationState,
+  BossErrandPhase,
+  BossErrandState,
+  ErrandRoom,
   EventLogEntry,
   ReplayFrame,
   AgentMovement,
@@ -43,6 +46,7 @@ import type {
   AgentAnimationState,
   CompactionAnimationPhase,
   BossAnimationState,
+  BossErrandState,
   EventLogEntry,
   ReplayFrame,
   AgentMovement,
@@ -66,7 +70,11 @@ import {
 } from "./slices/whiteboardSlice";
 import { createReplaySlice, initialReplayState } from "./slices/replaySlice";
 import { createDebugSlice, initialDebugState } from "./slices/debugSlice";
-import { createEmptyBubbleState, initialBossState } from "./slices/shared";
+import {
+  createEmptyBubbleState,
+  initialBossErrandState,
+  initialBossState,
+} from "./slices/shared";
 
 // ============================================================================
 // STORE INTERFACE (the single public contract; impls come from the slices)
@@ -148,6 +156,8 @@ export interface GameStore {
   updateBossBackendState: (state: BossState) => void;
   updateBossTask: (task: string | null) => void;
   updateBossActivity: (activity: Activity | null) => void;
+  bossErrand: BossErrandState;
+  setBossErrand: (errand: BossErrandState) => void;
   setBossInUse: (by: "arrival" | "departure" | null) => void;
   setBossTyping: (typing: boolean) => void;
 
@@ -303,6 +313,7 @@ export const useGameStore = create<GameStore>()(
         },
         readyOccupants: { arrival: null, departure: null },
         boss: { ...initialBossState, bubble: createEmptyBubbleState() },
+        bossErrand: initialBossErrandState,
         sessionId: "None",
         deskCount: MIN_DESK_COUNT,
         elevatorState: "closed",
@@ -430,6 +441,7 @@ export const useGameStore = create<GameStore>()(
 
 export const selectAgents = (state: GameStore) => state.agents;
 export const selectBoss = (state: GameStore) => state.boss;
+export const selectBossErrand = (state: GameStore) => state.bossErrand;
 export const selectArrivalQueue = (state: GameStore) => state.arrivalQueue;
 export const selectDepartureQueue = (state: GameStore) => state.departureQueue;
 export const selectIsConnected = (state: GameStore) => state.isConnected;

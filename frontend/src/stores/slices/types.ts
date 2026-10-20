@@ -111,6 +111,32 @@ export interface BossAnimationState {
   isTyping: boolean; // True when boss is actively using tools (typing animation)
 }
 
+/** Room the boss walks to for an errand (docs/plan/spec.md R1, R2). */
+export type ErrandRoom = "archive" | "server";
+
+/**
+ * Boss errand phases:
+ * - seated: at the desk (the regular BossSprite)
+ * - walking: heading to a room spot
+ * - working: at the spot (reading a book / at the rack)
+ * - returning: heading back to the desk
+ */
+export type BossErrandPhase = "seated" | "walking" | "working" | "returning";
+
+/**
+ * Frontend-owned errand choreography for the boss (systems/bossErrands.ts).
+ * `position` is the walking boss's body center; `lingerUntil` (ms, from
+ * performance.now) keeps the boss in a room briefly after its tool ends so
+ * back-to-back reads do not cause round trips.
+ */
+export interface BossErrandState {
+  phase: BossErrandPhase;
+  room: ErrandRoom | null;
+  position: Position;
+  path: PathState | null;
+  lingerUntil: number | null;
+}
+
 /**
  * Event log entry for display.
  */
