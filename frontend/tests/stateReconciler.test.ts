@@ -10,7 +10,12 @@
  * out of scope for this ARC-018 cut.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import { resolveSpawn } from "@/systems/stateReconciler";
+import {
+  reconcileState,
+  resolveSpawn,
+  type ReconcilerContext,
+} from "@/systems/stateReconciler";
+import { useGameStore } from "@/stores/gameStore";
 import { resetSpawnIndex } from "@/systems/queuePositions";
 import {
   ARRIVAL_QUEUE_POSITIONS,
@@ -158,5 +163,47 @@ describe("resolveSpawn", () => {
     expect(decision.queueIndex).toBe(1);
     // index 1 → getQueuePosition("arrival", 2) = ARRIVAL_QUEUE_POSITIONS[2].
     expect(decision.spawnPosition).toEqual(ARRIVAL_QUEUE_POSITIONS[2]);
+  });
+});
+
+describe("reconcileState — tool activity", () => {
+  beforeEach(() => {
+    useGameStore.getState().resetForSessionSwitch();
+  });
+
+  const ctx = (): ReconcilerContext => ({
+    currentSessionId: "session-1",
+    processedAgents: new Set<string>(),
+    lastSeenBubbleText: new Map<string, string>(),
+    initialQueueSyncDone: { current: "session-1" },
+  });
+
+  it("copies the boss activity and clears it when the backend drops it", () => {
+    reconcileState(
+      makeState({ boss: { state: "working", activity: "reading" } }),
+      ctx(),
+    );
+    expect(useGameStore.getState().boss.activity).toBe("reading");
+
+    reconcileState(makeState({ boss: { state: "idle" } }), ctx());
+    expect(useGameStore.getState().boss.activity).toBeNull();
+  });
+
+  it("copies an existing agent's activity", () => {
+    const agent = makeAgent({ id: "agent-7" });
+    useGameStore.getState().addAgent(agent, { x: 0, y: 0 });
+    const context = ctx();
+    context.processedAgents.add("agent-7");
+
+    reconcileState(
+      makeState({ agents: [{ ...agent, activity: "running" }] }),
+      context,
+    );
+    expect(useGameStore.getState().agents.get("agent-7")?.activity).toBe(
+      "running",
+    );
+
+    reconcileState(makeState({ agents: [agent] }), context);
+    expect(useGameStore.getState().agents.get("agent-7")?.activity).toBeNull();
   });
 });

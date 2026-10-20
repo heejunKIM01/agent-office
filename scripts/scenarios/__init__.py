@@ -11,6 +11,7 @@ Available scenarios
 - ``basic``      — Simple session: boss reads a file, spawns one agent, session ends.
 - ``complex``    — Multi-agent workflow with context compaction and background tasks.
 - ``edge_cases`` — Error paths, permission requests, and unusual event sequences.
+- ``errands``    — Boss and a subagent walking to the archive and the server room.
 - ``quick``      — Fast (~30 s) full-lifecycle smoke scenario.
 - ``teams``      — Multi-session team scenario exercising the room-orchestrator merge.
 """
@@ -21,6 +22,7 @@ from ._base import SimulationContext
 from .basic import run as run_basic
 from .complex import run as run_complex
 from .edge_cases import run as run_edge_cases
+from .errands import run as run_errands
 from .quick import run as run_quick
 from .teams import run as run_teams
 
@@ -28,6 +30,7 @@ SCENARIOS: dict[str, Callable[[SimulationContext], None]] = {
     "basic": run_basic,
     "complex": run_complex,
     "edge_cases": run_edge_cases,
+    "errands": run_errands,
     "quick": run_quick,
     "teams": run_teams,
 }
@@ -38,6 +41,7 @@ __all__ = [
     "run_basic",
     "run_complex",
     "run_edge_cases",
+    "run_errands",
     "run_quick",
     "run_teams",
 ]

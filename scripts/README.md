@@ -51,6 +51,7 @@ The main simulation script supports three scenarios, each exercising different a
 | `basic` | ~60s | 1 | Minimal happy-path lifecycle |
 | `complex` | ~5-10min | 4 | Full multi-agent workflow with compaction |
 | `edge_cases` | ~2min | 1-2 | Error handling, permissions, cleanup |
+| `errands` | ~70s | 1 | Boss and a subagent walking to the archive (reading tools) and the server room (shell tools) |
 
 ### Features Tested by Scenario
 

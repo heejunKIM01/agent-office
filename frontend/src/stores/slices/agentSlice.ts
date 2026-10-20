@@ -10,6 +10,7 @@
 import type { StateCreator } from "zustand";
 import type { GameStore } from "../gameStore";
 import type {
+  Activity,
   Position,
   AgentState as BackendAgentState,
   Agent as BackendAgent,
@@ -38,6 +39,7 @@ export type AgentSlice = {
       backendState: BackendAgentState;
       name: string | null;
       currentTask: string | null;
+      activity?: Activity | null;
     },
   ) => void;
   updateAgentQueueInfo: (
@@ -89,6 +91,7 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
           desk: backendAgent.desk ?? null,
           backendState: backendAgent.state,
           currentTask: backendAgent.currentTask ?? null,
+          activity: backendAgent.activity ?? null,
           characterType: backendAgent.characterType ?? null,
           parentSessionId: backendAgent.parentSessionId ?? null,
           parentId: backendAgent.parentId ?? null,
@@ -152,6 +155,9 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
         // `??` (not `||`) so an explicit empty-string currentTask clears the
         // previous task — only null/undefined fall back. See QA-012.
         currentTask: meta.currentTask ?? agent.currentTask,
+        // Activity mirrors the backend: null means no tool is running, and
+        // callers that do not know it (undefined) leave it unchanged.
+        activity: meta.activity === undefined ? agent.activity : meta.activity,
       })),
 
     updateAgentQueueInfo: (agentId, queueType, queueIndex) =>

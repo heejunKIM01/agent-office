@@ -5,6 +5,17 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
+/**
+ * What a character is doing with its current tool, in office terms.
+ *
+ * Drives where the character walks: reading tools send it to the archive,
+ * command tools to the server room (docs/plan/spec.md R1, R2). ``None`` on a
+ * character means no mapped tool is running.
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "Activity".
+ */
+export type Activity = "reading" | "running";
 export type Id = string;
 export type Nativeid = string | null;
 export type Name = string | null;
@@ -493,6 +504,7 @@ export interface Agent {
   bubble?: BubbleContent | null;
   currentTask?: Currenttask;
   position?: Position;
+  activity?: Activity | null;
   characterType?: Charactertype;
   parentSessionId?: Parentsessionid;
   parentId?: Parentid;
@@ -638,6 +650,7 @@ export interface Boss1 {
   state: BossState;
   currentTask?: Currenttask1;
   bubble?: BubbleContent | null;
+  activity?: Activity | null;
   position?: Position1;
   [k: string]: unknown;
 }

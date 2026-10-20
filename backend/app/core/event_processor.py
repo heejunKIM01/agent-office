@@ -588,7 +588,11 @@ class EventProcessor:
             sm.teammate_name = event.data.teammate_name
             sm.is_lead = False
 
-        agent_id = event.data.agent_id or "main"
+        agent_id = (
+            sm.tool_character_id(event)
+            if isinstance(event, ToolEvent)
+            else event.data.agent_id or "main"
+        )
 
         # Build detail dict from event data fields for frontend inspection.
         # Family-specific fields are read via getattr because event.data is the
@@ -833,7 +837,11 @@ class EventProcessor:
                         continue
                     sm.transition(evt)
 
-                    agent_id = evt.data.agent_id or "main"
+                    agent_id = (
+                        sm.tool_character_id(evt)
+                        if isinstance(evt, ToolEvent)
+                        else evt.data.agent_id or "main"
+                    )
                     history_entry: HistoryEntry = {
                         "id": str(evt.timestamp.timestamp()),
                         "type": str(evt.event_type),

@@ -19,5 +19,6 @@ export const initialBossState: BossAnimationState = {
   bubble: createEmptyBubbleState(),
   inUseBy: null,
   currentTask: null,
+  activity: null,
   isTyping: false,
 };

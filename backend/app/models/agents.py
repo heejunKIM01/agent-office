@@ -6,6 +6,7 @@ from pydantic.alias_generators import to_camel
 from app.models.common import BubbleContent
 
 __all__ = [
+    "Activity",
     "AgentState",
     "BossState",
     "Agent",
@@ -31,6 +32,18 @@ class AgentState(StrEnum):
     LEAVING = "leaving"
     IN_ELEVATOR = "in_elevator"
     IDLE = "idle"
+
+
+class Activity(StrEnum):
+    """What a character is doing with its current tool, in office terms.
+
+    Drives where the character walks: reading tools send it to the archive,
+    command tools to the server room (docs/plan/spec.md R1, R2). ``None`` on a
+    character means no mapped tool is running.
+    """
+
+    READING = "reading"
+    RUNNING = "running"
 
 
 class BossState(StrEnum):
@@ -63,6 +76,7 @@ class Agent(BaseModel):
     current_task: str | None = None
     position: dict[str, int] = {"x": 0, "y": 0}
     # Agent Teams character hierarchy (Phase 4)
+    activity: Activity | None = None  # set from in-flight tools, see core/activity.py
     character_type: str | None = None  # "lead" | "teammate" | "subagent"
     parent_session_id: str | None = None  # session that owns this character
     parent_id: str | None = None  # for subagents: parent lead/teammate id
@@ -76,6 +90,7 @@ class Boss(BaseModel):
     state: BossState
     current_task: str | None = None
     bubble: BubbleContent | None = None
+    activity: Activity | None = None  # set from in-flight tools, see core/activity.py
     position: dict[str, int] = {"x": 640, "y": 830}
 
 

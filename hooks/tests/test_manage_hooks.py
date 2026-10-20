@@ -86,3 +86,10 @@ def test_save_settings_preserves_oldest_backup_across_runs(tmp_path: Path) -> No
 def test_load_settings_returns_empty_for_missing_file(tmp_path: Path) -> None:
     """A fresh install (no settings.json) is still allowed: returns {}."""
     assert manage_hooks.load_settings(_settings_path(tmp_path)) == {}
+
+
+def test_post_tool_use_failure_hook_is_installed_with_matcher() -> None:
+    assert "PostToolUseFailure" in manage_hooks.HOOK_TYPES
+    entry = manage_hooks.create_hook_config("/bin/claude-office-hook", "PostToolUseFailure")
+    assert entry["matcher"] == ".*"
+    assert entry["hooks"][0]["command"] == "/bin/claude-office-hook post_tool_use_failure"

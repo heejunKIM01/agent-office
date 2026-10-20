@@ -178,3 +178,62 @@ class TestNativeSubagentStop:
         }
         result = map_event("subagent_stop", raw, SESSION_ID)
         assert result is None
+
+
+def _tool_call(tool_name: str = "Read", subagent_id: str | None = None) -> dict:
+    raw: dict = {
+        "tool_name": tool_name,
+        "tool_use_id": "tu_read_1",
+        "tool_input": {"file_path": "/repo/app.py"},
+        "session_id": SESSION_ID,
+        "transcript_path": TRANSCRIPT,
+    }
+    if subagent_id is not None:
+        raw["agent_id"] = subagent_id
+        raw["agent_type"] = "Explore"
+    return raw
+
+
+class TestToolEventAttribution:
+    """Tool hooks fired inside a subagent carry the subagent's native agent_id."""
+
+    def test_main_thread_tool_goes_to_boss(self) -> None:
+        result = map_event("pre_tool_use", _tool_call(), SESSION_ID)
+        assert result is not None
+        assert result["data"]["agent_id"] == "main"
+        assert "native_agent_id" not in result["data"]
+
+    def test_subagent_tool_forwards_native_id(self) -> None:
+        for event_type in ("pre_tool_use", "post_tool_use", "permission_request"):
+            result = map_event(event_type, _tool_call(subagent_id="a5a60c7"), SESSION_ID)
+            assert result is not None
+            assert result["data"]["native_agent_id"] == "a5a60c7"
+            assert "agent_id" not in result["data"]
+
+
+class TestPostToolUseFailure:
+    """PostToolUseFailure is sent as a failed post_tool_use."""
+
+    def test_failure_maps_to_failed_post_tool_use(self) -> None:
+        raw = {
+            **_tool_call("Bash"),
+            "tool_input": {"command": "npm test"},
+            "error": "Exit code 1\nError: Cannot find module 'express'",
+            "is_interrupt": False,
+        }
+        result = map_event("post_tool_use_failure", raw, SESSION_ID)
+        assert result is not None
+        assert result["event_type"] == "post_tool_use"
+        assert result["data"]["success"] is False
+        assert result["data"]["error_type"] == "tool_error"
+        assert result["data"]["result_summary"] == "Exit code 1"
+        assert result["data"]["tool_use_id"] == "tu_read_1"
+        assert result["data"]["agent_id"] == "main"
+
+    def test_interrupt_and_subagent_failure(self) -> None:
+        raw = {**_tool_call("Bash", subagent_id="a5a60c7"), "is_interrupt": True}
+        result = map_event("post_tool_use_failure", raw, SESSION_ID)
+        assert result is not None
+        assert result["data"]["error_type"] == "interrupt"
+        assert result["data"]["native_agent_id"] == "a5a60c7"
+        assert "result_summary" not in result["data"]

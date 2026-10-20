@@ -6,12 +6,14 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, cast
 
+from app.core.activity import ToolActivityTracker
 from app.core.path_utils import compress_path, compress_paths_in_text, truncate_long_words
 from app.core.quotes import get_random_job_completion_quote
 from app.core.summary_service import get_summary_service
 from app.core.token_tracker import TokenTracker
 from app.core.whiteboard_tracker import WhiteboardTracker
 from app.models.agents import (
+    Activity,
     Agent,
     AgentState,
     Boss,
@@ -244,7 +246,7 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
         sm.boss_state = BossState.DELEGATING
         sm.elevator_state = ElevatorState.ARRIVING
     else:
-        agent_id = event.data.agent_id or "main"
+        agent_id = sm.tool_character_id(event)
 
         bubble = sm.tool_to_thought(event)
         if agent_id == "main":
@@ -260,6 +262,7 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
                     )
                 )
                 new_agent.state = AgentState.WORKING
+                new_agent.native_id = event.data.native_agent_id
                 sm.agents[agent_id] = new_agent
 
             if agent_id in sm.agents:
@@ -268,11 +271,16 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
                 if agent_id in sm.arrival_queue:
                     sm.arrival_queue.remove(agent_id)
 
+        sm.tool_activity.start(agent_id, tool_name, event.data.tool_use_id)
+        sm.sync_activity(agent_id)
+
 
 def _handle_user_prompt_submit(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle USER_PROMPT_SUBMIT: boss receives a new user prompt."""
     assert isinstance(event, PromptEvent)
     sm.boss_state = BossState.RECEIVING
+    sm.tool_activity.clear("main")
+    sm.sync_activity("main")
     prompt_text = event.data.prompt
     sm.print_report = False
     sm.turn_active = True
@@ -289,7 +297,7 @@ def _handle_user_prompt_submit(sm: "StateMachine", event: AnyEvent) -> None:
 def _handle_permission_request(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle PERMISSION_REQUEST: set boss or agent to waiting state."""
     assert isinstance(event, ToolEvent)
-    agent_id = event.data.agent_id or "main"
+    agent_id = sm.tool_character_id(event)
     tool_name = event.data.tool_name or "permission"
 
     waiting_bubble = BubbleContent(
@@ -310,7 +318,9 @@ def _handle_permission_request(sm: "StateMachine", event: AnyEvent) -> None:
 def _handle_post_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle POST_TOOL_USE: increment tool counter and reset agent state."""
     assert isinstance(event, ToolEvent)
-    agent_id = event.data.agent_id or "main"
+    agent_id = sm.tool_character_id(event)
+    sm.tool_activity.finish(agent_id, event.data.tool_name, event.data.tool_use_id)
+    sm.sync_activity(agent_id)
     if agent_id == "main":
         sm.boss_state = BossState.IDLE
     elif agent_id in sm.agents and sm.agents[agent_id].state == AgentState.WAITING_PERMISSION:
@@ -363,6 +373,8 @@ def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
         agent_id = resolved.agent_id
         stopping_agent = resolved.agent
         stopping_agent.state = AgentState.WAITING
+        sm.tool_activity.clear(agent_id)
+        sm.sync_activity(agent_id)
         if agent_id not in sm.handin_queue:
             sm.handin_queue.append(agent_id)
 
@@ -395,6 +407,8 @@ def _handle_stop(sm: "StateMachine", event: AnyEvent) -> None:
     sm.phase = OfficePhase.COMPLETING
     sm.boss_state = BossState.COMPLETING
     sm.turn_active = False
+    sm.tool_activity.clear("main")
+    sm.sync_activity("main")
 
     speech_text = (
         event.data.speech_content.boss_phone
@@ -417,6 +431,10 @@ def _handle_session_end(sm: "StateMachine", event: AnyEvent) -> None:
     sm.boss_state = BossState.IDLE
     sm.boss_current_task = None
     sm.turn_active = False
+    sm.tool_activity.clear_all()
+    sm.boss_activity = None
+    for agent in sm.agents.values():
+        agent.activity = None
 
 
 def _handle_background_task_notification(sm: "StateMachine", event: AnyEvent) -> None:
@@ -558,6 +576,7 @@ class StateMachine:
     boss_state: BossState = BossState.IDLE
     boss_bubble: BubbleContent | None = None
     boss_current_task: str | None = None  # Summarized user prompt
+    boss_activity: Activity | None = None  # Mirrors tool_activity for "main"
     elevator_state: ElevatorState = ElevatorState.CLOSED
     agents: dict[str, Agent] = field(default_factory=_empty_agents)
     arrival_queue: list[str] = field(default_factory=_empty_str_list)
@@ -590,6 +609,10 @@ class StateMachine:
 
     # Whiteboard tracking delegated to WhiteboardTracker
     whiteboard: WhiteboardTracker = field(default_factory=WhiteboardTracker)
+
+    # Mapped tools in flight per character ("main" or agent id), which decide
+    # where each character walks (archive / server room).
+    tool_activity: ToolActivityTracker = field(default_factory=ToolActivityTracker)
 
     # Wall-clock timestamp of the most recent event routed through ``transition``
     # for this session (ARC-015). Used by ``EventProcessor.evict_idle_sessions``
@@ -632,6 +655,7 @@ class StateMachine:
             state=self.boss_state,
             current_task=self.boss_current_task,
             bubble=self.boss_bubble,
+            activity=self.boss_activity,
         )
 
         desk_count = min(
@@ -708,6 +732,7 @@ class StateMachine:
             self.arrival_queue.remove(agent_id)
         if agent_id in self.handin_queue:
             self.handin_queue.remove(agent_id)
+        self.tool_activity.clear(agent_id)
 
     def transition(self, event: AnyEvent) -> None:
         """Process an event and update state accordingly.
@@ -738,6 +763,38 @@ class StateMachine:
                     exc_info=True,
                 )
                 raise
+
+    def tool_character_id(self, event: ToolEvent) -> str:
+        """Which character a tool event belongs to: ``"main"`` or an agent id.
+
+        Producers that know the office agent id send it as ``agent_id``. Claude
+        Code tool calls made inside a subagent only carry the subagent's
+        native id (forwarded by the hook as ``native_agent_id``). It resolves
+        like a SUBAGENT_STOP: the agent linked to that native id, else the
+        oldest agent still waiting for its SUBAGENT_INFO link (late-linked
+        here), else ``subagent_<native id>`` — the PRE_TOOL_USE handler then
+        creates that one as a ghost agent.
+        """
+        if event.data.agent_id:
+            return event.data.agent_id
+        native_id = event.data.native_agent_id
+        if not native_id:
+            return "main"
+        resolved = resolve_agent_for_stop(
+            agents=self.agents,
+            arrival_queue=self.arrival_queue,
+            agent_id=None,
+            native_agent_id=native_id,
+        )
+        return resolved.agent_id if resolved else f"subagent_{native_id}"
+
+    def sync_activity(self, character_id: str) -> None:
+        """Copy a character's current activity onto the boss or its agent."""
+        activity = self.tool_activity.current(character_id)
+        if character_id == "main":
+            self.boss_activity = activity
+        elif character_id in self.agents:
+            self.agents[character_id].activity = activity
 
     def tool_to_thought(self, event: ToolEvent) -> BubbleContent:
         """Convert a tool use event to thought bubble content.

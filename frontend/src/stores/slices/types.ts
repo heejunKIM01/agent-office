@@ -7,6 +7,7 @@
  * "@/stores/gameStore"` consumers are unchanged.
  */
 import type {
+  Activity,
   Position,
   BubbleContent,
   BossState,
@@ -64,6 +65,7 @@ export interface AgentAnimationState {
   desk: number | null;
   backendState: BackendAgentState;
   currentTask: string | null;
+  activity: Activity | null; // Backend tool activity (archive / server room)
   characterType: string | null;
   parentSessionId: string | null;
   parentId: string | null;
@@ -105,6 +107,7 @@ export interface BossAnimationState {
   bubble: BubbleState;
   inUseBy: "arrival" | "departure" | null;
   currentTask: string | null;
+  activity: Activity | null; // Backend tool activity (archive / server room)
   isTyping: boolean; // True when boss is actively using tools (typing animation)
 }
 

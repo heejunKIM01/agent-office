@@ -188,6 +188,7 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
         backendState: backendAgent.state,
         name: backendAgent.name ?? null,
         currentTask: backendAgent.currentTask ?? null,
+        activity: backendAgent.activity ?? null,
       });
 
       // Enqueue bubbles for agents who are at their desk working.
@@ -230,6 +231,7 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
   // ---- Update boss state ----
   store.updateBossBackendState(state.boss.state);
   store.updateBossTask(state.boss.currentTask ?? null);
+  store.updateBossActivity(state.boss.activity ?? null);
 
   // Enqueue boss bubble if present.
   if (state.boss.bubble) {

@@ -137,6 +137,33 @@ _RAW_CASES: list[tuple[str, dict[str, Any], str]] = [
         },
         "post_tool_use",
     ),
+    # Tool call inside a subagent: Claude Code adds the subagent's native
+    # agent_id, forwarded as native_agent_id.
+    (
+        "pre_tool_use",
+        {
+            "session_id": "abc123",
+            "tool_name": "Grep",
+            "tool_use_id": "t_grep",
+            "tool_input": {"pattern": "TODO"},
+            "agent_id": "sa_1",
+            "agent_type": "Explore",
+        },
+        "pre_tool_use-in-subagent",
+    ),
+    # PostToolUseFailure is sent as a failed post_tool_use.
+    (
+        "post_tool_use_failure",
+        {
+            "session_id": "abc123",
+            "tool_name": "Bash",
+            "tool_use_id": "t_bash_fail",
+            "tool_input": {"command": "npm test"},
+            "error": "Exit code 1",
+            "is_interrupt": False,
+        },
+        "post_tool_use_failure-to-post_tool_use",
+    ),
     # Synchronous Task tool on post_tool_use remaps to subagent_stop. Response
     # must NOT carry ``agentId`` (that marks an async agent, which defers the
     # stop to the native SubagentStop hook).
