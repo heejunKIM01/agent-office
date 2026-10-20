@@ -8,6 +8,8 @@
 
 [![Watch the demo](https://img.shields.io/badge/YouTube-Demo-red?logo=youtube)](https://youtu.be/AM2UjKYB8Ew)
 
+> **포크 안내 (heejunKIM01/claude-office)** — 이 포크는 원본 사무실에 자료실 · 서버실을 더해, Claude Code 가 파일을 읽으면 자료실에서 책을 펴고 명령을 돌리면 서버실 랙 앞에 서고 막히면 그 자리에서 턱을 괴게 만든다. 무엇을 왜 만드는지는 [근거 문서](docs/plan/spec.md), 진행 상황은 [작업 분할](docs/plan/work-breakdown.md)에 있다.
+
 ## Table of Contents
 
 * [Screenshots](#screenshots)
