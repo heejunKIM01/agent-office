@@ -7,6 +7,15 @@
 
 import { Position } from "@/types";
 import { ELEVATOR_ZONE } from "./queuePositions";
+import {
+  ARCHIVE_ROOM,
+  PLANT_FOOTPRINT,
+  ROOM_DOOR_BOTTOM,
+  ROOM_DOOR_TOP,
+  ROOM_FURNITURE_BASE_Y,
+  SERVER_ROOM,
+  type RoomBounds,
+} from "@/constants/rooms";
 
 // Grid configuration
 export const TILE_SIZE = 32;
@@ -64,11 +73,13 @@ const BOSS_DESK_Y = 960; // Grid-aligned: 30*32 = 960
 const BOSS_DESK_HALF_WIDTH = 80 + OBSTACLE_PADDING;
 const BOSS_DESK_HALF_HEIGHT = 40 + OBSTACLE_PADDING;
 
-// Printer station (bottom left corner) - only bottom portion blocked
-const PRINTER_X = 50;
-const PRINTER_Y = 993;
-const PRINTER_HALF_WIDTH = 50 + OBSTACLE_PADDING;
-const PRINTER_HALF_HEIGHT = 12;
+// Side rooms (archive bottom-left, server room bottom-right). The top
+// partition plus the furniture standing against it block everything from the
+// room's top edge down to just above the furniture base, so the first walkable
+// row inside a room is the one characters stand on in front of a shelf/rack.
+// The printer stands in the archive's furniture band (constants/positions.ts).
+const ROOM_SIDE_WALL_WIDTH = 10;
+const ROOM_FURNITURE_BAND_END = ROOM_FURNITURE_BASE_Y - 4;
 
 // Trash can (right of boss desk)
 const TRASH_CAN_X = 640 + 110; // Boss position.x + offset
@@ -175,13 +186,17 @@ export class NavigationGrid {
       TileType.BOSS_DESK,
     );
 
-    // Mark printer station as obstacle
+    // Mark the archive and server room walls and furniture
+    this.markRoom(ARCHIVE_ROOM, ARCHIVE_ROOM.right - ROOM_SIDE_WALL_WIDTH);
+    this.markRoom(SERVER_ROOM, SERVER_ROOM.left);
+
+    // Mark the archive plant as obstacle
     this.markRectangle(
-      PRINTER_X - PRINTER_HALF_WIDTH,
-      PRINTER_Y - PRINTER_HALF_HEIGHT,
-      PRINTER_X + PRINTER_HALF_WIDTH,
-      PRINTER_Y + PRINTER_HALF_HEIGHT,
-      TileType.WALL, // Use WALL type for impassable
+      PLANT_FOOTPRINT.left,
+      PLANT_FOOTPRINT.top,
+      PLANT_FOOTPRINT.right,
+      PLANT_FOOTPRINT.bottom,
+      TileType.WALL,
     );
 
     // Mark trash can as obstacle
@@ -191,6 +206,34 @@ export class NavigationGrid {
       TRASH_CAN_X + TRASH_CAN_HALF_WIDTH,
       TRASH_CAN_Y + TRASH_CAN_HALF_HEIGHT,
       TileType.WALL, // Use WALL type for impassable
+    );
+  }
+
+  /**
+   * Mark a side room: the top partition and furniture band across the whole
+   * room, plus the inner side partition except for its door gap.
+   */
+  private markRoom(room: RoomBounds, sideWallX: number): void {
+    this.markRectangle(
+      room.left,
+      room.top,
+      room.right,
+      ROOM_FURNITURE_BAND_END,
+      TileType.WALL,
+    );
+    this.markRectangle(
+      sideWallX,
+      room.top,
+      sideWallX + ROOM_SIDE_WALL_WIDTH,
+      ROOM_DOOR_TOP,
+      TileType.WALL,
+    );
+    this.markRectangle(
+      sideWallX,
+      ROOM_DOOR_BOTTOM,
+      sideWallX + ROOM_SIDE_WALL_WIDTH,
+      room.bottom,
+      TileType.WALL,
     );
   }
 

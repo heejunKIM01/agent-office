@@ -96,6 +96,7 @@ import {
 import { ZoomControls } from "./ZoomControls";
 import { LoadingScreen } from "./LoadingScreen";
 import { OfficeBackground } from "./OfficeBackground";
+import { OfficeRooms } from "./OfficeRooms";
 
 // Register PixiJS components
 extend({ Container, Text, Graphics, Sprite });
@@ -361,6 +362,9 @@ export function OfficeGame(): ReactNode {
                   {/* Floor and walls */}
                   <OfficeBackground floorTileTexture={textures.floorTile} />
 
+                  {/* Archive and server room (floors, partitions, furniture) */}
+                  <OfficeRooms />
+
                   {/* Boss area rug - rendered right after floor */}
                   {textures.bossRug && (
                     <pixiSprite
@@ -433,7 +437,7 @@ export function OfficeGame(): ReactNode {
                     />
                   )}
 
-                  {/* Printer station - bottom left corner */}
+                  {/* Printer station - inside the archive */}
                   {/* Only print after boss delivers the completion message */}
                   <PrinterStation
                     x={PRINTER_STATION_POSITION.x}
@@ -445,7 +449,7 @@ export function OfficeGame(): ReactNode {
                     printerTexture={textures.printer}
                   />
 
-                  {/* Plant - to the right of printer */}
+                  {/* Plant - archive corner */}
                   {textures.plant && (
                     <pixiSprite
                       texture={textures.plant}

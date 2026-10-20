@@ -185,6 +185,10 @@ const en = {
   // Loading Screen
   "loading.office": "Loading office...",
 
+  // Office rooms
+  "office.archive": "ARCHIVE",
+  "office.serverRoom": "SERVER ROOM",
+
   // Zoom Controls
   "zoom.in": "Zoom in",
   "zoom.out": "Zoom out",

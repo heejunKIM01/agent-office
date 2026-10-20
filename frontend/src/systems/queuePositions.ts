@@ -127,34 +127,33 @@ export function isInElevatorZone(pos: Position): boolean {
   );
 }
 
-// Arrival queue positions (left side, horizontal then vertical L-shape)
+// The bottom corners are the archive and server room (constants/rooms.ts), so
+// both lines turn up the corridor between desk columns right after the ready
+// spot instead of running along the bottom edge. Corridor centers: x=384
+// (between desk columns 0 and 1) and x=896 (between columns 2 and 3).
+// MAX_AGENTS is 8 on the backend, so 8 slots never overflow.
+const QUEUE_SPACING = 90;
+
+// Arrival queue positions (left side, L-shape up the x=384 corridor)
 // Position 0 (A0) is the "ready" spot where agent waits before approaching boss
 // Position 1+ are waiting spots in the queue line
-// A0-A2: horizontal along bottom, A3-A7: vertical going up (above printer)
 export const ARRIVAL_QUEUE_POSITIONS: Position[] = [
   { x: 480, y: 930 }, // Position 0 (A0 - ready spot, left of boss desk)
-  { x: 330, y: 930 }, // Position 1 (first waiting spot)
-  { x: 190, y: 930 }, // Position 2 (horizontal)
-  { x: 70, y: 820 }, // Position 3 (moved up - above printer)
-  { x: 70, y: 710 }, // Position 4 (vertical going up)
-  { x: 70, y: 600 }, // Position 5
-  { x: 70, y: 490 }, // Position 6
-  { x: 70, y: 380 }, // Position 7
+  ...Array.from({ length: 7 }, (_, i) => ({
+    x: 384,
+    y: 850 - i * QUEUE_SPACING,
+  })), // Positions 1-7 going up the corridor
 ];
 
-// Departure queue positions (right side, horizontal then vertical L-shape)
+// Departure queue positions (right side, L-shape up the x=896 corridor)
 // Position 0 (D0) is the "ready" spot where agent waits before approaching boss
 // Position 1+ are waiting spots in the queue line
-// D0-D3: horizontal along bottom, D4-D7: vertical going up
 export const DEPARTURE_QUEUE_POSITIONS: Position[] = [
   { x: 800, y: 930 }, // Position 0 (D0 - ready spot, right of boss desk)
-  { x: 950, y: 930 }, // Position 1 (first waiting spot)
-  { x: 1090, y: 930 }, // Position 2 (horizontal)
-  { x: 1210, y: 930 }, // Position 3 (corner)
-  { x: 1210, y: 820 }, // Position 4 (vertical going up)
-  { x: 1210, y: 710 }, // Position 5
-  { x: 1210, y: 600 }, // Position 6
-  { x: 1210, y: 490 }, // Position 7
+  ...Array.from({ length: 7 }, (_, i) => ({
+    x: 896,
+    y: 850 - i * QUEUE_SPACING,
+  })), // Positions 1-7 going up the corridor
 ];
 
 export type QueueType = "arrival" | "departure";

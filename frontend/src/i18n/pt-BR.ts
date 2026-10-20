@@ -188,6 +188,10 @@ const ptBR: Record<TranslationKey, string> = {
   // Loading Screen
   "loading.office": "Carregando escritório...",
 
+  // Office rooms
+  "office.archive": "ARQUIVO",
+  "office.serverRoom": "SALA DE SERVIDORES",
+
   // Zoom Controls
   "zoom.in": "Aumentar zoom",
   "zoom.out": "Diminuir zoom",
