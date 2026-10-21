@@ -8,7 +8,7 @@
 
 import * as THREE from "three";
 import type { Furniture, IsoSpot } from "@/constants/isoFloorPlan";
-import { globeSpeed, type NoteStatus } from "@/systems/roomGimmicks";
+import { globeSpeed, lampLit, type NoteStatus } from "@/systems/roomGimmicks";
 import { material } from "./isoFurniture";
 import { ISO_COLORS } from "./isoPalette";
 import type { RoomsInUse } from "./isoPeople";
@@ -29,6 +29,9 @@ const DOOR_CLOSED_X = 0.58;
 const DOOR_SLIDE = 0.5;
 /** An open door narrows to this share of its width in its pocket. */
 const DOOR_OPEN_WIDTH = 0.2;
+/** The lamp over the elevator door when lit, and its arrow's opacity when not. */
+const LAMP_COLOR = "#f5b942";
+const ARROW_DIM = 0.3;
 /** The TV cuts to a new scene this often while someone watches (s). */
 const TV_SCENE_SECONDS = 4;
 /** A to-do note's colour by status, and the board's notes before any list. */
@@ -184,6 +187,15 @@ export class IsoEffects {
   private readonly notes: THREE.Mesh[] = [];
   private readonly globes: THREE.Object3D[] = [];
   private globeTurn = 0;
+  private lamp: {
+    mesh: THREE.Mesh;
+    off: THREE.Material | THREE.Material[];
+  } | null = null;
+  private arrow: THREE.MeshBasicMaterial | null = null;
+  private readonly lampOn = new THREE.MeshBasicMaterial({
+    color: LAMP_COLOR,
+  });
+  private lastArrival: number | null = null;
 
   constructor(office: THREE.Object3D) {
     const found: { whiteboard?: THREE.Object3D } = {};
@@ -201,6 +213,16 @@ export class IsoEffects {
         this.notes[object.userData.todoNote] = object;
       }
       if (object.userData.globeSpin) this.globes.push(object);
+      if (object.userData.elevatorLamp && object instanceof THREE.Mesh) {
+        this.lamp = { mesh: object, off: object.material };
+      }
+      if (
+        object.userData.elevatorArrow &&
+        object instanceof THREE.Mesh &&
+        object.material instanceof THREE.MeshBasicMaterial
+      ) {
+        this.arrow = object.material;
+      }
       if (object.userData.tvScreen && object instanceof THREE.Mesh) {
         this.tv = { mesh: object, off: object.material };
       }
@@ -280,6 +302,12 @@ export class IsoEffects {
       }
     }
 
+    // The lamp over the elevator: dark until someone steps out.
+    if (inUse.arriving) this.lastArrival = seconds;
+    const lit = lampLit(this.lastArrival, seconds);
+    if (this.lamp) this.lamp.mesh.material = lit ? this.lampOn : this.lamp.off;
+    if (this.arrow) this.arrow.opacity = lit ? 1 : ARROW_DIM;
+
     this.globeTurn = globeSpeed(this.globeTurn, inUse.browsing, dt);
     for (const globe of this.globes) globe.rotation.y += this.globeTurn * dt;
 
@@ -297,6 +325,7 @@ export class IsoEffects {
     this.code.dispose();
     this.codeMaterial.dispose();
     this.tvOn.dispose();
+    this.lampOn.dispose();
     if (this.board) {
       this.board.texture.dispose();
       this.board.mesh.geometry.dispose();
