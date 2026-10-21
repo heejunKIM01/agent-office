@@ -41,7 +41,17 @@ def _tool(event_type: EventType, tool_name: str, tool_use_id: str | None, **data
 class TestActivityForTool:
     @pytest.mark.parametrize(
         "tool_name",
-        ["Read", "Grep", "Glob", "LS", "NotebookRead", "read", "read_file", "grep_search"],
+        [
+            "Read",
+            "Grep",
+            "Glob",
+            "LS",
+            "NotebookRead",
+            "read",
+            "read_file",
+            "grep_search",
+            "view_image",
+        ],
     )
     def test_reading_tools(self, tool_name: str) -> None:
         assert activity_for_tool(tool_name) == Activity.READING
@@ -79,9 +89,18 @@ class TestActivityForTool:
     def test_room_tools(self, tool_name: str, activity: Activity) -> None:
         assert activity_for_tool(tool_name) == activity
 
-    @pytest.mark.parametrize("tool_name", ["Task", "SlashCommand", "mcp_x", "", None])
+    @pytest.mark.parametrize(
+        "tool_name", ["Task", "spawn_agent", "wait_agent", "SlashCommand", "mcp_x", "", None]
+    )
     def test_other_tools_have_no_activity(self, tool_name: str | None) -> None:
         assert activity_for_tool(tool_name) is None
+
+    @pytest.mark.parametrize("tool_name", ["Task", "Agent", "spawn_agent"])
+    def test_handing_out_work_puts_the_boss_on_delegating(self, tool_name: str) -> None:
+        sm = StateMachine()
+        sm.transition(_tool(EventType.PRE_TOOL_USE, tool_name, "d1"))
+        assert sm.boss_state.value == "delegating"
+        assert sm.boss_bubble is None
 
 
 class TestToolActivityTracker:

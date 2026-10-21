@@ -52,6 +52,8 @@ READING_TOOLS: frozenset[str] = frozenset(
         "grep_search",
         "search_file_content",
         "list_directory",
+        # Codex CLI (it reads files with the shell; see READ_ONLY_PROGRAMS)
+        "view_image",
     }
 )
 
@@ -128,8 +130,8 @@ ASKING_TOOLS: frozenset[str] = frozenset(
 )
 
 
-# Tools that hand work to a subagent (Claude Code, OpenCode).
-SUBAGENT_TOOLS: frozenset[str] = frozenset({"task", "agent"})
+# Tools that hand work to a subagent (Claude Code, OpenCode; Codex CLI's spawn_agent).
+SUBAGENT_TOOLS: frozenset[str] = frozenset({"task", "agent", "spawn_agent"})
 
 # Tools that rewrite the todo list from a `todos` input (Claude Code and
 # OpenCode `TodoWrite`/`todowrite`, Gemini CLI `write_todos`).
