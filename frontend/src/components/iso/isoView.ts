@@ -14,6 +14,7 @@ import {
 } from "@/constants/isoFloorPlan";
 import type { IsoPerson } from "@/systems/officePeople";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
+import type { BubbleWords } from "./isoBubbles";
 import { IsoEffects } from "./isoEffects";
 import { IsoPeople } from "./isoPeople";
 
@@ -31,6 +32,7 @@ const MAX_STEP_SECONDS = 0.1;
 
 export interface IsoView {
   setPeople(people: IsoPerson[]): void;
+  setBubbleWords(words: BubbleWords): void;
   zoomBy(factor: number): void;
   resetView(): void;
   dispose(): void;
@@ -223,6 +225,9 @@ export function createIsoView(container: HTMLElement): IsoView {
   return {
     setPeople(list: IsoPerson[]): void {
       people.sync(list);
+    },
+    setBubbleWords(words: BubbleWords): void {
+      people.setWords(words);
     },
     zoomBy(factor: number): void {
       camera.zoom = THREE.MathUtils.clamp(

@@ -146,6 +146,17 @@ describe("iso errands", () => {
     expect(movedOn.walker).toMatchObject({ goal: "server", pose: "work" });
   });
 
+  it("a person stuck on the way stops right there", () => {
+    const halfway = run(seatedWalker(SEAT), "reading", 1);
+    const stuck = run(halfway.walker, null, 2, halfway.now, true);
+    expect(stuck.walker).toMatchObject({
+      x: halfway.walker.x,
+      z: halfway.walker.z,
+      path: null,
+      pose: "work",
+    });
+  });
+
   it("sits still with nothing to do", () => {
     const { walker } = run(seatedWalker(SEAT), null, 2);
     expect(walker).toEqual(seatedWalker(SEAT));

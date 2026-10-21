@@ -198,6 +198,9 @@ const ptBR: Record<TranslationKey, string> = {
     "Arraste para mover · Role para ampliar · Clique duplo para redefinir",
   "iso.me": "Eu",
   "iso.agentType.general": "Geral",
+  "iso.bubble.thinking": "Pensando",
+  "iso.bubble.thinkingFor": "Pensando há {seconds}s",
+  "iso.bubble.looking": "Verificando",
 
   // Zoom Controls
   "zoom.in": "Aumentar zoom",

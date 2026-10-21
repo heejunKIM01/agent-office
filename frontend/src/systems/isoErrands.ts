@@ -4,8 +4,8 @@
  * stays ERRAND_LINGER_MS after the tool ends, finishing the walk first
  * (rule 2), turns at once when another tool starts, even mid-walk (rule 3),
  * and otherwise walks back to its seat and sits down (rule 4). Editing is
- * done at its own desk. A stuck person (a failed tool) does not move until
- * it moves on (rule 7).
+ * done at its own desk. A stuck person (a failed tool) stops where it is,
+ * even mid-walk, and does not move until it moves on (rule 7).
  *
  * `stepIsoWalker` is pure: the path finder and the spot a walker holds in a
  * room are passed in.
@@ -141,7 +141,12 @@ export function stepIsoWalker(
   walker: IsoWalker,
   input: IsoWalkerInput,
 ): IsoWalker {
-  if (input.stuck) return advance({ ...walker, lingerUntil: null }, input);
+  // Stuck: it stops right where it is, even mid-walk, and ponders there.
+  if (input.stuck) {
+    return walker.path || walker.lingerUntil !== null
+      ? { ...walker, path: null, pose: "work", lingerUntil: null }
+      : walker;
+  }
   const wanted = input.activity ? ROOM_FOR_ACTIVITY[input.activity] : null;
   let next = walker;
   if (wanted) {

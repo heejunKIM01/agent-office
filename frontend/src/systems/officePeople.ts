@@ -8,8 +8,12 @@
  * tool keeps it where it is (R3).
  */
 
-import type { Activity, StuckReason } from "@/types";
-import type { AgentAnimationState, AgentPhase } from "@/stores/slices/types";
+import type { Activity, BubbleContent, StuckReason } from "@/types";
+import type {
+  AgentAnimationState,
+  AgentPhase,
+  BubbleState,
+} from "@/stores/slices/types";
 
 export type PersonKind = "claude" | "me" | "subagent";
 
@@ -21,6 +25,11 @@ export interface IsoPerson {
   activity: Activity | null;
   /** A failed tool: it ponders where it is. */
   stuck: boolean;
+  /** Its latest bubble from the backend, and when it arrived (Date.now ms). */
+  bubble: BubbleContent | null;
+  bubbleAt: number | null;
+  /** Working with no tool running: it is thinking. */
+  thinking: boolean;
 }
 
 /** Words the chips need, already translated. */
@@ -31,6 +40,10 @@ export interface PeopleWords {
   /** Shown for the "general-purpose" subagent type. */
   generalType: string;
 }
+
+/** Backend states of a subagent still at its task (it has not reported back). */
+const AT_WORK_STATES: ReadonlySet<AgentAnimationState["backendState"]> =
+  new Set(["arriving", "walking_to_desk", "working", "thinking"]);
 
 /** Subagents in these phases have left the floor (the 2D office walks them out). */
 const LEFT_PHASES: ReadonlySet<AgentPhase> = new Set([
@@ -59,10 +72,21 @@ function doing(
   };
 }
 
+const said = (bubble: BubbleState): Pick<IsoPerson, "bubble" | "bubbleAt"> => ({
+  bubble: bubble.content,
+  bubbleAt: bubble.displayStartTime,
+});
+
 /** Everyone to show, Claude and me first. */
 export function officePeople(
   state: {
-    boss: { activity: Activity | null; stuck: StuckReason | null };
+    boss: {
+      activity: Activity | null;
+      stuck: StuckReason | null;
+      bubble: BubbleState;
+      /** Set while the boss is quiet mid-turn (see stateReconciler). */
+      quietSince: number | null;
+    };
     agents: Map<string, AgentAnimationState>;
   },
   words: PeopleWords,
@@ -73,8 +97,19 @@ export function officePeople(
       kind: "claude",
       label: words.agentName,
       ...doing(state.boss.activity, state.boss.stuck),
+      ...said(state.boss.bubble),
+      thinking: state.boss.quietSince !== null,
     },
-    { id: "me", kind: "me", label: words.me, activity: null, stuck: false },
+    {
+      id: "me",
+      kind: "me",
+      label: words.me,
+      activity: null,
+      stuck: false,
+      bubble: null,
+      bubbleAt: null,
+      thinking: false,
+    },
   ];
   for (const agent of state.agents.values()) {
     if (LEFT_PHASES.has(agent.phase)) continue;
@@ -83,6 +118,11 @@ export function officePeople(
       kind: "subagent",
       label: subagentLabel(agent, words),
       ...doing(agent.activity, agent.stuck),
+      ...said(agent.bubble),
+      thinking:
+        AT_WORK_STATES.has(agent.backendState) &&
+        !agent.activity &&
+        !agent.stuck,
     });
   }
   return people;
