@@ -102,6 +102,10 @@ export const ISO_COLORS = {
   bookCover: "#d9534f",
   bookPages: "#fbf8f1",
   cup: "#f4f1ec",
+  /** Sticky notes: still to do, in progress, done. */
+  notePending: "#9cc3f5",
+  noteInProgress: "#f7d774",
+  noteDone: "#9ee0a8",
   watchBand: "#2a2d33",
   watchFace: "#f2f4f7",
   coffee: "#6b4226",

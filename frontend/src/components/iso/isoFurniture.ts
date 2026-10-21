@@ -225,20 +225,40 @@ function meetingChair(): THREE.Group {
   );
 }
 
+/** Rows and columns of the to-do sticky notes on the whiteboard's top left. */
+const NOTE_COLUMNS = 4;
+const NOTE_ROWS = 3;
+
 /**
  * A wide board with sticky notes and a little diagram across its top half;
  * the bottom half is left clear for planning to write on (see isoEffects).
+ * The notes are a grid of slots isoEffects fills, one per to-do.
  */
 function whiteboard(): THREE.Group {
   const line = "#3a4250";
+  const notes: THREE.Mesh[] = [];
+  for (let i = 0; i < NOTE_COLUMNS * NOTE_ROWS; i++) {
+    const column = i % NOTE_COLUMNS;
+    const row = Math.floor(i / NOTE_COLUMNS);
+    const note = box(
+      0.26,
+      0.2,
+      0.02,
+      C.notePending,
+      -1.98 + column * 0.3,
+      2.25 - row * 0.25,
+      0.06,
+      { shadow: false },
+    );
+    note.userData.todoNote = i;
+    notes.push(note);
+  }
   return group(
     box(4.6, 1.6, 0.06, C.whiteboardFrame, 0, 1.0, 0),
     box(4.44, 1.44, 0.02, C.whiteboard, 0, 1.08, 0.04, {
       emissive: C.boardGlow,
     }),
-    box(0.32, 0.26, 0.02, "#9cc3f5", -1.85, 1.95, 0.06),
-    box(0.32, 0.26, 0.02, "#f7d774", -1.45, 2.0, 0.06),
-    box(0.32, 0.26, 0.02, "#9ee0a8", -1.05, 1.95, 0.06),
+    ...notes,
     box(0.9, 0.44, 0.02, "#e86b6b", -0.2, 1.72, 0.06),
     box(0.8, 0.36, 0.02, C.whiteboard, -0.2, 1.76, 0.07),
     box(0.9, 0.44, 0.02, "#5b8de0", 1.15, 1.72, 0.06),

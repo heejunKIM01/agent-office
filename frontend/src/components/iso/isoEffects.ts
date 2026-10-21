@@ -8,6 +8,9 @@
 
 import * as THREE from "three";
 import type { Furniture, IsoSpot } from "@/constants/isoFloorPlan";
+import type { NoteStatus } from "@/systems/roomGimmicks";
+import { material } from "./isoFurniture";
+import { ISO_COLORS } from "./isoPalette";
 import type { RoomsInUse } from "./isoPeople";
 
 /** Blink speed of the rack lights (rad/s), idle and while a command runs. */
@@ -28,6 +31,17 @@ const DOOR_SLIDE = 0.5;
 const DOOR_OPEN_WIDTH = 0.2;
 /** The TV cuts to a new scene this often while someone watches (s). */
 const TV_SCENE_SECONDS = 4;
+/** A to-do note's colour by status, and the board's notes before any list. */
+const NOTE_COLORS: Record<NoteStatus, string> = {
+  pending: ISO_COLORS.notePending,
+  in_progress: ISO_COLORS.noteInProgress,
+  completed: ISO_COLORS.noteDone,
+};
+const DEFAULT_NOTES: readonly NoteStatus[] = [
+  "pending",
+  "in_progress",
+  "completed",
+];
 
 const CODE_COLORS = [
   "#7dd3fc",
@@ -166,6 +180,8 @@ export class IsoEffects {
     off: THREE.Material | THREE.Material[];
   } | null = null;
   private readonly tvOn = new THREE.MeshBasicMaterial();
+  /** The whiteboard's to-do note slots, in order. */
+  private readonly notes: THREE.Mesh[] = [];
 
   constructor(office: THREE.Object3D) {
     const found: { whiteboard?: THREE.Object3D } = {};
@@ -175,6 +191,12 @@ export class IsoEffects {
       }
       if (typeof object.userData.elevatorDoor === "number") {
         this.doors.push({ mesh: object, side: object.userData.elevatorDoor });
+      }
+      if (
+        typeof object.userData.todoNote === "number" &&
+        object instanceof THREE.Mesh
+      ) {
+        this.notes[object.userData.todoNote] = object;
       }
       if (object.userData.tvScreen && object instanceof THREE.Mesh) {
         this.tv = { mesh: object, off: object.material };
@@ -192,6 +214,20 @@ export class IsoEffects {
       }
     });
     if (found.whiteboard) this.board = makeBoard(found.whiteboard);
+    this.setNotes(null);
+  }
+
+  /**
+   * Stick a note on the whiteboard per to-do, coloured by its status. With
+   * no list yet the board keeps three plain notes, as it always had.
+   */
+  setNotes(statuses: readonly NoteStatus[] | null): void {
+    const shown = statuses ?? DEFAULT_NOTES;
+    this.notes.forEach((note, i) => {
+      const status = shown[i];
+      note.visible = status !== undefined;
+      if (status) note.material = material(NOTE_COLORS[status]);
+    });
   }
 
   /** Bring the rooms up to date for this frame; ``seconds`` is the clock. */
