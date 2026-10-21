@@ -39,41 +39,41 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-[2px] animate-in fade-in duration-200"
       onClick={dismissible ? onClose : undefined}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white border border-slate-200/80 rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden text-slate-800 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 flex-shrink-0">
           <h2
             id={titleId}
-            className="text-lg font-bold text-white tracking-tight"
+            className="text-[15px] font-bold text-slate-800 tracking-tight"
           >
             {title}
           </h2>
           <button
             onClick={onClose}
             aria-label={t("modal.close")}
-            className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-6 text-slate-300 text-sm leading-relaxed overflow-y-auto flex-1 min-h-0">
+        <div className="px-5 py-5 text-slate-600 text-sm leading-relaxed overflow-y-auto flex-1 min-h-0">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex-shrink-0">
+          <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-slate-100 bg-slate-50/60 flex-shrink-0">
             {footer}
           </div>
         )}
