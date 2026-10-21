@@ -191,6 +191,7 @@ const en = {
   // Isometric office
   "iso.live": "LIVE",
   "iso.offline": "OFFLINE",
+  "iso.classic": "2D office",
   "iso.controlsHint": "Drag to move · Scroll to zoom · Double-click to reset",
   "iso.me": "Me",
   "iso.agentType.general": "General",
