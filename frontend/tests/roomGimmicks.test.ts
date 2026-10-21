@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  GLOBE_SPIN_SPEED,
   MAX_NOTES,
   WATCH_AFTER_MS,
+  globeSpeed,
   latestTodoNotes,
   todoNotes,
   watchesTheClock,
@@ -46,5 +48,18 @@ describe("todoNotes", () => {
     ];
     expect(latestTodoNotes(log)).toEqual(["completed"]);
     expect(latestTodoNotes([])).toBeNull();
+  });
+});
+
+describe("globeSpeed", () => {
+  it("winds up to full speed while searching and down to still after", () => {
+    let speed = 0;
+    for (let i = 0; i < 30; i++) speed = globeSpeed(speed, true, 0.1);
+    expect(speed).toBe(GLOBE_SPIN_SPEED);
+    const easing = globeSpeed(speed, false, 0.1);
+    expect(easing).toBeGreaterThan(0);
+    expect(easing).toBeLessThan(GLOBE_SPIN_SPEED);
+    for (let i = 0; i < 30; i++) speed = globeSpeed(speed, false, 0.1);
+    expect(speed).toBe(0);
   });
 });

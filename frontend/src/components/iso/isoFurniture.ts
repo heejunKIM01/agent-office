@@ -391,12 +391,16 @@ function globe(): THREE.Group {
     material(C.globeLand),
   );
   land2.position.copy(sphere.position);
+  // The ball turns while someone searches the web (isoEffects).
+  const ball = new THREE.Group();
+  ball.position.copy(sphere.position);
+  for (const part of [sphere, land, land2]) part.position.set(0, 0, 0);
+  ball.add(sphere, land, land2);
+  ball.userData.globeSpin = true;
   return group(
     cylinder(0.36, 0.4, 0.06, C.shelfWood, 0, 0, 0),
     cylinder(0.05, 0.05, 0.9, C.shelfWood, 0, 0.06, 0),
-    sphere,
-    land,
-    land2,
+    ball,
   );
 }
 
