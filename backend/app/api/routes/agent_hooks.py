@@ -1,7 +1,8 @@
 """API routes that connect coding agents to the office from the browser.
 
 ``POST`` runs a command on this computer and rewrites an agent's settings file,
-so ``ApiKeyMiddleware`` gates it like the other side-effecting endpoints.
+so ``ApiKeyMiddleware`` lets it through only from the office page itself (by its
+Origin) or with the launch token.
 """
 
 import shutil

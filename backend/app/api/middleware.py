@@ -4,11 +4,13 @@ Moved out of ``app.main`` in ARC-023. The trust boundary and auth behavior
 live here: ``LocalhostOnlyMiddleware`` restricts access to the loopback
 interface, and ``ApiKeyMiddleware`` gates state-changing endpoints behind
 either an explicit user-configured key or the per-launch auto-generated
-token (SEC-001 / SEC-002 / SEC-006). Logic is unchanged from the prior
-inline version in ``main.py``.
+token (SEC-001 / SEC-002 / SEC-006). The one exception is connecting a coding
+agent from the office page itself, recognised by its Origin
+(``office_page_origins``, which also gates browser WebSocket handshakes).
 """
 
 import hmac
+from urllib.parse import urlparse
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -22,6 +24,24 @@ from app.config import get_settings
 settings = get_settings()
 
 _LOCALHOST_HOSTS = frozenset({"127.0.0.1", "::1", "localhost", "testclient"})
+
+# Loopback hosts the office page may be served from. Its origins are
+# ``settings.BACKEND_CORS_ORIGINS`` filtered to these hosts, so a CORS-config
+# change can never widen the trust boundary beyond the local machine (QA-014).
+_LOOPBACK_ORIGIN_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def office_page_origins() -> frozenset[str]:
+    """Origins the office page itself is served from.
+
+    A browser WebSocket handshake must come from one of these, and so must an
+    agent connect sent without the launch token.
+    """
+    return frozenset(
+        origin.rstrip("/")
+        for origin in settings.BACKEND_CORS_ORIGINS
+        if urlparse(origin).hostname in _LOOPBACK_ORIGIN_HOSTS
+    )
 
 
 class LocalhostOnlyMiddleware(BaseHTTPMiddleware):
@@ -51,6 +71,11 @@ class LocalhostOnlyMiddleware(BaseHTTPMiddleware):
 _NO_AUTH_PATHS = frozenset({"/health", "/docs", "/redoc"})
 
 
+def _is_agent_connect(path: str, method: str) -> bool:
+    """Connecting or disconnecting a coding agent (``POST /hooks/...``)."""
+    return path.startswith(f"{settings.API_V1_STR}/hooks/") and method == "POST"
+
+
 def _is_state_changing(path: str, method: str) -> bool:
     """Return True if the request targets a destructive or side-effecting endpoint.
 
@@ -67,7 +92,7 @@ def _is_state_changing(path: str, method: str) -> bool:
         (path == prefix and method == "DELETE")
         or (path == f"{prefix}/simulate" and method == "POST")
         or (path.startswith(f"{prefix}/") and path.endswith("/focus") and method == "POST")
-        or (path.startswith(f"{settings.API_V1_STR}/hooks/") and method == "POST")
+        or _is_agent_connect(path, method)
     )
 
 
@@ -77,7 +102,8 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
     * When ``CLAUDE_OFFICE_API_KEY`` is explicitly set, ALL non-public paths
       require the key (existing behaviour).
     * When the key is empty (default), state-changing endpoints still require
-      the per-launch auto-generated token (``settings.effective_api_key``).
+      the per-launch auto-generated token (``settings.effective_api_key``),
+      except an agent connect sent by the office page (see below).
       Read-only paths remain open for backwards compatibility.
     """
 
@@ -99,6 +125,19 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
         )
 
         if not requires_auth:
+            return await call_next(request)
+
+        # The settings page connects agents without the launch token, which it
+        # has no way to get. A browser always sends Origin on a POST and a page
+        # cannot fake it, so another site (or DNS rebinding, whose Origin names
+        # the attacker's host) still needs the token, and so does a client that
+        # sends no Origin. An explicit key keeps gating everything.
+        origin = request.headers.get("origin", "").rstrip("/")
+        if (
+            not settings.has_explicit_key
+            and _is_agent_connect(request.url.path, request.method)
+            and origin in office_page_origins()
+        ):
             return await call_next(request)
 
         provided = request.headers.get("X-API-Key", "")

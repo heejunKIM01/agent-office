@@ -78,22 +78,49 @@ class TestHooksApi:
         assert agents[0]["settings_path"] == "~/.claude/settings.json"
         assert not any(a["connected"] for a in agents)
 
-    def test_running_needs_the_launch_token(
-        self, home: Path, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize(
+        "origin",
+        [
+            None,  # curl and other clients that send no Origin
+            "https://evil.example",  # another site in the same browser
+            "http://attacker.test:8000",  # DNS rebinding: Origin names the attacker's host
+            "http://0.0.0.0:4747",  # in the CORS list, but not a loopback host
+            "null",
+        ],
+    )
+    def test_anyone_but_the_office_page_needs_the_launch_token(
+        self, home: Path, monkeypatch: pytest.MonkeyPatch, origin: str | None
     ) -> None:
         async def must_not_run(hook: AgentHook, action: str) -> tuple[bool, str, str]:
             raise AssertionError("ran without the launch token")
 
         monkeypatch.setattr("app.api.routes.agent_hooks.run_hook_action", must_not_run)
-        res = client.post("/api/v1/hooks/claude-code/install")
+        headers = {"Origin": origin} if origin else {}
+        res = client.post("/api/v1/hooks/claude-code/install", headers=headers)
         assert res.status_code == 401
 
-    def test_the_page_can_read_the_missing_token_answer(self, home: Path) -> None:
+    def test_the_office_page_connects_without_the_token(
+        self, home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async def fake_run(hook: AgentHook, action: str) -> tuple[bool, str, str]:
+            return True, " ".join(hook.install), "Done!"
+
+        monkeypatch.setattr("app.api.routes.agent_hooks.run_hook_action", fake_run)
+        monkeypatch.setattr("app.api.routes.agent_hooks.unavailable_reason", lambda: None)
+        res = client.post(
+            "/api/v1/hooks/claude-code/install", headers={"Origin": "http://localhost:4747"}
+        )
+        assert res.status_code == 200
+        assert res.json()["ok"]
+
+    def test_an_explicit_key_gates_the_office_page_too(
+        self, home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(get_settings(), "CLAUDE_OFFICE_API_KEY", "explicit-key")
         res = client.post(
             "/api/v1/hooks/claude-code/install", headers={"Origin": "http://localhost:4747"}
         )
         assert res.status_code == 401
-        assert res.headers.get("access-control-allow-origin") == "http://localhost:4747"
 
     def test_unknown_agent_or_action(self, home: Path) -> None:
         assert (

@@ -36,7 +36,7 @@ make dev         # 백엔드 :8000 + 프런트 :4747
 
 브라우저로 <http://localhost:4747> 을 연다. 이벤트를 넣는 방법은 넷이다.
 
-1. **실제 Claude Code 에 연결** — 브라우저에서 한다: 백엔드 터미널에 찍힌 `Agent Office: http://localhost:4747/?token=…` 주소로 열고 ⚙ 설정 → 「연결」 탭에서 「연결」을 누른다(빈 사무실의 「에이전트 연결」 버튼도 그 탭을 연다). 버튼은 아래 명령을 대신 실행한다. 터미널에서는 `make hooks-install` 이 `~/.claude/settings.json` 에 훅을 등록한다. 원본에서 이미 설치했다면 `make hooks-reinstall` 로 다시 설치해야 실패 훅(`PostToolUseFailure`)이 들어간다.
+1. **실제 Claude Code 에 연결** — 브라우저에서 한다: ⚙ 설정 → 「연결」 탭에서 「연결」을 누른다(빈 사무실의 「에이전트 연결」 버튼도 그 탭을 연다). 버튼은 아래 명령을 대신 실행한다. 백엔드는 이 화면(4747)에서 온 요청만 실행 토큰 없이 받는다. 터미널에서는 `make hooks-install` 이 `~/.claude/settings.json` 에 훅을 등록한다. 원본에서 이미 설치했다면 `make hooks-reinstall` 로 다시 설치해야 실패 훅(`PostToolUseFailure`)이 들어간다.
 2. **Gemini CLI · Codex CLI · OpenCode 에 연결** — Gemini CLI · Codex CLI 도 같은 「연결」 탭에서 연결한다. 터미널에서는 `make gemini-hooks-install` 이 `~/.gemini/settings.json` 에, `make codex-hooks-install` 이 `~/.codex/hooks.json` 에 훅을 넣는다(다른 도구의 훅은 그대로 둔다). Codex 는 새 훅을 `/hooks` 에서 신뢰해야 돌린다([훅 README](hooks/README.md#codex-cli)). OpenCode 는 원본의 `make opencode-install`.
 3. **전역 설정을 건드리지 않고 한 번 돌려 보기** — `scripts/live_session.sh` 가 임시 프로젝트에서 짧은 Claude Code 세션(haiku, 지출 상한 $0.5)을 돌린다. 훅은 그 세션에만 걸린다. Gemini CLI 는 `scripts/gemini_session.sh`, Codex CLI 는 `scripts/codex_session.sh` 가 계정 없이 가짜 모델로 진짜 CLI 를 돌린다.
 4. **시뮬레이터** — `uv run python scripts/simulate_events.py errands` 가 같은 장면을 가짜 이벤트로 재생한다.

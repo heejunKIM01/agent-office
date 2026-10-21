@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AgentLogo } from "@/components/iso/AgentLogo";
 import { useTranslation, type TranslationKey } from "@/hooks/useTranslation";
-import { apiFetch, getApiKey } from "@/utils/api";
+import { apiFetch } from "@/utils/api";
 
 /** One coding agent's connection, as `GET /api/v1/hooks` reports it. */
 interface AgentHookStatus {
@@ -62,7 +62,8 @@ const button =
 /**
  * Connects coding agents to the office: each button runs the same install
  * command as `make hooks-install` (or its Codex and Gemini twins) through the
- * backend, which needs the launch token from the terminal.
+ * backend. The backend trusts this page by its origin, so no launch token is
+ * needed; it asks for one only when it refuses (an explicit API key, say).
  */
 export function ConnectTab(): React.ReactNode {
   const { t } = useTranslation();
@@ -70,8 +71,7 @@ export function ConnectTab(): React.ReactNode {
   const [loadFailed, setLoadFailed] = useState(false);
   const [running, setRunning] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, RunNote>>({});
-  // The token is read once: a rejected one (backend restarted) counts as none.
-  const [hasToken, setHasToken] = useState(() => getApiKey() !== null);
+  const [tokenRefused, setTokenRefused] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -98,7 +98,7 @@ export function ConnectTab(): React.ReactNode {
         method: "POST",
       });
       if (res.status === 401 || res.status === 403) {
-        setHasToken(false);
+        setTokenRefused(true);
         return;
       }
       if (res.status === 409) {
@@ -153,7 +153,7 @@ export function ConnectTab(): React.ReactNode {
   }
   if (!overview) return null;
 
-  const blocked = !overview.available || !hasToken || running !== null;
+  const blocked = !overview.available || tokenRefused || running !== null;
 
   return (
     <div className="space-y-4">
@@ -170,7 +170,7 @@ export function ConnectTab(): React.ReactNode {
               })}
         </p>
       )}
-      {overview.available && !hasToken && (
+      {overview.available && tokenRefused && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
           {t("settings.connect.needToken")}
         </p>
