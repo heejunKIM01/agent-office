@@ -493,7 +493,10 @@ class SummaryService:
         text = text.strip()
 
         for i, char in enumerate(text[: max_len + 50]):
-            if char in ".!?" and i >= 10:  # Ensure minimum sentence length
+            # A sentence ends at . ! ? before a space or the end, not inside
+            # a name such as "auth.py" or "1.2".
+            ends_here = i + 1 == len(text) or text[i + 1].isspace()
+            if char in ".!?" and i >= 10 and ends_here:  # Ensure minimum sentence length
                 result = text[: i + 1].strip()
                 if len(result) > max_len:
                     return result[: max_len - 3] + "..."
