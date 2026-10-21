@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Claude Office Visualizer transforms Claude Code operations into a real-time pixel art office simulation. A "boss" character (main Claude agent) manages work, spawns "employee" agents (subagents), and orchestrates tasks visually.
+Claude Office Visualizer transforms Claude Code operations into a real-time isometric office. A "boss" character (main Claude agent) manages work, spawns "employee" agents (subagents), and orchestrates tasks visually.
 
 See [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for system architecture and component details.
 
@@ -41,14 +41,6 @@ bun run typecheck  # Type check
 
 **Debugging:** Hook logs at `~/.claude/claude-office-hooks.log` (enable with `CLAUDE_OFFICE_DEBUG=1`)
 
-## Project Skills
-
-- **/office-sprite** - Generate office furniture sprites
-- **/character-sprite** - Generate character sprite sheets
-- **/desk-accessory** - Generate tintable desk items
-
-See `.claude/skills/*/SKILL.md` for details.
-
 ## Workflow Guidelines
 
 **Commit after every batch of work:** Always commit after completing each logical unit.
@@ -70,7 +62,6 @@ See `.claude/skills/*/SKILL.md` for details.
 | Hooks | `hooks/pyproject.toml` |
 | Hooks CLI | `hooks/src/claude_office_hooks/main.py` (`__version__` — derived via `importlib.metadata`, no manual bump needed) |
 | Frontend package | `frontend/package.json` |
-| Frontend display | `frontend/src/app/page.tsx` (header badge) |
 | OpenCode plugin | `opencode-plugin/package.json` |
 
 To bump all manual locations at once: `make bump-version VERSION=x.y.z` (rewrites the

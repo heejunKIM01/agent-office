@@ -43,7 +43,7 @@ keywords = [
     "subagent",
     "fastapi",
     "nextjs",
-    "pixijs",
+    "threejs",
     "websocket",
 ]
 requires-python = ">=3.13"
