@@ -33,6 +33,7 @@ async def test_reply_with_stop_reaches_the_conversation_and_the_boss() -> None:
     assert replies == ["Fixed the boundary. Tests pass."]
     assert sm.boss_bubble is not None
     assert sm.boss_bubble.text.startswith("Fixed the boundary")
+    assert sm.history[-1]["detail"]["message"] == "Fixed the boundary. Tests pass."
 
 
 @pytest.mark.asyncio
