@@ -24,9 +24,6 @@ export const BOSS_SLOT_RIGHT: Position = { x: 760, y: 868 }; // Receiving work (
 // For desk center at y=960 (grid-aligned 30*32), boss is at y=900
 export const BOSS_POSITION: Position = { x: 640, y: 900 };
 
-// Elevator position (DO NOT CHANGE - this is the elevator's fixed location)
-export const ELEVATOR_POSITION: Position = { x: 86, y: 178 };
-
 // Pathfinding target for agents walking to elevator (can be adjusted independently)
 export const ELEVATOR_PATHFINDING_TARGET: Position = { x: 86, y: 192 };
 
@@ -113,19 +110,6 @@ export const ELEVATOR_ZONE = {
   minY: 90, // Top of elevator
   maxY: 300, // Floor level threshold (extended to include lower spawn positions)
 };
-
-/**
- * Check if a position is inside the elevator zone
- * Used to skip collision checks and hide agents
- */
-export function isInElevatorZone(pos: Position): boolean {
-  return (
-    pos.x >= ELEVATOR_ZONE.minX &&
-    pos.x <= ELEVATOR_ZONE.maxX &&
-    pos.y >= ELEVATOR_ZONE.minY &&
-    pos.y <= ELEVATOR_ZONE.maxY
-  );
-}
 
 // The bottom corners are the archive and server room (constants/rooms.ts), so
 // both lines turn up the corridor between desk columns right after the ready
@@ -221,7 +205,6 @@ export function calculateQueueSlots(
  * Get desk position for a given desk number (1-indexed)
  * Returns the position where agent BOTTOM CIRCLE CENTER should be placed.
  * The bottom circle center is 22px above the feet, 18px below body center.
- * Must match DeskGrid rendering in OfficeGameV2.tsx
  * Grid-aligned: X at multiples of 32, row spacing 192 (6×32)
  */
 export function getDeskPosition(deskNum: number): Position {

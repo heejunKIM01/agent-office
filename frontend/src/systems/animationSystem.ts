@@ -509,20 +509,3 @@ class AnimationSystem {
 // ============================================================================
 
 export const animationSystem = new AnimationSystem();
-
-// ============================================================================
-// REACT HOOK
-// ============================================================================
-
-import { useEffect } from "react";
-
-/**
- * React hook to start/stop the animation system.
- * Should be called from the main game component.
- */
-export function useAnimationSystem(): void {
-  useEffect(() => {
-    animationSystem.start();
-    return () => animationSystem.stop();
-  }, []);
-}

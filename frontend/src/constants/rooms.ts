@@ -26,12 +26,6 @@ export interface RoomBounds {
   bottom: number;
 }
 
-/** Thickness of a partition cap seen from above */
-export const ROOM_WALL_CAP = 10;
-
-/** Height of the top partition's front face, seen from inside the room */
-export const ROOM_WALL_FACE = 48;
-
 /** Door gap in the inner side partition (tile-aligned: 27*32 .. 30*32) */
 export const ROOM_DOOR_TOP = 864;
 export const ROOM_DOOR_BOTTOM = 960;

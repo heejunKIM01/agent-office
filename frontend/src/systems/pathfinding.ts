@@ -116,5 +116,5 @@ export function recalculatePath(
 }
 
 // Re-export grid utilities for debugging
-export { getNavigationGrid, resetNavigationGrid } from "./navigationGrid";
+export { getNavigationGrid } from "./navigationGrid";
 export { TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, TileType } from "./navigationGrid";
