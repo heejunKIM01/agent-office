@@ -19,7 +19,6 @@ from app.api.middleware import ApiKeyMiddleware, LocalhostOnlyMiddleware
 from app.api.routes import agent_hooks, events, floors, preferences, sessions, websockets
 from app.config import get_settings
 from app.core.event_processor import EventProcessor, get_event_processor
-from app.core.summary_service import get_summary_service
 from app.db.database import Base, get_engine
 from app.db.migrate import migrate_schema
 from app.db.models import EventRecord, SessionRecord
@@ -228,21 +227,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
-
-
-@app.get(f"{settings.API_V1_STR}/status")
-async def get_status() -> dict[str, bool | str | None]:
-    """Get server status including AI summary availability.
-
-    The API key is no longer returned over HTTP (SEC-001). The frontend receives
-    it out-of-band via the ``?token=`` launch URL printed to the server console;
-    see ``initApiKeyFromBrowser`` on the frontend side.
-    """
-    summary_service = get_summary_service()
-    return {
-        "aiSummaryEnabled": summary_service.enabled,
-        "aiSummaryModel": summary_service.model if summary_service.enabled else None,
-    }
 
 
 def _safe_static_path(requested_path: str) -> Path | None:

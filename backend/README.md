@@ -191,7 +191,7 @@ curl -X DELETE http://localhost:8000/api/v1/sessions \
   -H "X-API-Key: $CLAUDE_OFFICE_API_KEY"
 ```
 
-**Discovery**: The auto-generated key is never sent over HTTP. At startup the server logs it to the console (visible only to the launching user) alongside a `?token=<key>` launch URL; the frontend reads `?token=` once on first load (stripped from the address bar via `replaceState`) and persists it to `sessionStorage` for reloads. An explicitly configured `CLAUDE_OFFICE_API_KEY` is never echoed. `GET /api/v1/status` reports AI-summary availability but does **not** return the key.
+**Discovery**: The auto-generated key is never sent over HTTP. At startup the server logs it to the console (visible only to the launching user) alongside a `?token=<key>` launch URL; the frontend reads `?token=` once on first load (stripped from the address bar via `replaceState`) and persists it to `sessionStorage` for reloads. An explicitly configured `CLAUDE_OFFICE_API_KEY` is never echoed.
 
 **Clients**: the Claude Code hooks send `X-API-Key` automatically when `CLAUDE_OFFICE_API_KEY` is set (env var or `~/.claude/claude-office-config.env`, with the env var taking precedence). The OpenCode plugin does not yet send a key — see its Known Limitations.
 
@@ -204,12 +204,6 @@ curl -X DELETE http://localhost:8000/api/v1/sessions \
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Server health status |
-
-### Status
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/status` | Server status including AI summary availability |
 
 ### Events
 

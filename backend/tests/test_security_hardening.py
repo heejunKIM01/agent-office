@@ -534,21 +534,19 @@ class TestEffectiveApiKey:
 
 
 # ---------------------------------------------------------------------------
-# SEC-001 — /api/v1/status must not disclose the effective API key
+# SEC-001 — the API key is never served over HTTP
 # ---------------------------------------------------------------------------
 
 
-class TestStatusEndpointKeyDisclosure:
-    """GET /api/v1/status must not return the effective API key (SEC-001)."""
+class TestStatusEndpointRemoved:
+    """``GET /api/v1/status`` once carried the API key (SEC-001); it is gone."""
 
-    def test_status_does_not_disclose_api_key(self) -> None:
+    def test_status_route_is_gone(self) -> None:
         from app.main import app
 
         client = TestClient(app)
         resp = client.get("/api/v1/status")
-        assert resp.status_code == 200
-        body = resp.json()
-        assert "apiKey" not in body
+        assert resp.status_code == 404
         assert get_settings().effective_api_key not in resp.text
 
 
