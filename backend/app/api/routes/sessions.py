@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.connection_manager import get_manager
 from app.core.event_processor import get_event_processor
+from app.core.transcript_title import transcript_titles
 from app.db.database import get_db
 from app.db.models import EventRecord, SessionRecord, TaskRecord, UserPreference
 from app.services.git_service import git_service
@@ -102,6 +103,38 @@ async def _first_prompt_titles(db: AsyncSession, session_ids: list[str]) -> dict
     return titles
 
 
+async def _transcript_paths(db: AsyncSession, session_ids: list[str]) -> dict[str, str]:
+    """Each session's transcript path, from its newest event that names one."""
+    if not session_ids:
+        return {}
+    path = func.json_extract(EventRecord.data, "$.transcript_path")
+    newest = (
+        select(func.max(EventRecord.id))
+        .where(EventRecord.session_id.in_(session_ids), path.is_not(None))
+        .group_by(EventRecord.session_id)
+    )
+    result = await db.execute(
+        select(EventRecord.session_id, path).where(EventRecord.id.in_(newest))
+    )
+    return {session_id: value for session_id, value in result.all() if isinstance(value, str)}
+
+
+async def _session_titles(db: AsyncSession, session_ids: list[str]) -> dict[str, str]:
+    """Each session's title: the name Claude Code gave it, else its first prompt.
+
+    Claude Code names a session itself (``ai-title`` in the transcript), and that
+    name also covers sessions whose first prompt came before the hooks did.
+    """
+    titles = await _first_prompt_titles(db, session_ids)
+    paths = await _transcript_paths(db, session_ids)
+    # Reading transcript tails is file I/O; keep it off the event loop.
+    for session_id, name in (await asyncio.to_thread(transcript_titles, paths)).items():
+        title = _title_of(name)
+        if title:
+            titles[session_id] = title
+    return titles
+
+
 class ReplayEvent(TypedDict):
     """Event data structure for replay."""
 
@@ -185,7 +218,7 @@ async def list_sessions(
     start_result = await db.execute(sessions_with_start_stmt)
     sessions_with_start: set[str] = {row[0] for row in start_result.all()}
 
-    titles = await _first_prompt_titles(db, [row[0].id for row in rows])
+    titles = await _session_titles(db, [row[0].id for row in rows])
 
     sessions: list[SessionSummary] = []
     for row in rows:

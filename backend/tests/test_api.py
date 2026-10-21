@@ -1,5 +1,7 @@
 import asyncio
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -202,3 +204,35 @@ def test_session_title_is_one_short_line():
     assert listed[spaced]["title"] == "a b"
     assert listed[long]["title"] == "x" * 79 + "…"
     assert listed[blank]["title"] is None
+
+
+def test_session_title_is_the_name_claude_code_gave_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Claude Code names sessions in their transcript; that beats the first prompt."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    folder = tmp_path / ".claude" / "projects" / "-tmp-demo"
+    folder.mkdir(parents=True)
+    named = folder / "named.jsonl"
+    named.write_text(json.dumps({"type": "ai-title", "aiTitle": "Login timeout fix"}) + "\n")
+    unnamed = folder / "unnamed.jsonl"
+    unnamed.write_text(json.dumps({"type": "user", "message": {"content": "/clear"}}) + "\n")
+
+    by_name, by_prompt = _seed_session(), _seed_session()
+    for session_id, prompt, transcript in (
+        (by_name, "/clear", named),
+        (by_prompt, "Fix the login timeout", unnamed),
+    ):
+        event = EventAdapter.validate_python(
+            {
+                "event_type": EventType.USER_PROMPT_SUBMIT,
+                "session_id": session_id,
+                "timestamp": datetime.now(UTC),
+                "data": {"prompt": prompt, "transcript_path": str(transcript)},
+            }
+        )
+        asyncio.run(event_processor.process_event(event))
+
+    listed = {s["id"]: s for s in client.get("/api/v1/sessions").json()}
+    assert listed[by_name]["title"] == "Login timeout fix"
+    assert listed[by_prompt]["title"] == "Fix the login timeout"
