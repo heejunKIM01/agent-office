@@ -17,6 +17,8 @@ import {
 
 export interface PreferencesState {
   autoFollowNewSessions: boolean;
+  /** The office also shows the floor's other working sessions (off: only the chosen one). */
+  showFloorColleagues: boolean;
   language: Locale;
   theme: Theme;
   isLoaded: boolean;
@@ -24,6 +26,7 @@ export interface PreferencesState {
   // Actions
   loadPreferences: () => Promise<void>;
   setAutoFollowNewSessions: (enabled: boolean) => Promise<void>;
+  setShowFloorColleagues: (enabled: boolean) => Promise<void>;
   setLanguage: (language: Locale) => Promise<void>;
   setTheme: (theme: Theme) => Promise<void>;
 }
@@ -35,6 +38,7 @@ export interface PreferencesState {
 const PREFS_PATH = "/api/v1/preferences";
 
 const DEFAULT_AUTO_FOLLOW_NEW_SESSIONS = true;
+const DEFAULT_SHOW_FLOOR_COLLEAGUES = true;
 const DEFAULT_LANGUAGE: Locale = "en";
 
 // ============================================================================
@@ -71,6 +75,7 @@ async function setPreference(key: string, value: string): Promise<void> {
 
 export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
   autoFollowNewSessions: DEFAULT_AUTO_FOLLOW_NEW_SESSIONS,
+  showFloorColleagues: DEFAULT_SHOW_FLOOR_COLLEAGUES,
   language: DEFAULT_LANGUAGE,
   // This browser's last theme until the saved preference arrives.
   theme: readStoredTheme() ?? DEFAULT_THEME,
@@ -84,6 +89,11 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
       autoFollowRaw === undefined
         ? DEFAULT_AUTO_FOLLOW_NEW_SESSIONS
         : autoFollowRaw === "true";
+    const colleaguesRaw = prefs.show_floor_colleagues;
+    const showFloorColleagues =
+      colleaguesRaw === undefined
+        ? DEFAULT_SHOW_FLOOR_COLLEAGUES
+        : colleaguesRaw === "true";
     const language = prefs.language || DEFAULT_LANGUAGE;
     // No saved theme yet: keep the one this browser used.
     const theme = isTheme(prefs.theme) ? prefs.theme : get().theme;
@@ -91,6 +101,7 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
 
     set({
       autoFollowNewSessions,
+      showFloorColleagues,
       language: isLocale(language) ? language : DEFAULT_LANGUAGE,
       theme,
       isLoaded: true,
@@ -100,6 +111,11 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
   setAutoFollowNewSessions: async (enabled) => {
     set({ autoFollowNewSessions: enabled });
     await setPreference("auto_follow_new_sessions", String(enabled));
+  },
+
+  setShowFloorColleagues: async (enabled) => {
+    set({ showFloorColleagues: enabled });
+    await setPreference("show_floor_colleagues", String(enabled));
   },
 
   setLanguage: async (language) => {
@@ -120,6 +136,8 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
 
 export const selectAutoFollowNewSessions = (state: PreferencesState) =>
   state.autoFollowNewSessions;
+export const selectShowFloorColleagues = (state: PreferencesState) =>
+  state.showFloorColleagues;
 export const selectLanguage = (state: PreferencesState) => state.language;
 export const selectTheme = (state: PreferencesState) => state.theme;
 export const selectIsLoaded = (state: PreferencesState) => state.isLoaded;

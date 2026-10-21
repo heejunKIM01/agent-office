@@ -13,6 +13,9 @@ const ko: Record<TranslationKey, string> = {
   "settings.autoFollow": "새 세션 자동으로 따라가기",
   "settings.autoFollowDesc":
     "같은 프로젝트에서 새 세션이 시작되면 자동으로 전환해요",
+  "settings.floorTogether": "같은 층 세션 함께 보기",
+  "settings.floorTogetherDesc":
+    "같은 층에서 일하는 다른 세션의 Claude 도 사무실에 함께 나와요. 끄면 고른 세션만 보여요",
   "settings.language": "언어",
   "settings.theme": "테마",
   "settings.theme.light": "밝게",
@@ -100,6 +103,7 @@ const ko: Record<TranslationKey, string> = {
   "iso.floor.sessions_other": "세션 {count}개",
   "iso.floor.activeNow": "지금 활동 중",
   "iso.floor.follow": "최근 세션 자동으로 따라가기",
+  "iso.floor.together": "같은 층 세션 함께 보기",
   "iso.floor.untitled": "제목 없는 세션 · {id}",
   "iso.floor.moreIdle": "오래 쉰 층 {count}개 더 보기",
   "iso.floor.moreIdle_one": "오래 쉰 층 {count}개 더 보기",
