@@ -11,8 +11,8 @@
  *
  * Subagents come and go by elevator (작성자 댓글): a newcomer steps out of
  * the cab and goes to work; one whose work is done walks to Claude, reports,
- * waves 「👋 퇴근합니다!」, walks back into the cab and is gone. Handed more
- * work on the way, it turns back to work.
+ * waves 「👋 퇴근합니다!」, has a coffee at the cafe, walks back into the cab
+ * and is gone. Handed more work on the way, it turns back to work.
  *
  * `stepIsoWalker` is pure: the path finder and the spot a walker holds in a
  * room are passed in.
@@ -44,6 +44,8 @@ export const ISO_WALK_SPEED = 3.2;
 /** How long a finished subagent tells Claude its result, then waves goodbye (ms). */
 export const REPORT_MS = 3500;
 export const BYE_MS = 1800;
+/** How long it stops at the cafe for a coffee on its way out (ms). */
+export const COFFEE_MS = 4000;
 
 /** Sitting idle, typing at the desk, walking, working in a room, standing, or waving. */
 export type IsoPose = "sit" | "type" | "walk" | "work" | "stand" | "wave";
@@ -59,6 +61,7 @@ export type IsoTrip =
   | { kind: "arrive" }
   | { kind: "report"; until: number | null }
   | { kind: "bye"; until: number }
+  | { kind: "coffee"; until: number | null }
   | { kind: "leave" }
   | { kind: "board" }
   | { kind: "gone" };
@@ -202,7 +205,7 @@ function headTo(
 const workGoal = (input: IsoWalkerInput): IsoGoal =>
   input.activity ? ROOM_FOR_ACTIVITY[input.activity] : "seat";
 
-/** The next step home: to Claude, report, wave, to the elevator, into the cab. */
+/** The next step home: to Claude, report, wave, a coffee, to the elevator, into the cab. */
 function goHome(walker: IsoWalker, input: IsoWalkerInput): IsoWalker {
   const trip = walker.trip;
   switch (trip?.kind) {
@@ -225,6 +228,17 @@ function goHome(walker: IsoWalker, input: IsoWalkerInput): IsoWalker {
         ? walker
         : { ...walker, trip: { kind: "bye", until: input.now + BYE_MS } };
     case "bye":
+      return input.now < trip.until
+        ? walker
+        : headTo(walker, "cafe", input, { kind: "coffee", until: null });
+    case "coffee":
+      if (walker.path) return walker;
+      if (trip.until === null) {
+        return {
+          ...walker,
+          trip: { kind: "coffee", until: input.now + COFFEE_MS },
+        };
+      }
       return input.now < trip.until
         ? walker
         : headTo(walker, "elevator", input, { kind: "leave" });

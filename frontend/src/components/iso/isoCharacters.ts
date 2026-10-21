@@ -52,6 +52,8 @@ export interface CharacterRig {
   legs: [THREE.Group, THREE.Group];
   arms: [THREE.Group, THREE.Group];
   book: THREE.Object3D;
+  /** A mug in the right hand while having a coffee at the cafe. */
+  cup: THREE.Object3D;
   /** A handset at the ear while Claude calls a subagent in. */
   phone: THREE.Object3D;
   /** Cold sweat beside the head while a failed tool keeps it stuck. */
@@ -183,6 +185,15 @@ export function buildCharacter(
   book.visible = false;
   hips.add(book);
 
+  // In the right hand, upright while the arm holds it out in front.
+  const cup = new THREE.Group();
+  cup.add(cylinder(0.11, 0.09, 0.24, C.cup, 0, -0.12, 0, 14));
+  cup.add(cylinder(0.095, 0.095, 0.02, C.coffee, 0, 0.11, 0, 14));
+  cup.position.set(0, -0.72, 0.14);
+  cup.rotation.x = 0.9;
+  cup.visible = false;
+  arms[1].add(cup);
+
   // Held at the left ear, where the raised left hand meets it: seated at
   // its desk, Claude shows its left side to the camera.
   const phone = box(0.22, 0.56, 0.16, C.phone, -0.84, 1, 0.25);
@@ -211,7 +222,7 @@ export function buildCharacter(
   chipAnchor.position.set(0, 2.2, 0);
   hips.add(chipAnchor);
 
-  return { root, hips, legs, arms, book, phone, sweat, chipAnchor };
+  return { root, hips, legs, arms, book, cup, phone, sweat, chipAnchor };
 }
 
 /** Where the sweat drops start, beside the head (x, y, z in the hips' frame). */
@@ -239,6 +250,9 @@ function workArms(room: IsoRoomId | null, seconds: number): [number, number] {
       return [0, -2.3 + 0.15 * Math.sin(seconds * 6)]; // writing on the board
     case "mydesk":
       return [0, -0.3 + 0.2 * Math.sin(seconds * 3)]; // talking to me
+    case "cafe":
+      // the mug held out, raised to the mouth now and then
+      return [0, -0.9 - 1.1 * Math.max(0, Math.sin(seconds * 1.6)) ** 4];
     default:
       return [-0.6, -0.6];
   }
@@ -271,6 +285,7 @@ export function poseCharacter(
   const [legL, legR] = rig.legs;
   const [armL, armR] = rig.arms;
   rig.book.visible = pose === "work" && room === "library" && !stuck;
+  rig.cup.visible = pose === "work" && room === "cafe" && !stuck;
   rig.phone.visible = pose === "phone";
   rig.sweat.visible = stuck;
   if (stuck) drip(rig.sweat, seconds);
