@@ -2,10 +2,9 @@
 
 /**
  * The right-hand column of the isometric office (docs/plan/spec.md
- * 「화면 재설계」, wording after the video): the project and session,
- * 「사무실 사람들」 with what each person is doing, 「활동 로그」 and
- * 「어디서 무엇을 하나」. ``className`` places it: a column beside the
- * office, or a sheet on phones.
+ * 「화면 재설계」 · 「오른쪽 패널 정리」): the project and session, 「사무실」
+ * with what each person is doing, and 「활동 로그」. ``className`` places
+ * it: a column beside the office, or a sheet on phones.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -23,16 +22,6 @@ import {
   type RosterRow,
   type RosterWords,
 } from "@/systems/officeRoster";
-
-const ROOM_LEGEND = [
-  { icon: "📚", room: "library" },
-  { icon: "💻", room: "dev" },
-  { icon: "🗄️", room: "server" },
-  { icon: "🌐", room: "search" },
-  { icon: "🗒️", room: "meeting" },
-  { icon: "🧑‍💻", room: "mydesk" },
-  { icon: "🛗", room: "elevator" },
-] as const;
 
 const card =
   "rounded-2xl border border-slate-200/80 bg-white/95 px-3 py-2.5 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/90";
@@ -257,23 +246,6 @@ export function IsoSidePanel({
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className={card}>
-        <h2 className="mb-1.5 text-[13px] font-bold">{t("iso.panel.rooms")}</h2>
-        <ul className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] leading-snug">
-          {ROOM_LEGEND.map(({ icon, room }) => (
-            <li key={room} className="flex gap-1">
-              <span aria-hidden="true">{icon}</span>
-              <span className="min-w-0">
-                <b className="font-semibold">{t(`iso.room.${room}`)}</b>{" "}
-                <span className="text-slate-400">
-                  {t(`iso.roomDoes.${room}`)}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
       </section>
     </aside>
   );
