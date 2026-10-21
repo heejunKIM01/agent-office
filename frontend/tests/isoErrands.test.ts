@@ -4,6 +4,7 @@ import type { IsoSpot } from "@/constants/isoFloorPlan";
 import { ERRAND_LINGER_MS } from "@/systems/bossErrands";
 import {
   BYE_MS,
+  COFFEE_MS,
   REPORT_MS,
   arrivingWalker,
   seatedWalker,
@@ -22,6 +23,7 @@ const SPOTS: Record<IsoRoomId, IsoSpot> = {
   meeting: { x: -3.2, z: 0, facing: 0 },
   mydesk: { x: 0, z: -3.2, facing: 0 },
   lounge: { x: -3.2, z: 3.2, facing: 0 },
+  cafe: { x: -3.2, z: -3.2, facing: 0 },
 };
 const REPORT: IsoSpot = { x: -1.6, z: 1.6, facing: 0 };
 const ELEVATOR: IsoElevator = {
@@ -77,10 +79,13 @@ function goHome(
   const stages: string[] = [];
   const at: Record<string, number> = {};
   const done = run(walker, null, seconds, start, false, true, (w, now) => {
+    const trip = w.trip;
     const stage =
-      w.trip?.kind === "report" && w.trip.until !== null
+      trip?.kind === "report" && trip.until !== null
         ? "reporting"
-        : (w.trip?.kind ?? "none");
+        : trip?.kind === "coffee" && trip.until !== null
+          ? "sipping"
+          : (trip?.kind ?? "none");
     if (stages[stages.length - 1] !== stage) {
       stages.push(stage);
       at[stage] = now;
@@ -234,20 +239,52 @@ describe("iso errands", () => {
     });
   });
 
-  it("when its work is done it reports beside Claude, waves, and rides the elevator away", () => {
-    const home = goHome(seatedWalker(SEAT), 15);
+  it("when its work is done it reports beside Claude, waves, has a coffee, and rides the elevator away", () => {
+    const home = goHome(seatedWalker(SEAT), 20);
     expect(home.stages).toEqual([
       "report",
       "reporting",
       "bye",
+      "coffee",
+      "sipping",
       "leave",
       "board",
       "gone",
     ]);
-    // It reports for REPORT_MS and waves for BYE_MS before setting off.
+    // It reports for REPORT_MS and waves for BYE_MS before setting off,
+    // then has its coffee for COFFEE_MS.
     expect(home.at.bye - home.at.reporting).toBe(REPORT_MS);
-    expect(home.at.leave - home.at.bye).toBe(BYE_MS);
+    expect(home.at.coffee - home.at.bye).toBe(BYE_MS);
+    expect(home.at.leave - home.at.sipping).toBe(COFFEE_MS);
     expect(home.walker).toMatchObject({ x: 3.2, z: -4.8, goal: "cab" });
+  });
+
+  it("has its coffee standing at the cafe", () => {
+    const home = goHome(seatedWalker(SEAT), 20);
+    const sipping = goHome(
+      seatedWalker(SEAT),
+      home.at.sipping / 1000 + 1,
+    ).walker;
+    expect(sipping).toMatchObject({
+      x: -3.2,
+      z: -3.2,
+      goal: "cafe",
+      pose: "work",
+      trip: { kind: "coffee" },
+    });
+  });
+
+  it("handed more work at the cafe, it goes straight to work", () => {
+    const home = goHome(seatedWalker(SEAT), 20);
+    const sipping = goHome(seatedWalker(SEAT), home.at.sipping / 1000 + 1);
+    const back = run(sipping.walker, "reading", 6, sipping.now);
+    expect(back.walker).toMatchObject({
+      x: 6.4,
+      z: 0,
+      goal: "library",
+      pose: "work",
+      trip: null,
+    });
   });
 
   it("stands facing Claude while reporting and waves goodbye", () => {
@@ -284,7 +321,7 @@ describe("iso errands", () => {
   });
 
   it("called back while stepping into the cab, it steps out again and sits down", () => {
-    const home = goHome(seatedWalker(SEAT), 15);
+    const home = goHome(seatedWalker(SEAT), 20);
     // Replay up to the moment it is half way into the cab.
     const boarding = run(
       seatedWalker(SEAT),
@@ -310,7 +347,7 @@ describe("iso errands", () => {
   });
 
   it("once gone it stays gone", () => {
-    const home = goHome(seatedWalker(SEAT), 15);
+    const home = goHome(seatedWalker(SEAT), 20);
     const later = run(home.walker, "reading", 2, home.now);
     expect(later.walker).toEqual(home.walker);
   });

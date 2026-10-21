@@ -431,11 +431,12 @@ export const ERRAND_SPOTS: Record<ErrandRoomId, IsoSpot[]> = {
 
 /**
  * Rooms people go to with nothing to run (docs/plan/spec.md 「라운지 · 카페」):
- * the lounge, where Claude rests between turns.
+ * the lounge, where Claude rests between turns, and the cafe, where a
+ * finished subagent has a coffee on its way home.
  */
-export type BreakRoomId = Extract<RoomId, "lounge">;
+export type BreakRoomId = Extract<RoomId, "lounge" | "cafe">;
 
-/** Where people sit in each break room, the first taken first (FURNITURE). */
+/** Where people sit or stand in each break room, the first taken first (FURNITURE). */
 export const BREAK_SPOTS: Record<BreakRoomId, IsoSpot[]> = {
   // The sofa facing the room, then the one facing the wall, then the armchair.
   lounge: [
@@ -444,6 +445,12 @@ export const BREAK_SPOTS: Record<BreakRoomId, IsoSpot[]> = {
     { x: 5.67, z: 25.7, facing: FACING_BACK },
     { x: 4.33, z: 25.7, facing: FACING_BACK },
     { x: 7.2, z: 28.35, facing: FACING_BACK },
+  ],
+  // Standing at the tables' free (back) sides, then between the tables.
+  cafe: [
+    { x: 31.3, z: 25.6, facing: 0 },
+    { x: 35.8, z: 25.6, facing: 0 },
+    { x: 33.55, z: 26.8, facing: FACING_LEFT_WALL },
   ],
 };
 

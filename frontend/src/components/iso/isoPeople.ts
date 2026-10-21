@@ -11,7 +11,8 @@
  *
  * A subagent the backend has just made steps out of the elevator while
  * Claude holds the phone; one whose work is done reports beside Claude,
- * says 「👋 퇴근합니다!」 and rides the elevator away (작성자 댓글).
+ * says 「👋 퇴근합니다!」, has a coffee at the cafe and rides the elevator
+ * away (작성자 댓글, spec 「라운지 · 카페」).
  */
 
 import * as THREE from "three";

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BREAK_SPOTS,
   CLAUDE_SEAT,
   ERRAND_SPOTS,
   FLOOR_WIDTH,
@@ -13,7 +14,14 @@ import {
 } from "@/systems/isoNavGrid";
 
 const workSpots = Object.values(ERRAND_SPOTS).flat();
-const allSpots = [CLAUDE_SEAT, ...SUBAGENT_SEATS, MY_SEAT, ...workSpots];
+// The cafe is stood in; the lounge spots are on the sofas, off the paths.
+const allSpots = [
+  CLAUDE_SEAT,
+  ...SUBAGENT_SEATS,
+  MY_SEAT,
+  ...workSpots,
+  ...BREAK_SPOTS.cafe,
+];
 
 /** Sample a path every 0.1m and check each point is open floor. */
 function staysOnFloor(path: FloorPoint[]): boolean {
