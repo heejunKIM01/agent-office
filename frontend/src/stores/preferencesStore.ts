@@ -3,6 +3,13 @@
 import { create } from "zustand";
 import { isLocale, type Locale } from "@/i18n";
 import { apiFetch } from "@/utils/api";
+import {
+  DEFAULT_THEME,
+  isTheme,
+  readStoredTheme,
+  storeTheme,
+  type Theme,
+} from "@/utils/theme";
 
 // ============================================================================
 // TYPES
@@ -11,12 +18,14 @@ import { apiFetch } from "@/utils/api";
 export interface PreferencesState {
   autoFollowNewSessions: boolean;
   language: Locale;
+  theme: Theme;
   isLoaded: boolean;
 
   // Actions
   loadPreferences: () => Promise<void>;
   setAutoFollowNewSessions: (enabled: boolean) => Promise<void>;
   setLanguage: (language: Locale) => Promise<void>;
+  setTheme: (theme: Theme) => Promise<void>;
 }
 
 // ============================================================================
@@ -60,9 +69,11 @@ async function setPreference(key: string, value: string): Promise<void> {
 // STORE
 // ============================================================================
 
-export const usePreferencesStore = create<PreferencesState>()((set) => ({
+export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
   autoFollowNewSessions: DEFAULT_AUTO_FOLLOW_NEW_SESSIONS,
   language: DEFAULT_LANGUAGE,
+  // This browser's last theme until the saved preference arrives.
+  theme: readStoredTheme() ?? DEFAULT_THEME,
   isLoaded: false,
 
   loadPreferences: async () => {
@@ -74,10 +85,14 @@ export const usePreferencesStore = create<PreferencesState>()((set) => ({
         ? DEFAULT_AUTO_FOLLOW_NEW_SESSIONS
         : autoFollowRaw === "true";
     const language = prefs.language || DEFAULT_LANGUAGE;
+    // No saved theme yet: keep the one this browser used.
+    const theme = isTheme(prefs.theme) ? prefs.theme : get().theme;
+    storeTheme(theme);
 
     set({
       autoFollowNewSessions,
       language: isLocale(language) ? language : DEFAULT_LANGUAGE,
+      theme,
       isLoaded: true,
     });
   },
@@ -91,6 +106,12 @@ export const usePreferencesStore = create<PreferencesState>()((set) => ({
     set({ language });
     await setPreference("language", language);
   },
+
+  setTheme: async (theme) => {
+    set({ theme });
+    storeTheme(theme);
+    await setPreference("theme", theme);
+  },
 }));
 
 // ============================================================================
@@ -100,4 +121,5 @@ export const usePreferencesStore = create<PreferencesState>()((set) => ({
 export const selectAutoFollowNewSessions = (state: PreferencesState) =>
   state.autoFollowNewSessions;
 export const selectLanguage = (state: PreferencesState) => state.language;
+export const selectTheme = (state: PreferencesState) => state.theme;
 export const selectIsLoaded = (state: PreferencesState) => state.isLoaded;
