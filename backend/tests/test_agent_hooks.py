@@ -88,6 +88,13 @@ class TestHooksApi:
         res = client.post("/api/v1/hooks/claude-code/install")
         assert res.status_code == 401
 
+    def test_the_page_can_read_the_missing_token_answer(self, home: Path) -> None:
+        res = client.post(
+            "/api/v1/hooks/claude-code/install", headers={"Origin": "http://localhost:4747"}
+        )
+        assert res.status_code == 401
+        assert res.headers.get("access-control-allow-origin") == "http://localhost:4747"
+
     def test_unknown_agent_or_action(self, home: Path) -> None:
         assert (
             client.post("/api/v1/hooks/cursor/install", headers=_auth_headers()).status_code == 404

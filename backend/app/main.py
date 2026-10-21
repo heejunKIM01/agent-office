@@ -187,6 +187,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(LocalhostOnlyMiddleware)
+app.add_middleware(ApiKeyMiddleware)
+# Added last so it wraps the two above: their 401 and 403 answers carry the
+# CORS headers too, so the page reads 「no token」 instead of a network error.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -194,9 +198,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.add_middleware(LocalhostOnlyMiddleware)
-app.add_middleware(ApiKeyMiddleware)
 
 app.include_router(agent_hooks.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(events.router, prefix=f"{settings.API_V1_STR}")
