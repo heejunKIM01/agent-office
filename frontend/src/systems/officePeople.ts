@@ -6,6 +6,10 @@
  * Waiting for a permission is asking (spec 「방 ↔ 도구」: 내 자리 —
  * AskUserQuestion, 권한 대기), so the person comes to my desk; a failed
  * tool keeps it where it is (R3).
+ *
+ * A subagent the backend has just made comes by elevator; one whose work
+ * is done stays listed as leaving, so it can report and go home. Explore
+ * wears green and Plan purple (작성자 댓글).
  */
 
 import type { Activity, BubbleContent, StuckReason } from "@/types";
@@ -16,6 +20,9 @@ import type {
 } from "@/stores/slices/types";
 
 export type PersonKind = "claude" | "me" | "subagent";
+
+/** What a subagent wears, by its type. */
+export type Outfit = "general" | "explore" | "plan";
 
 export interface IsoPerson {
   id: string;
@@ -33,6 +40,11 @@ export interface IsoPerson {
   bubbleAt: number | null;
   /** Working with no tool running: it is thinking. */
   thinking: boolean;
+  /** A subagent the backend has just made, not yet at work: it comes by elevator. */
+  arriving: boolean;
+  /** A subagent whose work is done: it reports to Claude and goes home. */
+  leaving: boolean;
+  outfit: Outfit;
 }
 
 /** Words the chips need, already translated. */
@@ -48,13 +60,37 @@ export interface PeopleWords {
 const AT_WORK_STATES: ReadonlySet<AgentAnimationState["backendState"]> =
   new Set(["arriving", "walking_to_desk", "working", "thinking"]);
 
-/** Subagents in these phases have left the floor (the 2D office walks them out). */
+/** Subagents in these phases are on their way out (the 2D office walks them out). */
 const LEFT_PHASES: ReadonlySet<AgentPhase> = new Set([
   "departing",
   "in_departure_queue",
   "walking_to_elevator",
   "in_elevator",
 ]);
+
+/**
+ * Backend states of a subagent on its way in: SUBAGENT_START makes it
+ * arriving and at once walking to its desk, until its first tool.
+ */
+const ARRIVING_STATES: ReadonlySet<AgentAnimationState["backendState"]> =
+  new Set(["arriving", "walking_to_desk"]);
+
+/** Backend states of a subagent whose work is done (SUBAGENT_STOP sets waiting). */
+const DONE_STATES: ReadonlySet<AgentAnimationState["backendState"]> = new Set([
+  "waiting",
+  "reporting_done",
+  "completed",
+  "leaving",
+  "in_elevator",
+]);
+
+/** Explore wears green and a cap, Plan purple and glasses, the rest blue. */
+export function outfitOf(agentType: string | null | undefined): Outfit {
+  const type = agentType?.toLowerCase() ?? "";
+  if (type.includes("explore")) return "explore";
+  if (type.includes("plan")) return "plan";
+  return "general";
+}
 
 function subagentNames(
   agent: AgentAnimationState,
@@ -111,6 +147,9 @@ export function officePeople(
       ...doing(state.boss.activity, state.boss.stuck),
       ...said(state.boss.bubble),
       thinking: state.boss.quietSince !== null,
+      arriving: false,
+      leaving: false,
+      outfit: "general",
     },
     {
       id: "me",
@@ -123,10 +162,14 @@ export function officePeople(
       bubble: null,
       bubbleAt: null,
       thinking: false,
+      arriving: false,
+      leaving: false,
+      outfit: "general",
     },
   ];
   for (const agent of state.agents.values()) {
-    if (LEFT_PHASES.has(agent.phase)) continue;
+    const leaving =
+      LEFT_PHASES.has(agent.phase) || DONE_STATES.has(agent.backendState);
     people.push({
       id: agent.id,
       kind: "subagent",
@@ -134,9 +177,13 @@ export function officePeople(
       ...doing(agent.activity, agent.stuck),
       ...said(agent.bubble),
       thinking:
+        !leaving &&
         AT_WORK_STATES.has(agent.backendState) &&
         !agent.activity &&
         !agent.stuck,
+      arriving: ARRIVING_STATES.has(agent.backendState),
+      leaving,
+      outfit: outfitOf(agent.agentType),
     });
   }
   return people;

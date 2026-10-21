@@ -201,6 +201,7 @@ const es: Record<TranslationKey, string> = {
   "iso.bubble.thinking": "Pensando",
   "iso.bubble.thinkingFor": "Pensando desde hace {seconds}s",
   "iso.bubble.looking": "Revisando",
+  "iso.bubble.bye": "👋 ¡Me voy a casa!",
   "iso.panel.project": "Proyecto",
   "iso.panel.session": "Sesión",
   "iso.panel.people": "Gente en la oficina",

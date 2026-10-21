@@ -2,7 +2,8 @@
  * Room effects of the isometric office, from the video author's notes in
  * docs/plan/spec.md 「화면 재설계」: code runs down the iMac of whoever is
  * editing, the rack lights blink faster while a command runs, and planning
- * writes on the meeting room whiteboard.
+ * writes on the meeting room whiteboard. The elevator doors open while
+ * someone steps in or out.
  */
 
 import * as THREE from "three";
@@ -18,6 +19,13 @@ const CODE_SCROLL_SPEED = 0.25;
 const BOARD_FILL_SECONDS = 8;
 /** An iMac sits this far in front of the chair of the person using it (m). */
 const SEAT_TO_SCREEN = 1.6;
+/** How fast the elevator doors open and close (fully per second). */
+const DOOR_SPEED = 2.2;
+/** Where a closed elevator door sits from the middle, and how far it slides. */
+const DOOR_CLOSED_X = 0.58;
+const DOOR_SLIDE = 0.5;
+/** An open door narrows to this share of its width in its pocket. */
+const DOOR_OPEN_WIDTH = 0.2;
 
 const CODE_COLORS = [
   "#7dd3fc",
@@ -149,12 +157,17 @@ export class IsoEffects {
   });
   private readonly board: Board | null = null;
   private wasPlanning = false;
+  private readonly doors: { mesh: THREE.Object3D; side: number }[] = [];
+  private doorsOpen = 0;
 
   constructor(office: THREE.Object3D) {
     const found: { whiteboard?: THREE.Object3D } = {};
     office.traverse((object) => {
       if (typeof object.userData.ledPhase === "number") {
         this.leds.push({ mesh: object, phase: object.userData.ledPhase });
+      }
+      if (typeof object.userData.elevatorDoor === "number") {
+        this.doors.push({ mesh: object, side: object.userData.elevatorDoor });
       }
       const item = object.userData.furniture as Furniture | undefined;
       if (item?.kind === "whiteboard") found.whiteboard = object;
@@ -206,6 +219,15 @@ export class IsoEffects {
       }
     }
     this.wasPlanning = inUse.planning;
+
+    const target = inUse.elevatorOpen ? 1 : 0;
+    const step = DOOR_SPEED * dt;
+    this.doorsOpen += Math.max(-step, Math.min(step, target - this.doorsOpen));
+    for (const door of this.doors) {
+      door.mesh.position.x =
+        door.side * (DOOR_CLOSED_X + DOOR_SLIDE * this.doorsOpen);
+      door.mesh.scale.x = 1 - (1 - DOOR_OPEN_WIDTH) * this.doorsOpen;
+    }
   }
 
   dispose(): void {

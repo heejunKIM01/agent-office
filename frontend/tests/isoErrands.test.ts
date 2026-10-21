@@ -3,8 +3,12 @@ import type { Activity } from "@/types";
 import type { ErrandRoomId, IsoSpot } from "@/constants/isoFloorPlan";
 import { ERRAND_LINGER_MS } from "@/systems/bossErrands";
 import {
+  BYE_MS,
+  REPORT_MS,
+  arrivingWalker,
   seatedWalker,
   stepIsoWalker,
+  type IsoElevator,
   type IsoWalker,
 } from "@/systems/isoErrands";
 import type { FloorPoint } from "@/systems/isoNavGrid";
@@ -17,6 +21,11 @@ const SPOTS: Record<ErrandRoomId, IsoSpot> = {
   meeting: { x: -3.2, z: 0, facing: 0 },
   mydesk: { x: 0, z: -3.2, facing: 0 },
 };
+const REPORT: IsoSpot = { x: -1.6, z: 1.6, facing: 0 };
+const ELEVATOR: IsoElevator = {
+  door: { x: 3.2, z: -3.2, facing: 0 },
+  cab: { x: 3.2, z: -4.8, facing: Math.PI },
+};
 const straight = (from: FloorPoint, to: FloorPoint): FloorPoint[] => [from, to];
 
 /** Run the walker for `seconds` in 0.1s steps starting at `start` ms. */
@@ -26,6 +35,8 @@ function run(
   seconds: number,
   start = 0,
   stuck = false,
+  leaving = false,
+  onStep?: (walker: IsoWalker, now: number) => void,
 ): { walker: IsoWalker; now: number } {
   let w = walker;
   let now = start;
@@ -39,9 +50,39 @@ function run(
       findPath: straight,
       now,
       dt: 0.1,
+      leaving,
+      reportSpot: () => REPORT,
+      elevator: ELEVATOR,
     });
+    onStep?.(w, now);
   }
   return { walker: w, now };
+}
+
+/** Run a finished subagent home, noting each stage of its trip once. */
+function goHome(
+  walker: IsoWalker,
+  seconds: number,
+  start = 0,
+): {
+  walker: IsoWalker;
+  now: number;
+  stages: string[];
+  at: Record<string, number>;
+} {
+  const stages: string[] = [];
+  const at: Record<string, number> = {};
+  const done = run(walker, null, seconds, start, false, true, (w, now) => {
+    const stage =
+      w.trip?.kind === "report" && w.trip.until !== null
+        ? "reporting"
+        : (w.trip?.kind ?? "none");
+    if (stages[stages.length - 1] !== stage) {
+      stages.push(stage);
+      at[stage] = now;
+    }
+  });
+  return { ...done, stages, at };
 }
 
 describe("iso errands", () => {
@@ -160,5 +201,113 @@ describe("iso errands", () => {
   it("sits still with nothing to do", () => {
     const { walker } = run(seatedWalker(SEAT), null, 2);
     expect(walker).toEqual(seatedWalker(SEAT));
+  });
+
+  it("a newcomer steps out of the elevator and goes to its seat", () => {
+    const out = run(arrivingWalker(ELEVATOR), null, 0.4);
+    expect(out.walker).toMatchObject({
+      trip: { kind: "arrive" },
+      pose: "walk",
+    });
+    const seated = run(out.walker, null, 4, out.now);
+    expect(seated.walker).toMatchObject({
+      x: 0,
+      z: 0,
+      goal: "seat",
+      pose: "sit",
+      trip: null,
+    });
+  });
+
+  it("a newcomer with work goes from the elevator straight to that room", () => {
+    const out = run(arrivingWalker(ELEVATOR), "reading", 4);
+    expect(out.walker).toMatchObject({
+      x: 6.4,
+      z: 0,
+      goal: "library",
+      pose: "work",
+      trip: null,
+    });
+  });
+
+  it("when its work is done it reports beside Claude, waves, and rides the elevator away", () => {
+    const home = goHome(seatedWalker(SEAT), 15);
+    expect(home.stages).toEqual([
+      "report",
+      "reporting",
+      "bye",
+      "leave",
+      "board",
+      "gone",
+    ]);
+    // It reports for REPORT_MS and waves for BYE_MS before setting off.
+    expect(home.at.bye - home.at.reporting).toBe(REPORT_MS);
+    expect(home.at.leave - home.at.bye).toBe(BYE_MS);
+    expect(home.walker).toMatchObject({ x: 3.2, z: -4.8, goal: "cab" });
+  });
+
+  it("stands facing Claude while reporting and waves goodbye", () => {
+    const reporting = goHome(seatedWalker(SEAT), 1.5);
+    expect(reporting.walker).toMatchObject({
+      x: -1.6,
+      z: 1.6,
+      facing: 0,
+      goal: "report",
+      pose: "stand",
+    });
+    const waving = goHome(
+      reporting.walker,
+      REPORT_MS / 1000 + 0.2,
+      reporting.now,
+    );
+    expect(waving.walker).toMatchObject({
+      trip: { kind: "bye" },
+      pose: "wave",
+    });
+  });
+
+  it("handed more work on its way to report, it turns back to work", () => {
+    const leaving = goHome(seatedWalker(SEAT), 0.3);
+    expect(leaving.walker).toMatchObject({ goal: "report", pose: "walk" });
+    const back = run(leaving.walker, "reading", 4, leaving.now);
+    expect(back.walker).toMatchObject({
+      x: 6.4,
+      z: 0,
+      goal: "library",
+      pose: "work",
+      trip: null,
+    });
+  });
+
+  it("called back while stepping into the cab, it steps out again and sits down", () => {
+    const home = goHome(seatedWalker(SEAT), 15);
+    // Replay up to the moment it is half way into the cab.
+    const boarding = run(
+      seatedWalker(SEAT),
+      null,
+      home.at.board / 1000 + 0.2,
+      0,
+      false,
+      true,
+    ).walker;
+    expect(boarding.trip).toEqual({ kind: "board" });
+    const out = run(boarding, null, 0.2, home.at.board + 200);
+    expect(out.walker).toMatchObject({
+      goal: "elevator",
+      trip: { kind: "arrive" },
+    });
+    const seated = run(out.walker, null, 6, out.now);
+    expect(seated.walker).toMatchObject({
+      x: 0,
+      z: 0,
+      pose: "sit",
+      trip: null,
+    });
+  });
+
+  it("once gone it stays gone", () => {
+    const home = goHome(seatedWalker(SEAT), 15);
+    const later = run(home.walker, "reading", 2, home.now);
+    expect(later.walker).toEqual(home.walker);
   });
 });

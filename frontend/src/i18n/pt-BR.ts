@@ -201,6 +201,7 @@ const ptBR: Record<TranslationKey, string> = {
   "iso.bubble.thinking": "Pensando",
   "iso.bubble.thinkingFor": "Pensando há {seconds}s",
   "iso.bubble.looking": "Verificando",
+  "iso.bubble.bye": "👋 Indo para casa!",
   "iso.panel.project": "Projeto",
   "iso.panel.session": "Sessão",
   "iso.panel.people": "Pessoas no escritório",

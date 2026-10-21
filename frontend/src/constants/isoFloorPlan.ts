@@ -429,5 +429,22 @@ export const ERRAND_SPOTS: Record<ErrandRoomId, IsoSpot[]> = {
   ],
 };
 
+/**
+ * The elevator between the dev and server rooms (FURNITURE): people step out
+ * of the cab, behind the back wall, to the door and back in again.
+ */
+export const ELEVATOR_DOOR: IsoSpot = { x: 29.2, z: 1.1, facing: 0 };
+export const ELEVATOR_CAB: IsoSpot = { x: 29.2, z: -1.4, facing: Math.PI };
+
+/**
+ * Where a finished subagent stands to report to Claude: behind its chair,
+ * nearer the camera, so the report shows over Claude rather than under it.
+ */
+export const REPORT_SPOTS: IsoSpot[] = [
+  { x: 14.3, z: 11.2, facing: FACING_BACK },
+  { x: 15.7, z: 11.2, facing: Math.atan2(-1.4, -1.6) },
+  { x: 12.9, z: 11.2, facing: Math.atan2(1.4, -1.6) },
+];
+
 /** Where the camera looks when the view is reset. */
 export const FLOOR_CENTER = { x: FLOOR_WIDTH / 2, z: FLOOR_DEPTH / 2 };

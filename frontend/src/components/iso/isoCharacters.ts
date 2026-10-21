@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import type { ErrandRoomId } from "@/constants/isoFloorPlan";
 import type { IsoPose } from "@/systems/isoErrands";
-import type { PersonKind } from "@/systems/officePeople";
+import type { Outfit, PersonKind } from "@/systems/officePeople";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, cylinder, material } from "./isoFurniture";
 
@@ -16,6 +16,8 @@ interface Look {
   shirt: string;
   hair: string;
   pants: string;
+  cap?: boolean;
+  glasses?: boolean;
 }
 
 /** Claude in coral, me in navy, subagents in blue, as in the video. */
@@ -23,6 +25,17 @@ const LOOKS: Record<PersonKind, Look> = {
   claude: { shirt: C.claudeShirt, hair: C.claudeHair, pants: C.pants },
   me: { shirt: C.myShirt, hair: C.darkHair, pants: C.myPants },
   subagent: { shirt: C.subagentShirt, hair: C.darkHair, pants: C.pants },
+};
+
+/** Explore comes in green with a cap, Plan in purple with glasses (작성자 댓글). */
+const OUTFIT_LOOKS: Record<Exclude<Outfit, "general">, Look> = {
+  explore: {
+    shirt: C.exploreShirt,
+    hair: C.darkHair,
+    pants: C.pants,
+    cap: true,
+  },
+  plan: { shirt: C.planShirt, hair: C.darkHair, pants: C.pants, glasses: true },
 };
 
 /** Whole figure scale; about 3.1m tall standing, a little under the walls. */
@@ -38,6 +51,8 @@ export interface CharacterRig {
   legs: [THREE.Group, THREE.Group];
   arms: [THREE.Group, THREE.Group];
   book: THREE.Object3D;
+  /** A handset at the ear while Claude calls a subagent in. */
+  phone: THREE.Object3D;
   /** Cold sweat beside the head while a failed tool keeps it stuck. */
   sweat: THREE.Group;
   /** Where the name chip hangs, just above the hair. */
@@ -117,12 +132,35 @@ function head(look: Look): THREE.Group {
     return c;
   };
   g.add(cheek(-0.36), cheek(0.36));
+  if (look.cap) {
+    g.add(shell(0.69, C.exploreCap, [0, Math.PI * 2], [0, Math.PI * 0.3]));
+    const brim = box(0.78, 0.05, 0.42, C.exploreCap, 0, 0.38, 0.58);
+    brim.rotation.x = 0.12;
+    g.add(brim);
+  }
+  if (look.glasses) {
+    for (const x of [-0.22, 0.22]) {
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.13, 0.028, 8, 20),
+        material(C.glasses),
+      );
+      rim.position.set(x, -0.08, 0.6);
+      g.add(rim);
+    }
+    g.add(box(0.18, 0.035, 0.03, C.glasses, 0, -0.075, 0.62));
+  }
   return g;
 }
 
-/** Build one person standing at the origin. */
-export function buildCharacter(kind: PersonKind): CharacterRig {
-  const look = LOOKS[kind];
+/** Build one person standing at the origin; subagents dress by ``outfit``. */
+export function buildCharacter(
+  kind: PersonKind,
+  outfit: Outfit = "general",
+): CharacterRig {
+  const look =
+    kind === "subagent" && outfit !== "general"
+      ? OUTFIT_LOOKS[outfit]
+      : LOOKS[kind];
   const root = new THREE.Group();
   root.scale.setScalar(SCALE);
   const hips = new THREE.Group();
@@ -143,6 +181,13 @@ export function buildCharacter(kind: PersonKind): CharacterRig {
   book.rotation.x = -0.5;
   book.visible = false;
   hips.add(book);
+
+  // Held at the left ear, where the raised left hand meets it: seated at
+  // its desk, Claude shows its left side to the camera.
+  const phone = box(0.22, 0.56, 0.16, C.phone, -0.84, 1, 0.25);
+  phone.rotation.z = -0.45;
+  phone.visible = false;
+  hips.add(phone);
 
   const sweat = new THREE.Group();
   // On both sides of the head, so one shows whichever way it faces.
@@ -165,7 +210,7 @@ export function buildCharacter(kind: PersonKind): CharacterRig {
   chipAnchor.position.set(0, 2.2, 0);
   hips.add(chipAnchor);
 
-  return { root, hips, legs, arms, book, sweat, chipAnchor };
+  return { root, hips, legs, arms, book, phone, sweat, chipAnchor };
 }
 
 /** Where the sweat drops start, beside the head (x, y, z in the hips' frame). */
@@ -177,6 +222,8 @@ const SWEAT_DROPS: [number, number, number][] = [
 
 /** Chin on the right hand, the left arm folded under it. */
 const PONDER_ARMS: [number, number] = [-1.2, -2.1];
+/** The left hand up at the ear, holding the phone (about x, then out about z). */
+const PHONE_ARM: [number, number] = [-2.5, -0.6];
 
 /** Arm angles (about x, forward is negative) while working in each room. */
 function workArms(
@@ -212,11 +259,13 @@ function drip(sweat: THREE.Group, seconds: number): void {
  * on a chair (hands moving on the keyboard while typing), and in a room a
  * book in hand, hands at the rack or kiosk, writing on the whiteboard, or
  * talking at my desk. A stuck person (a failed tool) props its chin on a
- * hand and sweats (spec R3). ``seconds`` drives the motion.
+ * hand and sweats (spec R3). Standing to report it talks with a hand, waving
+ * it raises its left arm, and on the phone (seated) it holds a handset to
+ * its ear. ``seconds`` drives the motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
-  pose: IsoPose,
+  pose: IsoPose | "phone",
   room: ErrandRoomId | null,
   seconds: number,
   stuck = false,
@@ -224,8 +273,12 @@ export function poseCharacter(
   const [legL, legR] = rig.legs;
   const [armL, armR] = rig.arms;
   rig.book.visible = pose === "work" && room === "library" && !stuck;
+  rig.phone.visible = pose === "phone";
   rig.sweat.visible = stuck;
   if (stuck) drip(rig.sweat, seconds);
+  // Only waving and the phone swing an arm out sideways.
+  armL.rotation.z = 0;
+  armR.rotation.z = 0;
   if (pose === "walk") {
     const swing = Math.sin(seconds * STRIDE_RATE);
     legL.rotation.x = 0.55 * swing;
@@ -236,14 +289,30 @@ export function poseCharacter(
       HIP_HEIGHT + 0.05 * Math.abs(Math.cos(seconds * STRIDE_RATE));
     return;
   }
-  if (pose === "sit" || pose === "type") {
+  if (pose === "sit" || pose === "type" || pose === "phone") {
     const tap = pose === "type" ? 0.12 * Math.sin(seconds * 14) : 0;
     const rest = pose === "type" ? -1.1 : -0.35;
     legL.rotation.x = -Math.PI / 2;
     legR.rotation.x = -Math.PI / 2;
     armL.rotation.x = stuck ? PONDER_ARMS[0] : rest + tap;
     armR.rotation.x = stuck ? PONDER_ARMS[1] : rest - tap;
+    if (pose === "phone") {
+      armL.rotation.x = PHONE_ARM[0];
+      armL.rotation.z = PHONE_ARM[1];
+    }
     rig.hips.position.y = SEATED_HIP_HEIGHT;
+    return;
+  }
+  if (pose === "stand" || pose === "wave") {
+    legL.rotation.x = 0;
+    legR.rotation.x = 0;
+    armR.rotation.x = 0.03 * Math.sin(seconds * 2);
+    armL.rotation.x =
+      pose === "stand" ? -0.5 + 0.18 * Math.sin(seconds * 5) : 0;
+    // Waving: the left arm up and out, swinging side to side. Facing
+    // Claude's desk, a reporter shows its left side to the camera.
+    if (pose === "wave") armL.rotation.z = -2.5 - 0.3 * Math.sin(seconds * 10);
+    rig.hips.position.y = HIP_HEIGHT;
     return;
   }
   const [left, right] = stuck ? PONDER_ARMS : workArms(room, seconds);

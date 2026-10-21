@@ -75,6 +75,7 @@ export const ISO_COLORS = {
   stem: "#8a6a4f",
   elevatorDoor: "#c9d0d9",
   elevatorFrame: "#9aa4b2",
+  elevatorCab: "#3d4452",
   clockFace: "#ffffff",
   clockRim: "#3a4250",
   // People
@@ -86,6 +87,11 @@ export const ISO_COLORS = {
   myShirt: "#283552",
   myPants: "#252a35",
   subagentShirt: "#3c6fd8",
+  exploreShirt: "#3aa35b",
+  exploreCap: "#24803f",
+  planShirt: "#8b5cf6",
+  glasses: "#262b36",
+  phone: "#f2f4f7",
   darkHair: "#22252c",
   pants: "#3d4250",
   shoes: "#2a2d33",
@@ -105,4 +111,11 @@ export const ISO_COLORS = {
     "#457b9d",
     "#c1121f",
   ],
+} as const;
+
+/** A subagent's colour by what it wears, for its name dot and avatar. */
+export const OUTFIT_COLORS = {
+  general: "#3b82f6",
+  explore: "#3aa35b",
+  plan: "#8b5cf6",
 } as const;
