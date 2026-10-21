@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { AgentAnimationState, BubbleState } from "@/stores/slices/types";
-import { officePeople, type PeopleWords } from "@/systems/officePeople";
+import {
+  isQuietTurn,
+  officePeople,
+  type PeopleWords,
+} from "@/systems/officePeople";
 
 const WORDS: PeopleWords = {
   agentName: "Claude",
@@ -187,5 +191,61 @@ describe("officePeople", () => {
       false,
       true,
     ]);
+  });
+});
+
+describe("officePeople — colleagues", () => {
+  it("brings other sessions' lead agents in last, named by their session", () => {
+    const people = officePeople({ boss: boss(), agents: new Map() }, WORDS, [
+      {
+        sessionId: "s2",
+        agentName: "Claude",
+        title: "로그인 고치기",
+        activity: "reading",
+        stuck: null,
+        bubble: { type: "thought", text: "src/auth.py", icon: "📖" },
+        bubbleAt: 5,
+        thinking: false,
+      },
+      {
+        sessionId: "s3",
+        agentName: "Codex",
+        title: "문서 정리",
+        activity: null,
+        stuck: "waiting_permission",
+        bubble: null,
+        bubbleAt: null,
+        thinking: false,
+      },
+    ]);
+    expect(people.map((p) => [p.id, p.kind, p.label])).toEqual([
+      ["claude", "claude", "Claude"],
+      ["me", "me", "나"],
+      ["colleague:s2", "colleague", "Claude · 로그인 고치기"],
+      ["colleague:s3", "colleague", "Codex · 문서 정리"],
+    ]);
+    expect(people[2]).toMatchObject({
+      title: "로그인 고치기",
+      typeLabel: "Claude",
+      activity: "reading",
+      bubbleAt: 5,
+    });
+    // Waiting for a permission sends it to my desk, as with Claude.
+    expect(people[3].activity).toBe("asking");
+  });
+});
+
+describe("isQuietTurn", () => {
+  it("is a turn with no tool running and nothing stuck", () => {
+    expect(isQuietTurn({ state: "idle", turnActive: true })).toBe(true);
+    expect(isQuietTurn({ state: "receiving", turnActive: true })).toBe(true);
+    expect(isQuietTurn({ state: "working", turnActive: true })).toBe(false);
+    expect(
+      isQuietTurn({ state: "idle", turnActive: true, activity: "reading" }),
+    ).toBe(false);
+    expect(
+      isQuietTurn({ state: "idle", turnActive: true, stuck: "tool_failed" }),
+    ).toBe(false);
+    expect(isQuietTurn({ state: "idle", turnActive: false })).toBe(false);
   });
 });

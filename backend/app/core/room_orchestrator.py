@@ -340,6 +340,10 @@ def build_overview(sessions: dict[str, StateMachine]) -> OverviewState:
                 todo_done=todo_done,
                 todo_total=todo_total,
                 subagent_count=len(list(sm.agents)),
+                activity=sm.boss_activity,
+                stuck=sm.boss_stuck,
+                bubble=sm.boss_bubble,
+                turn_active=sm.turn_active,
             )
         )
     return OverviewState(entries=entries, last_updated=datetime.now(UTC))

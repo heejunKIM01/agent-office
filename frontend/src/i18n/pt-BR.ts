@@ -71,6 +71,7 @@ const ptBR: Record<TranslationKey, string> = {
   "iso.panel.working": "Trabalhando",
   "iso.panel.tools": "{count} ferramentas · {seconds}s",
   "iso.panel.tools_one": "{count} ferramenta · {seconds}s",
+  "iso.panel.colleague": "Outra sessão deste andar · {seconds}s",
   "iso.panel.tools_other": "{count} ferramentas · {seconds}s",
   "iso.panel.log": "Registro de atividade",
   "iso.panel.logTime": "{h}:{m}:{s}",

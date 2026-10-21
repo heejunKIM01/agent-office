@@ -2,8 +2,9 @@
  * The people on the isometric floor: a figure and a name chip per person,
  * kept in step with the session by `sync` and moved every frame by the
  * errand rules in `update`. Claude sits at the front dev desk nearest my
- * desk, subagents take the next free dev chairs, and I sit behind the
- * reception desk. `update` also reports what the rooms should show: racks
+ * desk, subagents and colleagues (other sessions' lead agents on this
+ * floor) take the next free dev chairs, and I sit behind the reception
+ * desk. `update` also reports what the rooms should show: racks
  * busy while a command runs, code on the screens of people editing,
  * someone writing at the whiteboard, and the elevator doors open while
  * someone steps in or out.
@@ -54,6 +55,7 @@ import { OUTFIT_COLORS } from "./isoPalette";
 const DOT_COLORS: Record<Exclude<PersonKind, "subagent">, string> = {
   claude: "#e8735a",
   me: "#4f6fe8",
+  colleague: "#e8735a",
 };
 const dotColor = (person: IsoPerson): string =>
   person.kind === "subagent"

@@ -12,6 +12,8 @@ import { IsoFloorGuide } from "@/components/iso/IsoFloorGuide";
 import { IsoOffice } from "@/components/iso/IsoOffice";
 import { IsoSidePanel } from "@/components/iso/IsoSidePanel";
 import SettingsModal from "@/components/overlay/SettingsModal";
+import { useCodingAgentName } from "@/hooks/useCodingAgentName";
+import { useFloorColleagues } from "@/hooks/useFloorColleagues";
 import { useNow } from "@/hooks/useNow";
 import { useSessions } from "@/hooks/useSessions";
 import { useSessionSwitch } from "@/hooks/useSessionSwitch";
@@ -24,7 +26,12 @@ import {
   useGameStore,
 } from "@/stores/gameStore";
 import { usePreferencesStore } from "@/stores/preferencesStore";
-import { buildFloors, floorOfSession, sessionTitle } from "@/systems/floors";
+import {
+  buildFloors,
+  floorColleagues,
+  floorOfSession,
+  sessionTitle,
+} from "@/systems/floors";
 import { initApiKeyFromBrowser } from "@/utils/api";
 
 /** How long the 「▲ 3F」 lamp shows while the office changes floors (globals.css). */
@@ -60,6 +67,13 @@ export default function IsoOfficePage(): React.ReactNode {
   const now = useNow(15_000);
   const floors = useMemo(() => buildFloors(sessions, now), [sessions, now]);
   const floor = floorOfSession(floors, sessionId);
+  // Other sessions working on this floor send their lead agent in too.
+  const colleagueSessions = useMemo(
+    () => floorColleagues(floor, sessionId, now),
+    [floor, sessionId, now],
+  );
+  const leadName = useCodingAgentName();
+  const colleagues = useFloorColleagues(colleagueSessions, leadName);
   const title =
     (session && sessionTitle(session)) ||
     boss.currentTask ||
@@ -147,7 +161,7 @@ export default function IsoOfficePage(): React.ReactNode {
         </div>
       )}
       <div className="relative min-w-0 flex-1">
-        <IsoOffice />
+        <IsoOffice colleagues={colleagues} />
 
         {lamp && (
           <div
@@ -241,6 +255,7 @@ export default function IsoOfficePage(): React.ReactNode {
       </div>
       <IsoSidePanel
         session={session}
+        colleagues={colleagues}
         className="hidden w-[240px] shrink-0 flex-col gap-2 py-3 pr-3 lg:flex"
       />
       {sheet === "panel" && (
@@ -258,6 +273,7 @@ export default function IsoOfficePage(): React.ReactNode {
           />
           <IsoSidePanel
             session={session}
+            colleagues={colleagues}
             className="flex h-full w-[280px] max-w-[85vw] flex-col gap-2 overflow-y-auto bg-[#f5f7fa] p-3 shadow-xl"
           />
         </div>
