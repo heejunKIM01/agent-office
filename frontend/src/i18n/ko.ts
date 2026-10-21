@@ -196,6 +196,9 @@ const ko: Record<TranslationKey, string> = {
   "iso.controlsHint": "드래그로 이동 · 휠로 확대 · 더블클릭으로 원위치",
   "iso.me": "나",
   "iso.agentType.general": "범용",
+  "iso.bubble.thinking": "고민 중",
+  "iso.bubble.thinkingFor": "{seconds}s째 고민 중",
+  "iso.bubble.looking": "살펴보는 중",
 
   // Zoom Controls
   "zoom.in": "확대",

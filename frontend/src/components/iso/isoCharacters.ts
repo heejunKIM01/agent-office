@@ -38,6 +38,8 @@ export interface CharacterRig {
   legs: [THREE.Group, THREE.Group];
   arms: [THREE.Group, THREE.Group];
   book: THREE.Object3D;
+  /** Cold sweat beside the head while a failed tool keeps it stuck. */
+  sweat: THREE.Group;
   /** Where the name chip hangs, just above the hair. */
   chipAnchor: THREE.Object3D;
 }
@@ -142,12 +144,39 @@ export function buildCharacter(kind: PersonKind): CharacterRig {
   book.visible = false;
   hips.add(book);
 
+  const sweat = new THREE.Group();
+  // On both sides of the head, so one shows whichever way it faces.
+  for (const [x, y, z] of SWEAT_DROPS) {
+    const drop = new THREE.Group();
+    drop.add(sphere(0.12, C.sweat, 0, 0, 0, [12, 10]));
+    const tip = new THREE.Mesh(
+      new THREE.ConeGeometry(0.105, 0.18, 10),
+      material(C.sweat),
+    );
+    tip.position.y = 0.13;
+    drop.add(tip);
+    drop.position.set(x, y, z);
+    sweat.add(drop);
+  }
+  sweat.visible = false;
+  hips.add(sweat);
+
   const chipAnchor = new THREE.Object3D();
   chipAnchor.position.set(0, 2.2, 0);
   hips.add(chipAnchor);
 
-  return { root, hips, legs, arms, book, chipAnchor };
+  return { root, hips, legs, arms, book, sweat, chipAnchor };
 }
+
+/** Where the sweat drops start, beside the head (x, y, z in the hips' frame). */
+const SWEAT_DROPS: [number, number, number][] = [
+  [0.66, 1.78, 0.28],
+  [-0.66, 1.72, 0.28],
+  [0.72, 1.5, 0.12],
+];
+
+/** Chin on the right hand, the left arm folded under it. */
+const PONDER_ARMS: [number, number] = [-1.2, -2.1];
 
 /** Arm angles (about x, forward is negative) while working in each room. */
 function workArms(
@@ -170,21 +199,33 @@ function workArms(
   }
 }
 
+/** Sweat drops slide down and start again, each on its own beat. */
+function drip(sweat: THREE.Group, seconds: number): void {
+  sweat.children.forEach((drop, i) => {
+    const t = (seconds * 0.9 + i * 0.37) % 1;
+    drop.position.y = SWEAT_DROPS[i][1] - 0.25 * t;
+  });
+}
+
 /**
  * Pose a person for this frame: swinging limbs while walking, legs forward
  * on a chair (hands moving on the keyboard while typing), and in a room a
  * book in hand, hands at the rack or kiosk, writing on the whiteboard, or
- * talking at my desk. ``seconds`` drives the motion.
+ * talking at my desk. A stuck person (a failed tool) props its chin on a
+ * hand and sweats (spec R3). ``seconds`` drives the motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
   pose: IsoPose,
   room: ErrandRoomId | null,
   seconds: number,
+  stuck = false,
 ): void {
   const [legL, legR] = rig.legs;
   const [armL, armR] = rig.arms;
-  rig.book.visible = pose === "work" && room === "library";
+  rig.book.visible = pose === "work" && room === "library" && !stuck;
+  rig.sweat.visible = stuck;
+  if (stuck) drip(rig.sweat, seconds);
   if (pose === "walk") {
     const swing = Math.sin(seconds * STRIDE_RATE);
     legL.rotation.x = 0.55 * swing;
@@ -200,12 +241,12 @@ export function poseCharacter(
     const rest = pose === "type" ? -1.1 : -0.35;
     legL.rotation.x = -Math.PI / 2;
     legR.rotation.x = -Math.PI / 2;
-    armL.rotation.x = rest + tap;
-    armR.rotation.x = rest - tap;
+    armL.rotation.x = stuck ? PONDER_ARMS[0] : rest + tap;
+    armR.rotation.x = stuck ? PONDER_ARMS[1] : rest - tap;
     rig.hips.position.y = SEATED_HIP_HEIGHT;
     return;
   }
-  const [left, right] = workArms(room, seconds);
+  const [left, right] = stuck ? PONDER_ARMS : workArms(room, seconds);
   const breath = 0.03 * Math.sin(seconds * 2);
   legL.rotation.x = 0;
   legR.rotation.x = 0;

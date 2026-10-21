@@ -5,10 +5,50 @@ import { Minus, Plus, RotateCcw } from "lucide-react";
 import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useGameStore } from "@/stores/gameStore";
+import type { AgentPhase } from "@/stores/slices/types";
 import { officePeople, type PeopleWords } from "@/systems/officePeople";
+import type { BubbleWords } from "./isoBubbles";
 import { createIsoView, type IsoView } from "./isoView";
 
 const ZOOM_STEP = 1.25;
+
+/** Phases the 2D office walks a new subagent through on its way to a desk. */
+const ARRIVAL_PHASES: ReadonlySet<AgentPhase> = new Set([
+  "arriving",
+  "in_arrival_queue",
+  "walking_to_ready",
+  "conversing",
+  "walking_to_boss",
+  "at_boss",
+  "walking_to_desk",
+]);
+
+/**
+ * Seat new subagents at once: the 2D office's arrival walk does not run on
+ * this page, and a subagent only gets bubbles once it is at its desk.
+ */
+function seatNewcomers(): void {
+  const store = useGameStore.getState();
+  for (const [id, agent] of store.agents) {
+    if (ARRIVAL_PHASES.has(agent.phase)) store.updateAgentPhase(id, "idle");
+  }
+}
+
+/**
+ * Show each person's latest bubble at once. The 2D office's bubble timer
+ * does not run on this page, so queued bubbles are moved up here instead.
+ */
+function takeLatestBubbles(): void {
+  const store = useGameStore.getState();
+  for (let left = store.boss.bubble.queue.length; left > 0; left--) {
+    store.advanceBubble("boss");
+  }
+  for (const [id, agent] of store.agents) {
+    for (let left = agent.bubble.queue.length; left > 0; left--) {
+      store.advanceBubble(id);
+    }
+  }
+}
 /** `next dev` puts its indicator in the bottom-left corner; keep the buttons above it. */
 const CONTROLS_BOTTOM =
   process.env.NODE_ENV === "development" ? "bottom-16" : "bottom-4";
@@ -42,10 +82,30 @@ export function IsoOffice(): React.ReactNode {
     };
   }, []);
 
+  const bubbleWords = useMemo<BubbleWords>(
+    () => ({
+      thinking: t("iso.bubble.thinking"),
+      thinkingFor: (seconds) => t("iso.bubble.thinkingFor", { seconds }),
+      looking: t("iso.bubble.looking"),
+    }),
+    [t],
+  );
+  useEffect(() => {
+    viewRef.current?.setBubbleWords(bubbleWords);
+  }, [bubbleWords]);
+
   // Keep the people on the floor in step with the session.
   useEffect(() => {
-    const show = (): void =>
+    let showing = false;
+    const show = (): void => {
+      // Moving bubbles up changes the store and calls back in here.
+      if (showing) return;
+      showing = true;
+      seatNewcomers();
+      takeLatestBubbles();
       viewRef.current?.setPeople(officePeople(useGameStore.getState(), words));
+      showing = false;
+    };
     show();
     return useGameStore.subscribe(show);
   }, [words]);

@@ -92,6 +92,7 @@ export const ISO_COLORS = {
   collar: "#f4f5f7",
   bookCover: "#d9534f",
   bookPages: "#fbf8f1",
+  sweat: "#7cc4f2",
   labelText: "#8e98a7",
   wallLabelText: "#4a5262",
   books: [

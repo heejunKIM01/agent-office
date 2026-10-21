@@ -194,6 +194,9 @@ const en = {
   "iso.controlsHint": "Drag to move · Scroll to zoom · Double-click to reset",
   "iso.me": "Me",
   "iso.agentType.general": "General",
+  "iso.bubble.thinking": "Thinking",
+  "iso.bubble.thinkingFor": "Thinking for {seconds}s",
+  "iso.bubble.looking": "Looking into it",
 
   // Zoom Controls
   "zoom.in": "Zoom in",

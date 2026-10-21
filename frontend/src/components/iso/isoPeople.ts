@@ -24,7 +24,14 @@ import {
   type IsoWalker,
 } from "@/systems/isoErrands";
 import { findFloorPath } from "@/systems/isoNavGrid";
+import { pickBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
+import {
+  bubbleHolder,
+  bubbleKey,
+  drawBubble,
+  type BubbleWords,
+} from "./isoBubbles";
 import {
   buildCharacter,
   poseCharacter,
@@ -55,6 +62,12 @@ interface Placed {
   rig: CharacterRig;
   chip: CSS2DObject;
   chipText: HTMLSpanElement;
+  bubble: CSS2DObject;
+  bubbleHolder: HTMLDivElement;
+  /** What the bubble shows now, to redraw it only when that changes. */
+  bubbleKey: string;
+  /** When it started thinking (performance.now ms), while it thinks. */
+  thinkingSince: number | null;
   walker: IsoWalker;
   seat: IsoSpot;
 }
@@ -82,7 +95,19 @@ export class IsoPeople {
     ROOMS.map((room) => [room, new Map<string, number>()]),
   ) as Record<ErrandRoomId, Map<string, number>>;
 
+  private words: BubbleWords = {
+    thinking: "",
+    thinkingFor: () => "",
+    looking: "",
+  };
+
   constructor(private readonly scene: THREE.Scene) {}
+
+  /** Use these words in bubbles from now on. */
+  setWords(words: BubbleWords): void {
+    this.words = words;
+    for (const placed of this.placed.values()) placed.bubbleKey = "redraw";
+  }
 
   /** Add, relabel and remove people to match the session. */
   sync(people: IsoPerson[]): void {
@@ -104,12 +129,20 @@ export class IsoPeople {
       const label = new CSS2DObject(chip.element);
       label.center.set(0.5, 1);
       rig.chipAnchor.add(label);
+      const holder = bubbleHolder();
+      const bubble = new CSS2DObject(holder);
+      bubble.center.set(0.5, 1);
+      rig.chipAnchor.add(bubble);
       this.scene.add(rig.root);
       this.placed.set(person.id, {
         person,
         rig,
         chip: label,
         chipText: chip.text,
+        bubble,
+        bubbleHolder: holder,
+        bubbleKey: "",
+        thinkingSince: null,
         walker: seatedWalker(seat),
         seat,
       });
@@ -145,7 +178,9 @@ export class IsoPeople {
         walker.pose,
         walker.goal === "seat" ? null : walker.goal,
         now / 1000,
+        stuck,
       );
+      this.showBubble(placed, activity, stuck, now);
       if (activity === "running") inUse.serverBusy = true;
       if (walker.pose === "type") inUse.editingSeats.push(placed.seat);
       if (walker.goal === "meeting" && walker.pose === "work") {
@@ -153,6 +188,33 @@ export class IsoPeople {
       }
     }
     return inUse;
+  }
+
+  /** Redraw a person's bubble when what it should show has changed. */
+  private showBubble(
+    placed: Placed,
+    activity: IsoPerson["activity"],
+    stuck: boolean,
+    now: number,
+  ): void {
+    const { person } = placed;
+    if (person.thinking) placed.thinkingSince ??= now;
+    else placed.thinkingSince = null;
+    const bubble = pickBubble({
+      bubble: person.bubble,
+      bubbleAgeMs:
+        person.bubbleAt === null ? null : Date.now() - person.bubbleAt,
+      activity,
+      stuck,
+      thinkingSeconds:
+        placed.thinkingSince === null
+          ? null
+          : Math.floor((now - placed.thinkingSince) / 1000),
+    });
+    const key = bubbleKey(bubble);
+    if (key === placed.bubbleKey) return;
+    placed.bubbleKey = key;
+    drawBubble(placed.bubbleHolder, bubble, this.words);
   }
 
   dispose(): void {
@@ -187,6 +249,7 @@ export class IsoPeople {
     // Removing the chip itself takes its element off the page; removing
     // only the figure would leave the chip behind.
     placed.chip.removeFromParent();
+    placed.bubble.removeFromParent();
     this.scene.remove(placed.rig.root);
     placed.rig.root.traverse((object) => {
       if (object instanceof THREE.Mesh) object.geometry.dispose();

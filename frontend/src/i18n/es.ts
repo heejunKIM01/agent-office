@@ -198,6 +198,9 @@ const es: Record<TranslationKey, string> = {
     "Arrastra para mover · Rueda para ampliar · Doble clic para restablecer",
   "iso.me": "Yo",
   "iso.agentType.general": "General",
+  "iso.bubble.thinking": "Pensando",
+  "iso.bubble.thinkingFor": "Pensando desde hace {seconds}s",
+  "iso.bubble.looking": "Revisando",
 
   // Zoom Controls
   "zoom.in": "Acercar",
