@@ -26,6 +26,8 @@ const DOOR_CLOSED_X = 0.58;
 const DOOR_SLIDE = 0.5;
 /** An open door narrows to this share of its width in its pocket. */
 const DOOR_OPEN_WIDTH = 0.2;
+/** The TV cuts to a new scene this often while someone watches (s). */
+const TV_SCENE_SECONDS = 4;
 
 const CODE_COLORS = [
   "#7dd3fc",
@@ -159,6 +161,11 @@ export class IsoEffects {
   private wasPlanning = false;
   private readonly doors: { mesh: THREE.Object3D; side: number }[] = [];
   private doorsOpen = 0;
+  private tv: {
+    mesh: THREE.Mesh;
+    off: THREE.Material | THREE.Material[];
+  } | null = null;
+  private readonly tvOn = new THREE.MeshBasicMaterial();
 
   constructor(office: THREE.Object3D) {
     const found: { whiteboard?: THREE.Object3D } = {};
@@ -168,6 +175,9 @@ export class IsoEffects {
       }
       if (typeof object.userData.elevatorDoor === "number") {
         this.doors.push({ mesh: object, side: object.userData.elevatorDoor });
+      }
+      if (object.userData.tvScreen && object instanceof THREE.Mesh) {
+        this.tv = { mesh: object, off: object.material };
       }
       const item = object.userData.furniture as Furniture | undefined;
       if (item?.kind === "whiteboard") found.whiteboard = object;
@@ -220,6 +230,17 @@ export class IsoEffects {
     }
     this.wasPlanning = inUse.planning;
 
+    // A show on the TV: colours drifting, with the odd cut to a new scene.
+    if (this.tv) {
+      this.tv.mesh.material = inUse.tvOn ? this.tvOn : this.tv.off;
+      if (inUse.tvOn) {
+        const scene = Math.floor(seconds / TV_SCENE_SECONDS);
+        const hue = (scene * 0.37 + seconds * 0.02) % 1;
+        const flicker = 0.55 + 0.08 * Math.sin(seconds * 9);
+        this.tvOn.color.setHSL(hue, 0.55, flicker);
+      }
+    }
+
     const target = inUse.elevatorOpen ? 1 : 0;
     const step = DOOR_SPEED * dt;
     this.doorsOpen += Math.max(-step, Math.min(step, target - this.doorsOpen));
@@ -233,6 +254,7 @@ export class IsoEffects {
   dispose(): void {
     this.code.dispose();
     this.codeMaterial.dispose();
+    this.tvOn.dispose();
     if (this.board) {
       this.board.texture.dispose();
       this.board.mesh.geometry.dispose();

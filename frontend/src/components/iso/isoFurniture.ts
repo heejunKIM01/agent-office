@@ -286,11 +286,14 @@ function sideTable(): THREE.Group {
 
 /** A long wooden cabinet against the wall with a TV on it. */
 function tvStand(): THREE.Group {
+  // The screen lights up while someone in the lounge watches (isoEffects).
+  const screen = box(1.16, 0.7, 0.01, "#323a47", 0, 0.87, 0.26);
+  screen.userData.tvScreen = true;
   return group(
     box(4.4, 0.75, 0.7, C.cabinetWood, 0, 0, 0),
     box(4.44, 0.05, 0.74, C.tableWood, 0, 0.75, 0),
     box(1.3, 0.85, 0.5, C.tv, 0, 0.8, 0),
-    box(1.16, 0.7, 0.01, "#323a47", 0, 0.87, 0.26),
+    screen,
   );
 }
 

@@ -4,8 +4,9 @@
  * errand rules in `update`. Claude sits at the front dev desk nearest my
  * desk, subagents and colleagues (other sessions' lead agents on this
  * floor) take the next free dev chairs, and I sit behind the reception
- * desk. Claude rests on the lounge sofa between turns and has a coffee in
- * the cafe while its conversation is compacted. `update` also reports what the rooms should show: racks
+ * desk. Claude rests on the lounge sofa between turns, passing the time
+ * with a coffee, its phone, a book or the TV and dozing off after a long
+ * rest, and has a coffee in the cafe while its conversation is compacted. `update` also reports what the rooms should show: racks
  * busy while a command runs, code on the screens of people editing,
  * someone writing at the whiteboard, and the elevator doors open while
  * someone steps in or out.
@@ -39,6 +40,7 @@ import {
   type IsoWalker,
 } from "@/systems/isoErrands";
 import { findFloorPath } from "@/systems/isoNavGrid";
+import { loungeAct, type LoungeAct } from "@/systems/loungeActs";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import {
@@ -92,6 +94,8 @@ export interface RoomsInUse {
   planning: boolean;
   /** Someone is stepping into or out of the elevator. */
   elevatorOpen: boolean;
+  /** Someone on the lounge sofa is watching TV. */
+  tvOn: boolean;
 }
 
 interface Placed {
@@ -105,6 +109,8 @@ interface Placed {
   bubbleKey: string;
   /** When it started thinking (performance.now ms), while it thinks. */
   thinkingSince: number | null;
+  /** When it sat down on the lounge sofa (Date.now ms), while it sits there. */
+  loungeSince: number | null;
   walker: IsoWalker;
   seat: IsoSpot;
   /** What it tells Claude when its work is done, read when it gets there. */
@@ -206,6 +212,7 @@ export class IsoPeople {
         bubbleHolder: holder,
         bubbleKey: "",
         thinkingSince: null,
+        loungeSince: null,
         walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
@@ -220,6 +227,7 @@ export class IsoPeople {
       editingSeats: [],
       planning: false,
       elevatorOpen: false,
+      tvOn: false,
     };
     if (this.callPending) {
       this.callPending = false;
@@ -260,12 +268,14 @@ export class IsoPeople {
         placed.person.kind === "claude" &&
         now < this.callUntil &&
         walker.pose === "sit";
+      const act = this.loungeActOf(placed);
       poseCharacter(
         placed.rig,
         calling ? "phone" : walker.pose,
         isRoom(walker.goal) ? walker.goal : null,
         now / 1000,
         stuck && !leaving,
+        act,
       );
       // In the cab, behind its doors: no chip or bubble either.
       const inCab = walker.z < ELEVATOR_DOOR.z - IN_CAB_DEPTH;
@@ -277,8 +287,10 @@ export class IsoPeople {
         stuck,
         now,
         listening && placed.person.kind === "claude",
+        act,
       );
       if (activity === "running") inUse.serverBusy = true;
+      if (act === "tv") inUse.tvOn = true;
       if (walker.pose === "type") inUse.editingSeats.push(placed.seat);
       if (walker.goal === "meeting" && walker.pose === "work") {
         inUse.planning = true;
@@ -321,16 +333,20 @@ export class IsoPeople {
     stuck: boolean,
     now: number,
     quiet: boolean,
+    act: LoungeAct | null,
   ): void {
     const { person } = placed;
     if (person.thinking) placed.thinkingSince ??= now;
     else placed.thinkingSince = null;
     const onTrip = quiet ? null : this.tripBubble(placed);
-    // Over coffee while compacting, it says so instead of thinking aloud.
+    // Over coffee while compacting it says so instead of thinking aloud;
+    // dozing on the sofa it snores.
     const onBreak: IsoBubble | undefined =
       person.breakRoom === "cafe"
         ? { kind: "speech", text: this.words.compacting }
-        : undefined;
+        : act === "doze"
+          ? { kind: "speech", text: "💤" }
+          : undefined;
     const bubble =
       onTrip !== undefined
         ? onTrip
@@ -350,6 +366,20 @@ export class IsoPeople {
     if (key === placed.bubbleKey) return;
     placed.bubbleKey = key;
     drawBubble(placed.bubbleHolder, bubble, this.words);
+  }
+
+  /**
+   * What it does on the lounge sofa, counted from the last event (or from
+   * when it sat down); null anywhere else.
+   */
+  private loungeActOf(placed: Placed): LoungeAct | null {
+    const { walker } = placed;
+    if (walker.goal !== "lounge" || walker.path || walker.pose !== "sit") {
+      placed.loungeSince = null;
+      return null;
+    }
+    const sat = (placed.loungeSince ??= Date.now());
+    return loungeAct(Date.now() - (placed.person.idleSince ?? sat));
   }
 
   /** Take everyone off the floor; the next `sync` places them afresh. */
