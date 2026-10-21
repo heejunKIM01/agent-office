@@ -271,13 +271,15 @@ export class IsoPeople {
         gone.push(id);
         continue;
       }
+      const act = this.actOf(placed, now);
       placed.rig.root.position.set(walker.x, 0, walker.z);
-      placed.rig.root.rotation.y = walker.facing;
+      // Waiting on a long command it turns from the rack to face the room.
+      placed.rig.root.rotation.y =
+        act === "watch" ? walker.facing + Math.PI : walker.facing;
       const calling =
         placed.person.kind === "claude" &&
         now < this.callUntil &&
         walker.pose === "sit";
-      const act = this.actOf(placed, now);
       poseCharacter(
         placed.rig,
         calling
