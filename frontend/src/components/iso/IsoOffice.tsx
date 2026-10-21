@@ -6,6 +6,9 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { createIsoView, type IsoView } from "./isoView";
 
 const ZOOM_STEP = 1.25;
+/** `next dev` puts its indicator in the bottom-left corner; keep the buttons above it. */
+const CONTROLS_BOTTOM =
+  process.env.NODE_ENV === "development" ? "bottom-16" : "bottom-4";
 
 /**
  * The isometric office scene with its zoom buttons and control hint
@@ -33,7 +36,9 @@ export function IsoOffice(): React.ReactNode {
   return (
     <div className="relative h-full w-full">
       <div ref={mountRef} className="absolute inset-0" />
-      <div className="absolute bottom-4 left-4 flex flex-col gap-1.5">
+      <div
+        className={`absolute left-4 flex flex-col gap-1.5 ${CONTROLS_BOTTOM}`}
+      >
         <button
           type="button"
           className={buttonClass}
