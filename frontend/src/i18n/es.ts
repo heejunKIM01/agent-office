@@ -77,6 +77,7 @@ const es: Record<TranslationKey, string> = {
   "settings.language": "Idioma",
   "settings.tabs.general": "General",
   "settings.tabs.building": "Edificio",
+  "settings.tabs.connect": "Conectar",
   "settings.building.name": "Nombre del Edificio",
   "settings.building.namePlaceholder": "Mi Empresa",
   "settings.building.floors": "Pisos",
@@ -99,6 +100,36 @@ const es: Record<TranslationKey, string> = {
   "settings.building.saveFailed": "Error al guardar: {status} {statusText}",
   "settings.building.saveUnreachable":
     "No se puede conectar con el servidor — ¿está en ejecución?",
+  "settings.connect.intro":
+    "Cada botón ejecuta por ti el comando de conexión en este equipo. El resto de tu configuración no cambia; solo se añade el hook de Agent Office.",
+  "settings.connect.connected": "Conectado",
+  "settings.connect.notConnected": "Sin conectar",
+  "settings.connect.connect": "Conectar",
+  "settings.connect.reconnect": "Reconectar",
+  "settings.connect.disconnect": "Desconectar",
+  "settings.connect.running": "Ejecutando…",
+  "settings.connect.done": "Listo.",
+  "settings.connect.failed": "No funcionó. Revisa la salida de abajo.",
+  "settings.connect.output": "Salida · {command}",
+  "settings.connect.cliMissing":
+    "Todavía no se encuentra el comando {cli} en este equipo.",
+  "settings.connect.toolMissing":
+    "Falta la herramienta del hook. Vuelve a conectar para instalarla.",
+  "settings.connect.afterClaude":
+    "Las sesiones de Claude Code que abras a partir de ahora aparecerán en la oficina.",
+  "settings.connect.afterCodex":
+    "En Codex, abre /hooks y confía en el hook de Agent Office; si no, no se ejecuta.",
+  "settings.connect.afterGemini":
+    "Las sesiones de Gemini CLI que abras a partir de ahora aparecerán en la oficina.",
+  "settings.connect.needToken":
+    "Para conectar, abre esta página desde la dirección de la línea 「Open the UI with this URL」 en la terminal del backend (…/?token=…).",
+  "settings.connect.notLocal":
+    "Este backend es accesible desde otros equipos (por ejemplo, Docker), así que no puede conectar agentes. Ejecuta make hooks-install en una terminal.",
+  "settings.connect.cannotRun":
+    "Este backend no puede ejecutar el comando de conexión ({reason}). Ejecuta make hooks-install desde el repositorio en una terminal.",
+  "settings.connect.busy": "Otra conexión sigue en curso.",
+  "settings.connect.loadFailed":
+    "No se pudo leer el estado de las conexiones. ¿Está en marcha el backend?",
 
   // Sessions
   "sessions.title": "Sesiones",
@@ -229,6 +260,8 @@ const es: Record<TranslationKey, string> = {
   "iso.roomDoes.mydesk": "Preguntas · llamadas para mí",
   "iso.roomDoes.elevator": "Los subagentes llegan y se van",
   "iso.floor.title": "Guía de pisos",
+  "iso.connect.empty": "Todavía no ha llegado nadie.",
+  "iso.connect.cta": "Conectar un agente",
   "iso.floor.caption": "DIRECTORIO",
   "iso.floor.sessions": "{count} sesiones",
   "iso.floor.sessions_one": "{count} sesión",

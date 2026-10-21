@@ -77,6 +77,7 @@ const ko: Record<TranslationKey, string> = {
   "settings.language": "언어",
   "settings.tabs.general": "일반",
   "settings.tabs.building": "건물",
+  "settings.tabs.connect": "연결",
   "settings.building.name": "건물 이름",
   "settings.building.namePlaceholder": "우리 회사",
   "settings.building.floors": "층",
@@ -99,6 +100,35 @@ const ko: Record<TranslationKey, string> = {
   "settings.building.saveFailed": "저장 실패: {status} {statusText}",
   "settings.building.saveUnreachable":
     "백엔드에 연결할 수 없어요. 서버가 켜져 있나요?",
+  "settings.connect.intro":
+    "버튼을 누르면 이 컴퓨터에서 연결 명령을 대신 실행해요. 다른 설정은 그대로 두고 Agent Office 훅만 더해요.",
+  "settings.connect.connected": "연결됨",
+  "settings.connect.notConnected": "연결 안 됨",
+  "settings.connect.connect": "연결",
+  "settings.connect.reconnect": "다시 연결",
+  "settings.connect.disconnect": "해제",
+  "settings.connect.running": "실행 중…",
+  "settings.connect.done": "완료했어요.",
+  "settings.connect.failed": "실패했어요. 아래 출력을 확인해 주세요.",
+  "settings.connect.output": "출력 · {command}",
+  "settings.connect.cliMissing": "이 컴퓨터에서 {cli} 명령을 찾지 못했어요.",
+  "settings.connect.toolMissing":
+    "훅 도구가 보이지 않아요. 다시 연결해 주세요.",
+  "settings.connect.afterClaude":
+    "지금부터 여는 Claude Code 세션이 사무실에 나타나요.",
+  "settings.connect.afterCodex":
+    "Codex에서 /hooks 를 열어 Agent Office 훅을 신뢰해야 동작해요.",
+  "settings.connect.afterGemini":
+    "지금부터 여는 Gemini CLI 세션이 사무실에 나타나요.",
+  "settings.connect.needToken":
+    "연결하려면 백엔드 터미널의 「Open the UI with this URL」 줄에 있는 주소(…/?token=…)로 이 화면을 열어 주세요.",
+  "settings.connect.notLocal":
+    "이 백엔드는 다른 컴퓨터에서도 접속할 수 있게 떠 있어서(Docker 등) 연결할 수 없어요. 터미널에서 make hooks-install 을 실행해 주세요.",
+  "settings.connect.cannotRun":
+    "이 백엔드에서는 연결 명령을 실행할 수 없어요({reason}). 저장소 폴더에서 터미널로 make hooks-install 을 실행해 주세요.",
+  "settings.connect.busy": "다른 연결 작업이 아직 진행 중이에요.",
+  "settings.connect.loadFailed":
+    "연결 상태를 불러오지 못했어요. 백엔드가 떠 있는지 확인해 주세요.",
 
   // Sessions
   "sessions.title": "세션",
@@ -227,6 +257,8 @@ const ko: Record<TranslationKey, string> = {
   "iso.roomDoes.mydesk": "질문 · 에이전트 호출",
   "iso.roomDoes.elevator": "서브에이전트 출퇴근",
   "iso.floor.title": "층별 안내",
+  "iso.connect.empty": "아직 아무도 출근하지 않았어요.",
+  "iso.connect.cta": "에이전트 연결",
   "iso.floor.caption": "FLOOR GUIDE",
   "iso.floor.sessions": "세션 {count}개",
   "iso.floor.sessions_one": "세션 {count}개",
