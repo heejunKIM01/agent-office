@@ -18,8 +18,7 @@
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
  * via the `definition` "Activity".
  */
-export type Activity =
-  "reading" | "running" | "editing" | "browsing" | "planning" | "asking";
+export type Activity = "reading" | "running" | "editing" | "browsing" | "planning" | "asking";
 export type Id = string;
 export type Nativeid = string | null;
 export type Name = string | null;
