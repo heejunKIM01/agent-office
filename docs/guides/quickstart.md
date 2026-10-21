@@ -15,7 +15,7 @@ Get Claude Office Visualizer running in under 5 minutes. This guide covers the f
 
 ## Overview
 
-Claude Office Visualizer transforms Claude Code operations into a real-time pixel art office simulation. Once installed, it automatically captures Claude Code events and displays them as animated office activities.
+Claude Office Visualizer transforms Claude Code operations into a real-time office. Once installed, it automatically captures Claude Code events and displays them as animated office activities. In this fork the main page is a bright isometric office; the original pixel art office stays at `/classic`.
 
 ```mermaid
 graph LR
@@ -152,11 +152,12 @@ Expected response:
 
 Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
 
-You should see the pixel art office with:
-- A boss character at the main desk
-- Empty employee desks
-- A city skyline window
-- Status panels on the sides
+You should see the isometric office with:
+- The floor guide on the left: one floor per project, its sessions listed under it
+- One floor with its rooms (library, dev room, server room, search room, meeting room, lounge, cafe), my desk and an elevator
+- The people in the office, an activity log and a room legend on the right
+
+The original pixel art office, with the whiteboard, the Command Center and the Building view, is at [http://localhost:3000/classic](http://localhost:3000/classic) (the gamepad button at the top right).
 
 ### 3. Test with Claude Code
 
@@ -167,9 +168,9 @@ claude "What is 2 + 2?"
 ```
 
 Watch the visualizer:
-1. Boss picks up the phone (receiving prompt)
-2. Boss works at the desk (processing)
-3. Speech bubble appears with response summary
+1. Claude thinks at its desk (a 「💭 고민 중」 bubble)
+2. Claude walks to the room of each tool it runs: the library to read, the server room to run commands, its desk to edit
+3. Its reply appears as a speech bubble
 
 ### 4. Test Subagent Visualization
 
@@ -180,10 +181,10 @@ claude "Search this codebase for all Python files and summarize what each does"
 ```
 
 Watch the visualizer:
-1. Boss delegates work
-2. Employee agents spawn from the elevator
-3. Agents walk to desks and work
-4. Agents return to elevator when done
+1. Claude picks up the phone at its desk
+2. Employee agents step out of the elevator
+3. Agents walk to their desks, or to the room of their tool, and work
+4. When done they report beside Claude, wave 「👋 퇴근합니다!」 and ride the elevator away
 
 ## Next Steps
 
@@ -191,12 +192,12 @@ Now that the visualizer is running:
 
 | Task | Command/Action |
 |------|----------------|
-| Run simulation | Click the **Simulate** button in the frontend header |
+| Run simulation | `uv run --frozen python scripts/simulate_events.py errands`, or **Simulate** in the `/classic` header |
 | Enable debug mode | Press `D` in the browser |
 | View hook logs | `make hooks-logs` |
 | Stop services | `make dev-tmux-kill` |
 
-### Keyboard Shortcuts (in browser)
+### Keyboard Shortcuts (2D office at `/classic`)
 
 | Key | Action |
 |-----|--------|
