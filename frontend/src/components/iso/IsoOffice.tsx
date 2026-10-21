@@ -121,6 +121,16 @@ export function IsoOffice({
     const show = (): void => {
       // Moving bubbles up changes the store and calls back in here.
       if (showing) return;
+      // A chosen session's people wait for its snapshot, so they start where
+      // it puts them (at work, on the sofa, in the cafe) instead of walking
+      // there from where the empty office had them.
+      const store = useGameStore.getState();
+      if (
+        store.sessionId !== "None" &&
+        store.snapshotSessionId !== store.sessionId
+      ) {
+        return;
+      }
       showing = true;
       seatNewcomers();
       takeLatestBubbles();
