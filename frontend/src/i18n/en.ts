@@ -75,6 +75,7 @@ const en = {
   "settings.language": "Language",
   "settings.tabs.general": "General",
   "settings.tabs.building": "Building",
+  "settings.tabs.connect": "Connect",
   "settings.building.name": "Building Name",
   "settings.building.namePlaceholder": "My Company",
   "settings.building.floors": "Floors",
@@ -97,6 +98,36 @@ const en = {
   "settings.building.saveFailed": "Save failed: {status} {statusText}",
   "settings.building.saveUnreachable":
     "Cannot reach backend — is the server running?",
+  "settings.connect.intro":
+    "Each button runs the connect command on this computer for you. Your other settings stay as they are; only the Agent Office hook is added.",
+  "settings.connect.connected": "Connected",
+  "settings.connect.notConnected": "Not connected",
+  "settings.connect.connect": "Connect",
+  "settings.connect.reconnect": "Reconnect",
+  "settings.connect.disconnect": "Disconnect",
+  "settings.connect.running": "Running…",
+  "settings.connect.done": "Done.",
+  "settings.connect.failed": "It didn't work. Check the output below.",
+  "settings.connect.output": "Output · {command}",
+  "settings.connect.cliMissing":
+    "The {cli} command isn't on this computer yet.",
+  "settings.connect.toolMissing":
+    "The hook tool is missing. Reconnect to install it again.",
+  "settings.connect.afterClaude":
+    "Claude Code sessions you open from now on show up in the office.",
+  "settings.connect.afterCodex":
+    "In Codex, open /hooks and trust the Agent Office hook, or it won't run.",
+  "settings.connect.afterGemini":
+    "Gemini CLI sessions you open from now on show up in the office.",
+  "settings.connect.needToken":
+    "To connect, open this page from the 「Agent Office: http://localhost:4747/?token=…」 line in the backend's terminal.",
+  "settings.connect.notLocal":
+    "This backend is reachable from other machines (Docker, for example), so it can't connect agents. Run make hooks-install in a terminal instead.",
+  "settings.connect.cannotRun":
+    "This backend can't run the connect command ({reason}). Run make hooks-install from the repository in a terminal.",
+  "settings.connect.busy": "Another connect is still running.",
+  "settings.connect.loadFailed":
+    "Couldn't read the connections. Is the backend running?",
 
   // Sessions
   "sessions.title": "Sessions",
@@ -225,6 +256,8 @@ const en = {
   "iso.roomDoes.mydesk": "Questions · calls for me",
   "iso.roomDoes.elevator": "Subagents come and go",
   "iso.floor.title": "Floor guide",
+  "iso.connect.empty": "No one has come to work yet.",
+  "iso.connect.cta": "Connect an agent",
   "iso.floor.caption": "DIRECTORY",
   "iso.floor.sessions": "{count} sessions",
   "iso.floor.sessions_one": "{count} session",

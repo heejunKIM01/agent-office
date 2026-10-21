@@ -16,7 +16,7 @@ from rich.logging import RichHandler
 from sqlalchemy import delete, select, update
 
 from app.api.middleware import ApiKeyMiddleware, LocalhostOnlyMiddleware
-from app.api.routes import events, floors, preferences, sessions, websockets
+from app.api.routes import agent_hooks, events, floors, preferences, sessions, websockets
 from app.config import get_settings
 from app.core.event_processor import EventProcessor, get_event_processor
 from app.core.summary_service import get_summary_service
@@ -64,6 +64,12 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
             "http://localhost:8050/?token=%s (static, published by docker-compose)",
             settings.effective_api_key,
             settings.effective_api_key,
+        )
+        # RichHandler folds the long URL across lines, so a terminal click
+        # opens a cut token. Print the dev URL once more on a line of its own.
+        print(
+            f"\n  Agent Office: http://localhost:4747/?token={settings.effective_api_key}\n",
+            flush=True,
         )
 
     if not settings.LOCALHOST_ONLY:
@@ -181,6 +187,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(LocalhostOnlyMiddleware)
+app.add_middleware(ApiKeyMiddleware)
+# Added last so it wraps the two above: their 401 and 403 answers carry the
+# CORS headers too, so the page reads 「no token」 instead of a network error.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -189,9 +199,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(LocalhostOnlyMiddleware)
-app.add_middleware(ApiKeyMiddleware)
-
+app.include_router(agent_hooks.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(events.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(floors.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(preferences.router, prefix=f"{settings.API_V1_STR}")

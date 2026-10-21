@@ -41,7 +41,7 @@ export default function IsoOfficePage(): React.ReactNode {
   const { t } = useTranslation();
   // Status toasts are not shown on this page yet.
   const showStatus = useCallback(() => undefined, []);
-  const { sessions, sessionId, setSessionId, fetchSessions } =
+  const { sessions, sessionsLoading, sessionId, setSessionId, fetchSessions } =
     useSessions(showStatus);
   const { handleSessionSelect } = useSessionSwitch({
     sessionId,
@@ -93,6 +93,13 @@ export default function IsoOfficePage(): React.ReactNode {
   // Settings open here; the Command Center (two or more sessions at work,
   // as in the 2D header) and the 2D office open at /classic.
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"general" | "connect">(
+    "general",
+  );
+  const openSettings = (tab: "general" | "connect"): void => {
+    setSettingsTab(tab);
+    setIsSettingsOpen(true);
+  };
 
   // Below 1024px both columns are hidden; buttons open them as sheets.
   const [sheet, setSheet] = useState<"guide" | "panel" | null>(null);
@@ -166,6 +173,22 @@ export default function IsoOfficePage(): React.ReactNode {
           </div>
         )}
 
+        {/* An empty office points at the connect tab: nothing is wired up yet. */}
+        {!sessionsLoading && sessions.length === 0 && (
+          <div className="absolute left-4 top-4 flex max-w-[min(60%,calc(100%_-_15rem))] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-3 pr-2 shadow-sm">
+            <p className="hidden min-w-0 truncate text-xs text-slate-500 sm:block">
+              {t("iso.connect.empty")}
+            </p>
+            <button
+              type="button"
+              onClick={() => openSettings("connect")}
+              className="shrink-0 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-slate-700"
+            >
+              {t("iso.connect.cta")}
+            </button>
+          </div>
+        )}
+
         {session && (
           <header className="absolute left-4 top-4 flex max-w-[min(60%,calc(100%_-_15rem))] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-2 pr-4 shadow-sm">
             <AgentLogo codingAgent={codingAgent ?? session.codingAgent} />
@@ -208,7 +231,7 @@ export default function IsoOfficePage(): React.ReactNode {
             type="button"
             aria-label="settings"
             title={t("header.settings")}
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => openSettings("general")}
             className={toolButton}
           >
             <Settings size={14} />
@@ -277,6 +300,7 @@ export default function IsoOfficePage(): React.ReactNode {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        initialTab={settingsTab}
       />
     </main>
   );

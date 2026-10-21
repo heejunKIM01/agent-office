@@ -10,17 +10,18 @@ import {
 import { useTranslation } from "@/hooks/useTranslation";
 import { locales, type Locale } from "@/i18n";
 import { BuildingTab } from "@/components/settings/BuildingTab";
+import { ConnectTab } from "@/components/settings/ConnectTab";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-type SettingsTab = "general" | "building";
+type SettingsTab = "general" | "building" | "connect";
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: "general" | "building";
+  initialTab?: SettingsTab;
 }
 
 // ============================================================================
@@ -180,7 +181,7 @@ export default function SettingsModal({
     >
       {/* Tab bar */}
       <div className="flex gap-1 mb-6 p-1 bg-slate-800/50 rounded-lg border border-slate-700">
-        {(["general", "building"] as const).map((tab) => (
+        {(["general", "building", "connect"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -200,7 +201,7 @@ export default function SettingsModal({
       </div>
 
       {/* Tab content */}
-      {activeTab === "general" ? (
+      {activeTab === "general" && (
         <div className="space-y-6">
           {/* Language */}
           <div>
@@ -449,9 +450,11 @@ export default function SettingsModal({
             <p className="text-slate-500 text-xs">{t("settings.clockTip")}</p>
           </div>
         </div>
-      ) : (
+      )}
+      {activeTab === "building" && (
         <BuildingTab onDirtyChange={handleDirtyChange} />
       )}
+      {activeTab === "connect" && <ConnectTab />}
     </Modal>
   );
 }
