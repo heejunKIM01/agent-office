@@ -23,6 +23,52 @@ interface SettingsModalProps {
 // COMPONENT
 // ============================================================================
 
+/** One on/off row of the session settings: label and description, then the switch. */
+function SessionSwitch({
+  checked,
+  label,
+  description,
+  onToggle,
+}: {
+  checked: boolean;
+  label: string;
+  description: string;
+  onToggle: () => void;
+}): ReactNode {
+  return (
+    <div
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
+      className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+    >
+      <div>
+        <p className="text-slate-700 text-[13px] font-semibold">{label}</p>
+        <p className="text-slate-500 text-[11px] mt-0.5">{description}</p>
+      </div>
+      <div
+        className={`w-11 h-6 shrink-0 rounded-full relative transition-colors ${
+          checked ? "bg-[#2ca056]" : "bg-slate-200"
+        }`}
+      >
+        <div
+          className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-transform ${
+            checked ? "translate-x-6" : "translate-x-1"
+          }`}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsModal({
   isOpen,
   onClose,
@@ -46,6 +92,10 @@ export default function SettingsModal({
   const setLanguage = usePreferencesStore((s) => s.setLanguage);
   const setAutoFollowNewSessions = usePreferencesStore(
     (s) => s.setAutoFollowNewSessions,
+  );
+  const showFloorColleagues = usePreferencesStore((s) => s.showFloorColleagues);
+  const setShowFloorColleagues = usePreferencesStore(
+    (s) => s.setShowFloorColleagues,
   );
 
   const { t } = useTranslation();
@@ -149,39 +199,21 @@ export default function SettingsModal({
             <label className="block text-slate-500 text-[11px] font-bold uppercase tracking-wider mb-2.5">
               {t("settings.sessionBehavior")}
             </label>
-            <div
-              role="switch"
-              aria-checked={autoFollowNewSessions}
-              aria-label={t("settings.autoFollow")}
-              tabIndex={0}
-              onClick={handleAutoFollowToggle}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleAutoFollowToggle();
+            <div className="space-y-2">
+              <SessionSwitch
+                checked={autoFollowNewSessions}
+                label={t("settings.autoFollow")}
+                description={t("settings.autoFollowDesc")}
+                onToggle={handleAutoFollowToggle}
+              />
+              <SessionSwitch
+                checked={showFloorColleagues}
+                label={t("settings.floorTogether")}
+                description={t("settings.floorTogetherDesc")}
+                onToggle={() =>
+                  void setShowFloorColleagues(!showFloorColleagues)
                 }
-              }}
-              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-            >
-              <div>
-                <p className="text-slate-700 text-[13px] font-semibold">
-                  {t("settings.autoFollow")}
-                </p>
-                <p className="text-slate-500 text-[11px] mt-0.5">
-                  {t("settings.autoFollowDesc")}
-                </p>
-              </div>
-              <div
-                className={`w-11 h-6 shrink-0 rounded-full relative transition-colors ${
-                  autoFollowNewSessions ? "bg-[#2ca056]" : "bg-slate-200"
-                }`}
-              >
-                <div
-                  className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-transform ${
-                    autoFollowNewSessions ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </div>
+              />
             </div>
           </div>
         </div>

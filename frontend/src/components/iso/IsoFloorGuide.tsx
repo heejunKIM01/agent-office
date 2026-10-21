@@ -14,6 +14,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { dateFnsLocaleFor } from "@/i18n/dateLocale";
 import {
   selectAutoFollowNewSessions,
+  selectShowFloorColleagues,
   usePreferencesStore,
 } from "@/stores/preferencesStore";
 import {
@@ -59,6 +60,8 @@ export function IsoFloorGuide({
   const { t, language } = useTranslation();
   const autoFollow = usePreferencesStore(selectAutoFollowNewSessions);
   const setAutoFollow = usePreferencesStore((s) => s.setAutoFollowNewSessions);
+  const together = usePreferencesStore(selectShowFloorColleagues);
+  const setTogether = usePreferencesStore((s) => s.setShowFloorColleagues);
   const [showIdle, setShowIdle] = useState(false);
 
   const current = floorOfSession(floors, sessionId);
@@ -155,6 +158,23 @@ export function IsoFloorGuide({
                         🔄
                       </span>
                       {t("iso.floor.follow")}
+                    </button>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={together}
+                      onClick={() => void setTogether(!together)}
+                      className={`mb-0.5 flex w-full items-center gap-1 rounded-md px-1 py-1 text-left text-[10.5px] hover:bg-slate-50 ${
+                        together ? "text-slate-600" : "text-slate-400"
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={together ? "" : "opacity-40 grayscale"}
+                      >
+                        👥
+                      </span>
+                      {t("iso.floor.together")}
                     </button>
                     <ul className="-mr-1 flex max-h-[42vh] flex-col overflow-y-auto pr-1">
                       {floor.sessions.map((session) => {

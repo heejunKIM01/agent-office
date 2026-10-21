@@ -11,6 +11,9 @@ const en = {
   "settings.autoFollow": "Auto-follow new sessions",
   "settings.autoFollowDesc":
     "Automatically switch to new sessions in the current project",
+  "settings.floorTogether": "Show the floor's other sessions",
+  "settings.floorTogetherDesc":
+    "Claude from other sessions working on the same floor joins the office. Off shows only the chosen session.",
   "settings.language": "Language",
   "settings.tabs.general": "General",
   "settings.tabs.connect": "Connect",
@@ -96,6 +99,7 @@ const en = {
   "iso.floor.sessions_other": "{count} sessions",
   "iso.floor.activeNow": "Active now",
   "iso.floor.follow": "Follow the latest session",
+  "iso.floor.together": "Show the floor's other sessions",
   "iso.floor.untitled": "Untitled session · {id}",
   "iso.floor.moreIdle": "{count} more quiet floors",
   "iso.floor.moreIdle_one": "{count} more quiet floor",

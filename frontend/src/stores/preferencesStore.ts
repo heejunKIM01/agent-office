@@ -10,12 +10,15 @@ import { apiFetch } from "@/utils/api";
 
 export interface PreferencesState {
   autoFollowNewSessions: boolean;
+  /** The office also shows the floor's other working sessions (off: only the chosen one). */
+  showFloorColleagues: boolean;
   language: Locale;
   isLoaded: boolean;
 
   // Actions
   loadPreferences: () => Promise<void>;
   setAutoFollowNewSessions: (enabled: boolean) => Promise<void>;
+  setShowFloorColleagues: (enabled: boolean) => Promise<void>;
   setLanguage: (language: Locale) => Promise<void>;
 }
 
@@ -26,6 +29,7 @@ export interface PreferencesState {
 const PREFS_PATH = "/api/v1/preferences";
 
 const DEFAULT_AUTO_FOLLOW_NEW_SESSIONS = true;
+const DEFAULT_SHOW_FLOOR_COLLEAGUES = true;
 const DEFAULT_LANGUAGE: Locale = "en";
 
 // ============================================================================
@@ -62,6 +66,7 @@ async function setPreference(key: string, value: string): Promise<void> {
 
 export const usePreferencesStore = create<PreferencesState>()((set) => ({
   autoFollowNewSessions: DEFAULT_AUTO_FOLLOW_NEW_SESSIONS,
+  showFloorColleagues: DEFAULT_SHOW_FLOOR_COLLEAGUES,
   language: DEFAULT_LANGUAGE,
   isLoaded: false,
 
@@ -73,10 +78,16 @@ export const usePreferencesStore = create<PreferencesState>()((set) => ({
       autoFollowRaw === undefined
         ? DEFAULT_AUTO_FOLLOW_NEW_SESSIONS
         : autoFollowRaw === "true";
+    const colleaguesRaw = prefs.show_floor_colleagues;
+    const showFloorColleagues =
+      colleaguesRaw === undefined
+        ? DEFAULT_SHOW_FLOOR_COLLEAGUES
+        : colleaguesRaw === "true";
     const language = prefs.language || DEFAULT_LANGUAGE;
 
     set({
       autoFollowNewSessions,
+      showFloorColleagues,
       language: isLocale(language) ? language : DEFAULT_LANGUAGE,
       isLoaded: true,
     });
@@ -85,6 +96,11 @@ export const usePreferencesStore = create<PreferencesState>()((set) => ({
   setAutoFollowNewSessions: async (enabled) => {
     set({ autoFollowNewSessions: enabled });
     await setPreference("auto_follow_new_sessions", String(enabled));
+  },
+
+  setShowFloorColleagues: async (enabled) => {
+    set({ showFloorColleagues: enabled });
+    await setPreference("show_floor_colleagues", String(enabled));
   },
 
   setLanguage: async (language) => {
@@ -99,5 +115,7 @@ export const usePreferencesStore = create<PreferencesState>()((set) => ({
 
 export const selectAutoFollowNewSessions = (state: PreferencesState) =>
   state.autoFollowNewSessions;
+export const selectShowFloorColleagues = (state: PreferencesState) =>
+  state.showFloorColleagues;
 export const selectLanguage = (state: PreferencesState) => state.language;
 export const selectIsLoaded = (state: PreferencesState) => state.isLoaded;
