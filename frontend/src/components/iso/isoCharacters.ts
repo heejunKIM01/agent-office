@@ -205,17 +205,19 @@ export function buildCharacter(
   cup.visible = false;
   arms[1].add(cup);
 
-  // On the floor to its right, a little in front; each book a bit askew.
+  // On the floor a step behind it, to its left: facing a shelf, that is
+  // toward the camera and clear of its legs and the walls. Each book a bit
+  // askew.
   const pile = new THREE.Group();
-  pile.position.set(0.75, 0, 0.3);
+  pile.position.set(0.85, 0, -0.5);
   for (let i = 0; i < MAX_PILE; i++) {
     const book = box(
-      0.42,
-      0.1,
-      0.3,
+      0.5,
+      0.12,
+      0.36,
       C.books[(i * 3 + 1) % C.books.length],
       0,
-      i * 0.1,
+      i * 0.12,
       0,
     );
     book.rotation.y = ((i * 37) % 9) * 0.06 - 0.24;
