@@ -73,6 +73,26 @@ export function plankTexture(light: string, dark: string): THREE.CanvasTexture {
   });
 }
 
+/** A blurred dark rectangle on a transparent canvas, for the plate's shadow. */
+export function softShadowTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    // Draw the rectangle off the canvas so only its blurred shadow lands on it.
+    const inset = size * 0.13;
+    ctx.shadowColor = "rgba(48, 60, 84, 0.32)";
+    ctx.shadowBlur = size * 0.07;
+    ctx.shadowOffsetX = size;
+    ctx.fillRect(inset - size, inset, size - inset * 2, size - inset * 2);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 export interface TextTexture {
   texture: THREE.CanvasTexture;
   /** Width / height of the painted text block. */

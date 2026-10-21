@@ -19,9 +19,14 @@ import {
 } from "@/constants/isoFloorPlan";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, buildFurniture, material } from "./isoFurniture";
-import { plankTexture, textTexture, tileTexture } from "./isoTextures";
+import {
+  plankTexture,
+  softShadowTexture,
+  textTexture,
+  tileTexture,
+} from "./isoTextures";
 
-const PLATE_THICKNESS = 0.5;
+export const PLATE_THICKNESS = 0.5;
 const WALL_THICKNESS = 0.25;
 /** Room floors sit just above the plate so they never flicker against it. */
 const FINISH_Y = 0.012;
@@ -39,8 +44,9 @@ function finishTexture(finish: FloorFinish): THREE.Texture | null {
     case "mint":
       return tileTexture(C.mintA, C.mintB, "#bfe0d6");
     case "checker":
-      return tileTexture(C.checkerA, C.checkerB, "#dcbf96", 4);
+      return tileTexture(C.checkerA, C.checkerB, "#dcbf96");
     case "rug":
+    case "plain":
       return null;
   }
 }
@@ -54,12 +60,13 @@ const FINISH_REPEAT: Record<FloorFinish, number> = {
   mint: 4,
   checker: 3,
   rug: 1,
+  plain: 1,
 };
 
 function floorPlate(): THREE.Mesh {
   const top = tileTexture(C.floorTileA, C.floorTileB, C.floorGrout);
   top.repeat.set(FLOOR_WIDTH / 4, FLOOR_DEPTH / 4);
-  const side = material(C.plateSide);
+  const side = material(C.plateSide, { emissive: C.plateGlow });
   const topMaterial = new THREE.MeshLambertMaterial({ map: top });
   const plate = new THREE.Mesh(
     new THREE.BoxGeometry(FLOOR_WIDTH, PLATE_THICKNESS, FLOOR_DEPTH),
@@ -68,6 +75,22 @@ function floorPlate(): THREE.Mesh {
   plate.position.set(FLOOR_WIDTH / 2, -PLATE_THICKNESS / 2, FLOOR_DEPTH / 2);
   plate.receiveShadow = true;
   return plate;
+}
+
+/** A soft shadow under the plate, so the floor looks like it floats. */
+function plateShadow(): THREE.Mesh {
+  const margin = 8;
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(FLOOR_WIDTH + margin, FLOOR_DEPTH + margin),
+    new THREE.MeshBasicMaterial({
+      map: softShadowTexture(),
+      transparent: true,
+      depthWrite: false,
+    }),
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.set(FLOOR_WIDTH / 2 + 0.6, -2.2, FLOOR_DEPTH / 2 + 0.6);
+  return shadow;
 }
 
 function roomFloor(room: Room): THREE.Object3D {
@@ -84,6 +107,7 @@ function roomFloor(room: Room): THREE.Object3D {
     mesh.receiveShadow = true;
     return mesh;
   };
+  if (room.finish === "plain") return new THREE.Group();
   if (room.finish === "rug") {
     const g = new THREE.Group();
     g.add(plane(w, d, material(C.rugBorder), FINISH_Y));
@@ -97,6 +121,22 @@ function roomFloor(room: Room): THREE.Object3D {
       d / FINISH_REPEAT[room.finish],
     );
   return plane(w, d, new THREE.MeshLambertMaterial({ map: texture }), FINISH_Y);
+}
+
+/** Whether a wall end touches no other wall, so its cut face shows. */
+function isFreeEnd([px, pz]: [number, number], self: Wall): boolean {
+  const eps = 0.01;
+  return !WALLS.some((other) => {
+    if (other === self) return false;
+    const [x1, z1] = other.from;
+    const [x2, z2] = other.to;
+    return (
+      px >= Math.min(x1, x2) - eps &&
+      px <= Math.max(x1, x2) + eps &&
+      pz >= Math.min(z1, z2) - eps &&
+      pz <= Math.max(z1, z2) + eps
+    );
+  });
 }
 
 function wall(segment: Wall): THREE.Object3D {
@@ -124,12 +164,26 @@ function wall(segment: Wall): THREE.Object3D {
   }
   const height = segment.kind === "low" ? LOW_WALL_HEIGHT : WALL_HEIGHT;
   const g = new THREE.Group();
-  g.add(box(w, height, d, C.wall, cx, 0, cz));
+  // Walls glow a little so the faces turned away from the sun stay light,
+  // as in the video.
+  g.add(box(w, height, d, C.wall, cx, 0, cz, { emissive: C.wallGlow }));
+  // Free ends show the cut of the wall as a warm stripe.
+  for (const end of [segment.from, segment.to]) {
+    if (!isFreeEnd(end, segment)) continue;
+    const [ex, ez] = end;
+    const out = alongX ? Math.sign(ex - cx) : Math.sign(ez - cz);
+    g.add(
+      alongX
+        ? box(0.06, height, d + 0.02, "#000000", ex + out * 0.02, 0, cz, {
+            emissive: C.wallCap,
+          })
+        : box(w + 0.02, height, 0.06, "#000000", cx, 0, ez + out * 0.02, {
+            emissive: C.wallCap,
+          }),
+    );
+  }
   g.add(
     box(w + 0.02, 0.05, d + 0.02, C.wallTop, cx, height, cz, { shadow: false }),
-  );
-  g.add(
-    box(w + 0.02, 0.12, d + 0.02, C.wallTrim, cx, 0, cz, { shadow: false }),
   );
   return g;
 }
@@ -138,8 +192,11 @@ function wall(segment: Wall): THREE.Object3D {
 function roomLabel(room: Room): THREE.Mesh {
   const { ko, en, x, z, along, on } = room.label;
   const text = en ? `${ko} · ${en}` : ko;
-  const label = textTexture(text, { color: C.labelText });
-  const height = on === "wall" ? 0.42 : 0.62;
+  const label = textTexture(text, {
+    color: on === "wall" ? C.wallLabelText : C.labelText,
+    weight: 700,
+  });
+  const height = on === "wall" ? 0.56 : 0.72;
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(height * label.aspect, height),
     new THREE.MeshBasicMaterial({
@@ -151,11 +208,12 @@ function roomLabel(room: Room): THREE.Mesh {
   if (on === "wall") {
     // Facing out of the wall; text reads along +x on the right wall and
     // along -z on the left wall, which is left to right for the viewer.
+    const y = WALL_HEIGHT - 0.44;
     if (along === "x") {
-      mesh.position.set(x, WALL_HEIGHT - 0.42, z + WALL_THICKNESS / 2 + 0.02);
+      mesh.position.set(x, y, z + WALL_THICKNESS / 2 + 0.02);
     } else {
       mesh.rotation.y = Math.PI / 2;
-      mesh.position.set(x + WALL_THICKNESS / 2 + 0.02, WALL_HEIGHT - 0.42, z);
+      mesh.position.set(x + WALL_THICKNESS / 2 + 0.02, y, z);
     }
   } else {
     mesh.rotation.x = -Math.PI / 2;
@@ -168,7 +226,7 @@ function roomLabel(room: Room): THREE.Mesh {
 /** Build the whole static office. */
 export function buildIsoOffice(): THREE.Group {
   const office = new THREE.Group();
-  office.add(floorPlate());
+  office.add(plateShadow(), floorPlate());
   for (const room of ROOMS) office.add(roomFloor(room), roomLabel(room));
   for (const segment of WALLS) office.add(wall(segment));
   FURNITURE.forEach((item, index) => {
