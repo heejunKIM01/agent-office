@@ -170,13 +170,16 @@ function longDesk(): THREE.Group {
 }
 
 function imac(): THREE.Group {
+  const screen = box(0.84, 0.48, 0.01, C.imacScreen, 0, 0.27, 0.03, {
+    emissive: C.imacScreenDark,
+  });
+  // Shows running code while someone edits at this desk (see isoEffects).
+  screen.userData.imacScreen = true;
   return group(
     box(0.32, 0.03, 0.22, C.imacFrame, 0, 0, 0),
     box(0.06, 0.24, 0.05, C.imacFrame, 0, 0.02, -0.04),
     box(0.92, 0.6, 0.05, C.imacFrame, 0, 0.2, 0),
-    box(0.84, 0.48, 0.01, C.imacScreen, 0, 0.27, 0.03, {
-      emissive: C.imacScreenDark,
-    }),
+    screen,
   );
 }
 
@@ -205,7 +208,10 @@ function meetingChair(): THREE.Group {
   );
 }
 
-/** A wide board with a little diagram of sticky notes and boxes on it. */
+/**
+ * A wide board with sticky notes and a little diagram across its top half;
+ * the bottom half is left clear for planning to write on (see isoEffects).
+ */
 function whiteboard(): THREE.Group {
   const line = "#3a4250";
   return group(
@@ -213,16 +219,16 @@ function whiteboard(): THREE.Group {
     box(4.44, 1.44, 0.02, C.whiteboard, 0, 1.08, 0.04, {
       emissive: C.boardGlow,
     }),
-    box(0.32, 0.26, 0.02, "#9cc3f5", -1.8, 1.9, 0.06),
-    box(0.32, 0.26, 0.02, "#f7d774", -1.35, 1.95, 0.06),
-    box(0.32, 0.26, 0.02, "#9ee0a8", -1.8, 1.45, 0.06),
-    box(1.0, 0.5, 0.02, "#e86b6b", -0.6, 1.3, 0.06),
-    box(0.9, 0.44, 0.02, C.whiteboard, -0.6, 1.33, 0.07),
-    box(1.0, 0.5, 0.02, "#5b8de0", 1.0, 1.7, 0.06),
-    box(0.9, 0.44, 0.02, C.whiteboard, 1.0, 1.73, 0.07),
-    box(0.6, 0.04, 0.02, line, 0.2, 1.75, 0.06),
-    box(1.6, 0.04, 0.02, line, 0.9, 2.35, 0.06),
-    box(1.1, 0.04, 0.02, line, 1.15, 2.22, 0.06),
+    box(0.32, 0.26, 0.02, "#9cc3f5", -1.85, 1.95, 0.06),
+    box(0.32, 0.26, 0.02, "#f7d774", -1.45, 2.0, 0.06),
+    box(0.32, 0.26, 0.02, "#9ee0a8", -1.05, 1.95, 0.06),
+    box(0.9, 0.44, 0.02, "#e86b6b", -0.2, 1.72, 0.06),
+    box(0.8, 0.36, 0.02, C.whiteboard, -0.2, 1.76, 0.07),
+    box(0.9, 0.44, 0.02, "#5b8de0", 1.15, 1.72, 0.06),
+    box(0.8, 0.36, 0.02, C.whiteboard, 1.15, 1.76, 0.07),
+    box(0.36, 0.04, 0.02, line, 0.48, 1.92, 0.06),
+    box(1.6, 0.04, 0.02, line, 0.95, 2.3, 0.06),
+    box(1.1, 0.04, 0.02, line, 1.2, 2.4, 0.06),
   );
 }
 
@@ -299,12 +305,22 @@ function serverRack(seed: number): THREE.Group {
     g.add(box(1.0, 0.12, 0.02, "#2b3342", 0, y, 0.56));
     for (let led = 0; led < 3; led++) {
       const color = random() > 0.3 ? C.rackLedGreen : C.rackLedAmber;
-      g.add(
-        box(0.06, 0.05, 0.02, color, -0.4 + led * 0.1, y + 0.035, 0.575, {
+      const light = box(
+        0.06,
+        0.05,
+        0.02,
+        color,
+        -0.4 + led * 0.1,
+        y + 0.035,
+        0.575,
+        {
           emissive: color,
           shadow: false,
-        }),
+        },
       );
+      // Each light blinks on its own beat (see isoEffects).
+      light.userData.ledPhase = random() * Math.PI * 2;
+      g.add(light);
     }
   }
   return g;

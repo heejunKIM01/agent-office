@@ -382,8 +382,11 @@ export const SUBAGENT_SEATS: IsoSpot[] = (
 /** My chair behind the reception desk. */
 export const MY_SEAT: IsoSpot = { x: 17.4, z: 19, facing: FACING_RIGHT };
 
-/** Rooms people walk to while a tool runs (spec R1 · R2). */
-export type ErrandRoomId = Extract<RoomId, "library" | "server">;
+/** Rooms people walk to while a tool runs (spec 「방 ↔ 도구」). */
+export type ErrandRoomId = Extract<
+  RoomId,
+  "library" | "server" | "search" | "meeting" | "mydesk"
+>;
 
 /** Where people stand to work in each room, nearest the door first. */
 export const ERRAND_SPOTS: Record<ErrandRoomId, IsoSpot[]> = {
@@ -402,6 +405,27 @@ export const ERRAND_SPOTS: Record<ErrandRoomId, IsoSpot[]> = {
     { x: 36.8, z: 2.3, facing: FACING_BACK },
     { x: 39.2, z: 6.9, facing: FACING_BACK },
     { x: 38.8, z: 2.3, facing: FACING_BACK },
+  ],
+  search: [
+    { x: 30.4, z: 16, facing: FACING_BACK },
+    { x: 33.4, z: 16, facing: FACING_BACK },
+    { x: 36.5, z: 16, facing: FACING_BACK },
+    { x: 31.6, z: 19.5, facing: FACING_BACK },
+    { x: 38.4, z: 15.4, facing: FACING_BACK },
+  ],
+  // At the board's right end first, so the writer hides little of it.
+  meeting: [
+    { x: 1.3, z: 14, facing: FACING_LEFT_WALL },
+    { x: 1.3, z: 15.4, facing: FACING_LEFT_WALL },
+    { x: 1.3, z: 16.8, facing: FACING_LEFT_WALL },
+    { x: 2.6, z: 12.6, facing: FACING_LEFT_WALL },
+  ],
+  // In front of the reception desk, facing me.
+  mydesk: [
+    { x: 20.4, z: 19, facing: FACING_LEFT_WALL },
+    { x: 20.4, z: 20.5, facing: FACING_LEFT_WALL },
+    { x: 20.4, z: 17.5, facing: FACING_LEFT_WALL },
+    { x: 20.4, z: 22, facing: FACING_LEFT_WALL },
   ],
 };
 

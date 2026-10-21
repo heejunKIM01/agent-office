@@ -12,13 +12,8 @@ import {
   type FloorPoint,
 } from "@/systems/isoNavGrid";
 
-const allSpots = [
-  CLAUDE_SEAT,
-  ...SUBAGENT_SEATS,
-  MY_SEAT,
-  ...ERRAND_SPOTS.library,
-  ...ERRAND_SPOTS.server,
-];
+const workSpots = Object.values(ERRAND_SPOTS).flat();
+const allSpots = [CLAUDE_SEAT, ...SUBAGENT_SEATS, MY_SEAT, ...workSpots];
 
 /** Sample a path every 0.1m and check each point is open floor. */
 function staysOnFloor(path: FloorPoint[]): boolean {
@@ -77,7 +72,7 @@ describe("iso navigation grid", () => {
   });
 
   it("reaches every seat from every work spot", () => {
-    for (const from of [...ERRAND_SPOTS.library, ...ERRAND_SPOTS.server]) {
+    for (const from of workSpots) {
       for (const seat of [CLAUDE_SEAT, ...SUBAGENT_SEATS, MY_SEAT]) {
         expect(
           findFloorPath(from, seat).length,

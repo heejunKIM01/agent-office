@@ -149,10 +149,32 @@ export function buildCharacter(kind: PersonKind): CharacterRig {
   return { root, hips, legs, arms, book, chipAnchor };
 }
 
+/** Arm angles (about x, forward is negative) while working in each room. */
+function workArms(
+  room: ErrandRoomId | null,
+  seconds: number,
+): [number, number] {
+  switch (room) {
+    case "library":
+      return [-1.0, -1.0]; // holding a book
+    case "server":
+      return [-0.6, -0.6]; // hands at the rack
+    case "search":
+      return [-0.9, -0.9]; // touching the kiosk
+    case "meeting":
+      return [0, -2.3 + 0.15 * Math.sin(seconds * 6)]; // writing on the board
+    case "mydesk":
+      return [0, -0.3 + 0.2 * Math.sin(seconds * 3)]; // talking to me
+    default:
+      return [-0.6, -0.6];
+  }
+}
+
 /**
  * Pose a person for this frame: swinging limbs while walking, legs forward
- * on a chair, a book in hand in the library, hands at the rack in the
- * server room. ``seconds`` drives the stride.
+ * on a chair (hands moving on the keyboard while typing), and in a room a
+ * book in hand, hands at the rack or kiosk, writing on the whiteboard, or
+ * talking at my desk. ``seconds`` drives the motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
@@ -173,20 +195,21 @@ export function poseCharacter(
       HIP_HEIGHT + 0.05 * Math.abs(Math.cos(seconds * STRIDE_RATE));
     return;
   }
-  if (pose === "sit") {
+  if (pose === "sit" || pose === "type") {
+    const tap = pose === "type" ? 0.12 * Math.sin(seconds * 14) : 0;
+    const rest = pose === "type" ? -1.1 : -0.35;
     legL.rotation.x = -Math.PI / 2;
     legR.rotation.x = -Math.PI / 2;
-    armL.rotation.x = -0.35;
-    armR.rotation.x = -0.35;
+    armL.rotation.x = rest + tap;
+    armR.rotation.x = rest - tap;
     rig.hips.position.y = SEATED_HIP_HEIGHT;
     return;
   }
-  // Working on the spot: holding a book, or reaching for the rack.
-  const reach = room === "library" ? -1.0 : -0.6;
+  const [left, right] = workArms(room, seconds);
   const breath = 0.03 * Math.sin(seconds * 2);
   legL.rotation.x = 0;
   legR.rotation.x = 0;
-  armL.rotation.x = reach + breath;
-  armR.rotation.x = reach - breath;
+  armL.rotation.x = left + breath;
+  armR.rotation.x = right - breath;
   rig.hips.position.y = HIP_HEIGHT;
 }

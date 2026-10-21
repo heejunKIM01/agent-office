@@ -17,6 +17,7 @@ function agent(
     name: null,
     currentTask: null,
     activity: null,
+    stuck: null,
     agentType: null,
     phase: "idle",
     ...fields,
@@ -26,12 +27,18 @@ function agent(
 describe("officePeople", () => {
   it("puts Claude and me first, Claude with the boss's activity", () => {
     const people = officePeople(
-      { boss: { activity: "reading" }, agents: new Map() },
+      { boss: { activity: "reading", stuck: null }, agents: new Map() },
       WORDS,
     );
     expect(people).toEqual([
-      { id: "claude", kind: "claude", label: "Claude", activity: "reading" },
-      { id: "me", kind: "me", label: "나", activity: null },
+      {
+        id: "claude",
+        kind: "claude",
+        label: "Claude",
+        activity: "reading",
+        stuck: false,
+      },
+      { id: "me", kind: "me", label: "나", activity: null, stuck: false },
     ]);
   });
 
@@ -54,21 +61,32 @@ describe("officePeople", () => {
       ],
       ["a3", agent("a3", { name: "Scout" })],
     ]);
-    const people = officePeople({ boss: { activity: null }, agents }, WORDS);
+    const people = officePeople(
+      { boss: { activity: null, stuck: null }, agents },
+      WORDS,
+    );
     expect(people.slice(2)).toEqual([
       {
         id: "a1",
         kind: "subagent",
         label: "범용 · T-013 부속 작성",
         activity: "running",
+        stuck: false,
       },
       {
         id: "a2",
         kind: "subagent",
         label: "Explore · Find the login code",
         activity: null,
+        stuck: false,
       },
-      { id: "a3", kind: "subagent", label: "Scout", activity: null },
+      {
+        id: "a3",
+        kind: "subagent",
+        label: "Scout",
+        activity: null,
+        stuck: false,
+      },
     ]);
   });
 
@@ -78,9 +96,22 @@ describe("officePeople", () => {
       ["a2", agent("a2", { currentTask: "leaves", phase: "departing" })],
       ["a3", agent("a3", { currentTask: "gone", phase: "in_elevator" })],
     ]);
-    const ids = officePeople({ boss: { activity: null }, agents }, WORDS).map(
-      (p) => p.id,
-    );
+    const ids = officePeople(
+      { boss: { activity: null, stuck: null }, agents },
+      WORDS,
+    ).map((p) => p.id);
     expect(ids).toEqual(["claude", "me", "a1"]);
+  });
+
+  it("sends a person waiting for a permission to my desk, and keeps a failed one in place", () => {
+    const agents = new Map([
+      ["a1", agent("a1", { activity: "running", stuck: "tool_failed" })],
+    ]);
+    const [claude, , a1] = officePeople(
+      { boss: { activity: "running", stuck: "waiting_permission" }, agents },
+      WORDS,
+    );
+    expect(claude).toMatchObject({ activity: "asking", stuck: false });
+    expect(a1).toMatchObject({ activity: "running", stuck: true });
   });
 });

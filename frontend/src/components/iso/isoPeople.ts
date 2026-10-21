@@ -3,7 +3,9 @@
  * kept in step with the session by `sync` and moved every frame by the
  * errand rules in `update`. Claude sits at the front dev desk nearest my
  * desk, subagents take the next free dev chairs, and I sit behind the
- * reception desk.
+ * reception desk. `update` also reports what the rooms should show: racks
+ * busy while a command runs, code on the screens of people editing, and
+ * someone writing at the whiteboard.
  */
 
 import * as THREE from "three";
@@ -36,7 +38,17 @@ const DOT_COLORS: Record<PersonKind, string> = {
   subagent: "#3b82f6",
 };
 
-const ROOMS: ErrandRoomId[] = ["library", "server"];
+const ROOMS = Object.keys(ERRAND_SPOTS) as ErrandRoomId[];
+
+/** What the rooms should show this frame. */
+export interface RoomsInUse {
+  /** Someone is running a command. */
+  serverBusy: boolean;
+  /** Seats of people typing at their desks. */
+  editingSeats: IsoSpot[];
+  /** Someone is planning at the whiteboard. */
+  planning: boolean;
+}
 
 interface Placed {
   person: IsoPerson;
@@ -66,10 +78,9 @@ function nameChip(kind: PersonKind): {
 export class IsoPeople {
   private readonly placed = new Map<string, Placed>();
   /** Which spot each walker holds in a room, by index into ERRAND_SPOTS. */
-  private readonly held: Record<ErrandRoomId, Map<string, number>> = {
-    library: new Map(),
-    server: new Map(),
-  };
+  private readonly held = Object.fromEntries(
+    ROOMS.map((room) => [room, new Map<string, number>()]),
+  ) as Record<ErrandRoomId, Map<string, number>>;
 
   constructor(private readonly scene: THREE.Scene) {}
 
@@ -106,10 +117,17 @@ export class IsoPeople {
   }
 
   /** Move and pose everyone for this frame; ``dt`` in seconds. */
-  update(now: number, dt: number): void {
+  update(now: number, dt: number): RoomsInUse {
+    const inUse: RoomsInUse = {
+      serverBusy: false,
+      editingSeats: [],
+      planning: false,
+    };
     for (const [id, placed] of this.placed) {
+      const { activity, stuck } = placed.person;
       const walker = stepIsoWalker(placed.walker, {
-        activity: placed.person.activity,
+        activity,
+        stuck,
         seat: placed.seat,
         spotIn: (room) => this.spotIn(id, room),
         findPath: findFloorPath,
@@ -128,7 +146,13 @@ export class IsoPeople {
         walker.goal === "seat" ? null : walker.goal,
         now / 1000,
       );
+      if (activity === "running") inUse.serverBusy = true;
+      if (walker.pose === "type") inUse.editingSeats.push(placed.seat);
+      if (walker.goal === "meeting" && walker.pose === "work") {
+        inUse.planning = true;
+      }
     }
+    return inUse;
   }
 
   dispose(): void {

@@ -233,6 +233,7 @@ export function buildIsoOffice(): THREE.Group {
     const piece = buildFurniture(item.kind, index);
     piece.position.set(item.x, item.y ?? 0, item.z);
     piece.rotation.y = ((item.rot ?? 0) * Math.PI) / 2;
+    piece.userData.furniture = item;
     office.add(piece);
   });
   return office;
