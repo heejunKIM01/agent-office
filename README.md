@@ -31,10 +31,10 @@
 git clone https://github.com/heejunKIM01/agent-office.git
 cd agent-office
 make install     # uv · bun(또는 npm) 필요. Python 3.13 은 uv 가 받는다
-make dev         # 백엔드 :8000 + 프런트 :3000
+make dev         # 백엔드 :8000 + 프런트 :4747
 ```
 
-브라우저로 <http://localhost:3000> 을 연다. 이벤트를 넣는 방법은 넷이다.
+브라우저로 <http://localhost:4747> 을 연다. 이벤트를 넣는 방법은 넷이다.
 
 1. **실제 Claude Code 에 연결** — `make hooks-install` 이 `~/.claude/settings.json` 에 훅을 등록한다. 원본에서 이미 설치했다면 `make hooks-reinstall` 로 다시 설치해야 실패 훅(`PostToolUseFailure`)이 들어간다.
 2. **Gemini CLI · Codex CLI · OpenCode 에 연결** — `make gemini-hooks-install` 이 `~/.gemini/settings.json` 에, `make codex-hooks-install` 이 `~/.codex/hooks.json` 에 훅을 넣는다(다른 도구의 훅은 그대로 둔다). Codex 는 새 훅을 `/hooks` 에서 신뢰해야 돌린다([훅 README](hooks/README.md#codex-cli)). OpenCode 는 원본의 `make opencode-install`.
@@ -179,7 +179,7 @@ make install-all
 make dev-tmux
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) and run any Claude Code command to see it visualized.
+Then open [http://localhost:4747](http://localhost:4747) and run any Claude Code command to see it visualized.
 
 ## Prerequisites
 
@@ -340,7 +340,7 @@ See [Docker Guide](docs/guides/deployment.md) for detailed configuration.
 
 ### Accessing the Visualizer
 
-Once running, open [http://localhost:3000](http://localhost:3000) in your browser.
+Once running, open [http://localhost:4747](http://localhost:4747) in your browser.
 
 ## Project Structure
 
@@ -397,7 +397,7 @@ claude-office/
 |-------|----------|
 | "Session already exists" | Run `make dev-tmux-kill` first |
 | Port 8000 in use | Stop other services on that port |
-| Port 3000 in use | Stop other services on that port |
+| Port 4747 in use | Stop other services on that port |
 | Hooks not detected | Restart Claude Code after installing hooks |
 
 ## Contributing

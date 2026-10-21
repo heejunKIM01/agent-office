@@ -22,7 +22,7 @@ graph LR
     CC[Claude Code]
     Hooks[Hooks]
     Backend[Backend :8000]
-    Frontend[Frontend :3000]
+    Frontend[Frontend :4747]
 
     CC -->|Events| Hooks
     Hooks -->|HTTP POST| Backend
@@ -120,7 +120,7 @@ This creates a tmux session with separate windows for backend and frontend:
 | Window | Service | URL |
 |--------|---------|-----|
 | 0: backend | FastAPI server | http://localhost:8000 |
-| 1: frontend | Next.js dev server | http://localhost:3000 |
+| 1: frontend | Next.js dev server | http://localhost:4747 |
 
 **Navigation:**
 - `Ctrl-b n` - Next window
@@ -150,14 +150,14 @@ Expected response:
 
 ### 2. Open the Frontend
 
-Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
+Navigate to [http://localhost:4747](http://localhost:4747) in your browser.
 
 You should see the isometric office with:
 - The floor guide on the left: one floor per project, its sessions listed under it
 - One floor with its rooms (library, dev room, server room, search room, meeting room, lounge, cafe), my desk and an elevator
 - The people in the office, an activity log and a room legend on the right
 
-The original pixel art office, with the whiteboard, the Command Center and the Building view, is at [http://localhost:3000/classic](http://localhost:3000/classic) (the gamepad button at the top right).
+The original pixel art office, with the whiteboard, the Command Center and the Building view, is at [http://localhost:4747/classic](http://localhost:4747/classic) (the gamepad button at the top right).
 
 ### 3. Test with Claude Code
 
@@ -230,7 +230,7 @@ make dev-tmux-kill
 
 # Or manually kill processes on ports
 lsof -ti:8000 | xargs kill -9
-lsof -ti:3000 | xargs kill -9
+lsof -ti:4747 | xargs kill -9
 ```
 
 ### Frontend Not Connecting

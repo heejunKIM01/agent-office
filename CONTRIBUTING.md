@@ -40,7 +40,7 @@ Contributions are welcome. This guide covers development setup, code style, and 
    make dev-tmux
    ```
 
-   This creates a tmux session with backend (`:8000`) and frontend (`:3000`) in separate windows.
+   This creates a tmux session with backend (`:8000`) and frontend (`:4747`) in separate windows.
 
 3. **Install hooks (for live testing):**
 

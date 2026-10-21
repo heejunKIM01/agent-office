@@ -13,7 +13,7 @@ See [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for s
 ```bash
 # Root
 make install       # Install all dependencies
-make dev-tmux      # Run in tmux (recommended) - backend :8000, frontend :3000
+make dev-tmux      # Run in tmux (recommended) - backend :8000, frontend :4747
 make dev-tmux-kill # Kill tmux session
 make checkall      # Lint, typecheck, test all components
 make simulate      # Run event simulation
