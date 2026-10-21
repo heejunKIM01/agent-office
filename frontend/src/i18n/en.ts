@@ -192,6 +192,8 @@ const en = {
   "iso.live": "LIVE",
   "iso.offline": "OFFLINE",
   "iso.controlsHint": "Drag to move · Scroll to zoom · Double-click to reset",
+  "iso.me": "Me",
+  "iso.agentType.general": "General",
 
   // Zoom Controls
   "zoom.in": "Zoom in",

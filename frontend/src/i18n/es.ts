@@ -196,6 +196,8 @@ const es: Record<TranslationKey, string> = {
   "iso.offline": "SIN CONEXIÓN",
   "iso.controlsHint":
     "Arrastra para mover · Rueda para ampliar · Doble clic para restablecer",
+  "iso.me": "Yo",
+  "iso.agentType.general": "General",
 
   // Zoom Controls
   "zoom.in": "Acercar",

@@ -194,6 +194,8 @@ const ko: Record<TranslationKey, string> = {
   "iso.live": "LIVE",
   "iso.offline": "오프라인",
   "iso.controlsHint": "드래그로 이동 · 휠로 확대 · 더블클릭으로 원위치",
+  "iso.me": "나",
+  "iso.agentType.general": "범용",
 
   // Zoom Controls
   "zoom.in": "확대",

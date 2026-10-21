@@ -311,5 +311,99 @@ export const FURNITURE: Furniture[] = [
   { kind: "bush", x: 39.2, z: 25.5 },
 ];
 
+/**
+ * Floor area each piece of furniture takes, width along its own x and depth
+ * along its own z (as the builders in components/iso/isoFurniture.ts draw
+ * it). People walk around these; chairs are left out because people sit on
+ * them, and things on desks or walls take no floor.
+ */
+export const FOOTPRINTS: Partial<Record<FurnitureKind, [number, number]>> = {
+  bookshelf: [2.3, 0.5],
+  roundTable: [2, 2],
+  longDesk: [9.6, 1.2],
+  meetingTable: [4.7, 2.4],
+  sofa: [3.3, 1.2],
+  armchair: [1.4, 1.2],
+  coffeeTable: [2, 1],
+  sideTable: [1.1, 1.1],
+  tvStand: [4.4, 0.7],
+  locker: [1.7, 0.9],
+  serverRack: [1.2, 1.1],
+  kiosk: [0.8, 0.56],
+  globe: [0.8, 0.8],
+  workDesk: [2.2, 0.9],
+  cafeTable: [1.15, 1.15],
+  receptionDesk: [6.6, 1.2],
+  plant: [0.6, 0.6],
+  bush: [0.7, 0.7],
+};
+
+/** Where a person stands or sits, turned ``facing`` radians about y (0 faces +z). */
+export interface IsoSpot {
+  x: number;
+  z: number;
+  facing: number;
+}
+
+const FACING_BACK = Math.PI;
+const FACING_RIGHT = Math.PI / 2;
+const FACING_LEFT_WALL = -Math.PI / 2;
+
+const devSeat = (seat: number, row: number): IsoSpot => ({
+  x: DEV_SEATS_X[seat],
+  z: DEV_ROWS[row] + 1.3,
+  facing: FACING_BACK,
+});
+
+/** Claude's chair: the front row's end nearest my desk. */
+export const CLAUDE_SEAT: IsoSpot = devSeat(0, 1);
+
+/**
+ * Dev room chairs in the order subagents take them: every other chair of
+ * the back row first, so their name chips do not stack on each other or on
+ * Claude's, then the rest.
+ */
+export const SUBAGENT_SEATS: IsoSpot[] = (
+  [
+    [0, 0],
+    [2, 0],
+    [4, 0],
+    [2, 1],
+    [4, 1],
+    [1, 0],
+    [3, 0],
+    [5, 0],
+    [1, 1],
+    [3, 1],
+    [5, 1],
+  ] as const
+).map(([seat, row]) => devSeat(seat, row));
+
+/** My chair behind the reception desk. */
+export const MY_SEAT: IsoSpot = { x: 17.4, z: 19, facing: FACING_RIGHT };
+
+/** Rooms people walk to while a tool runs (spec R1 · R2). */
+export type ErrandRoomId = Extract<RoomId, "library" | "server">;
+
+/** Where people stand to work in each room, nearest the door first. */
+export const ERRAND_SPOTS: Record<ErrandRoomId, IsoSpot[]> = {
+  library: [
+    { x: 9.05, z: 1.4, facing: FACING_BACK },
+    { x: 6.75, z: 1.4, facing: FACING_BACK },
+    { x: 4.45, z: 1.4, facing: FACING_BACK },
+    { x: 2.15, z: 1.4, facing: FACING_BACK },
+    { x: 1.4, z: 6.75, facing: FACING_LEFT_WALL },
+    { x: 1.4, z: 4.45, facing: FACING_LEFT_WALL },
+  ],
+  server: [
+    { x: 35.6, z: 6.9, facing: FACING_BACK },
+    { x: 37.4, z: 6.9, facing: FACING_BACK },
+    { x: 34.8, z: 2.3, facing: FACING_BACK },
+    { x: 36.8, z: 2.3, facing: FACING_BACK },
+    { x: 39.2, z: 6.9, facing: FACING_BACK },
+    { x: 38.8, z: 2.3, facing: FACING_BACK },
+  ],
+};
+
 /** Where the camera looks when the view is reset. */
 export const FLOOR_CENTER = { x: FLOOR_WIDTH / 2, z: FLOOR_DEPTH / 2 };

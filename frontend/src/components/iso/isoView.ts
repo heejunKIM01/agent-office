@@ -5,13 +5,16 @@
 
 import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
+import { CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import {
   FLOOR_CENTER,
   FLOOR_DEPTH,
   FLOOR_WIDTH,
   WALL_HEIGHT,
 } from "@/constants/isoFloorPlan";
+import type { IsoPerson } from "@/systems/officePeople";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
+import { IsoPeople } from "./isoPeople";
 
 /** The reference video uses a 2:1 isometric view: floor edges climb 1 in 2. */
 const CAMERA_AZIMUTH = THREE.MathUtils.degToRad(45);
@@ -22,8 +25,11 @@ const FIT_PADDING = { top: 72, right: 40, bottom: 44, left: 40 };
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
 const RESET_MS = 350;
+/** Longest frame step the walkers take, so a background tab does not teleport them. */
+const MAX_STEP_SECONDS = 0.1;
 
 export interface IsoView {
+  setPeople(people: IsoPerson[]): void;
   zoomBy(factor: number): void;
   resetView(): void;
   dispose(): void;
@@ -136,9 +142,17 @@ export function createIsoView(container: HTMLElement): IsoView {
   renderer.domElement.style.display = "block";
   container.appendChild(renderer.domElement);
 
+  // Name chips and bubbles are HTML laid over the canvas, so text stays sharp.
+  const labels = new CSS2DRenderer();
+  labels.domElement.style.position = "absolute";
+  labels.domElement.style.inset = "0";
+  labels.domElement.style.pointerEvents = "none";
+  container.appendChild(labels.domElement);
+
   const scene = new THREE.Scene();
   scene.add(buildIsoOffice());
   addLights(scene);
+  const people = new IsoPeople(scene);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
   const home = new THREE.Vector3(FLOOR_CENTER.x, 0, FLOOR_CENTER.z);
@@ -161,6 +175,7 @@ export function createIsoView(container: HTMLElement): IsoView {
     const height = container.clientHeight || 1;
     fitFrustum(camera, home, width, height);
     renderer.setSize(width, height);
+    labels.setSize(width, height);
   };
   resize();
   const observer = new ResizeObserver(resize);
@@ -189,15 +204,23 @@ export function createIsoView(container: HTMLElement): IsoView {
   renderer.domElement.addEventListener("dblclick", resetView);
 
   let frame = 0;
+  let lastFrame = performance.now();
   const loop = (now: number): void => {
+    const dt = Math.min(MAX_STEP_SECONDS, Math.max(0, now - lastFrame) / 1000);
+    lastFrame = now;
     stepReset(now);
     controls.update();
+    people.update(now, dt);
     renderer.render(scene, camera);
+    labels.render(scene, camera);
     frame = requestAnimationFrame(loop);
   };
   frame = requestAnimationFrame(loop);
 
   return {
+    setPeople(list: IsoPerson[]): void {
+      people.sync(list);
+    },
     zoomBy(factor: number): void {
       camera.zoom = THREE.MathUtils.clamp(
         camera.zoom * factor,
@@ -212,6 +235,7 @@ export function createIsoView(container: HTMLElement): IsoView {
       observer.disconnect();
       renderer.domElement.removeEventListener("dblclick", resetView);
       controls.dispose();
+      people.dispose();
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
           object.geometry.dispose();
@@ -226,6 +250,7 @@ export function createIsoView(container: HTMLElement): IsoView {
       });
       renderer.dispose();
       renderer.domElement.remove();
+      labels.domElement.remove();
     },
   };
 }
