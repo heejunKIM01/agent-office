@@ -124,7 +124,6 @@ graph LR
 | `core/transcript_poller.py` | Polls subagent JSONL transcript files for their tool calls |
 | `core/jsonl_parser.py` | Parses Claude Code JSONL transcript format |
 | `core/quotes.py` | Quote generation for boss completion messages |
-| `core/office_layout.py` | Desk and position constants |
 | `core/path_utils.py` | Path utilities for transcript file handling |
 | `core/task_persistence.py` | Task list persistence from TodoWrite tool |
 | `core/task_file_poller.py` | Polls external task files for todo list updates |
@@ -142,7 +141,7 @@ graph LR
 | `db/models.py` | SQLAlchemy database models |
 | `models/agents.py` | Agent and Boss models |
 | `models/events.py` | Event and EventData models |
-| `models/sessions.py` | GameState and session models |
+| `models/sessions.py` | GameState and history entry models |
 | `models/common.py` | Shared models (BubbleContent, SpeechContent, TodoItem) |
 | `models/overview.py` | `OverviewEntry` / `OverviewState` for `/ws/overview` |
 | `models/ui.py` | UI-specific model re-exports |

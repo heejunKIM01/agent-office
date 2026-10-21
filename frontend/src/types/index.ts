@@ -28,7 +28,6 @@ export type {
   TodoItem,
   // Sessions
   GameState,
-  Session,
   HistoryEntry,
   // Events (backend models)
   EventType,

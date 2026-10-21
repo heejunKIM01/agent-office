@@ -37,10 +37,7 @@ from app.models.events import (  # noqa: E402  # type: ignore[import]
     ToolEventData,
 )
 from app.models.overview import OverviewEntry, OverviewState  # noqa: E402  # type: ignore[import]
-from app.models.sessions import (  # noqa: E402  # type: ignore[import]
-    GameState,
-    Session,
-)
+from app.models.sessions import GameState  # noqa: E402  # type: ignore[import]
 from pydantic.json_schema import models_json_schema  # noqa: E402
 
 # All Pydantic BaseModel subclasses to generate types for
@@ -71,7 +68,6 @@ MODELS = [
     LifecycleEventData,
     TaskEventData,
     BackgroundTaskEventData,
-    Session,
     GameState,
     OverviewEntry,
     OverviewState,

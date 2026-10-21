@@ -1,16 +1,11 @@
 """Tests for state machine logic."""
 
-from app.core.state_machine import OfficePhase, StateMachine
+from app.core.state_machine import StateMachine
 from app.models.agents import AgentState, BossState
 
 
 class TestStateMachineInit:
     """Tests for StateMachine initialization."""
-
-    def test_initial_phase_is_empty(self) -> None:
-        """Initial phase should be EMPTY."""
-        sm = StateMachine()
-        assert sm.phase == OfficePhase.EMPTY
 
     def test_initial_boss_state_is_idle(self) -> None:
         """Initial boss state should be IDLE."""
@@ -97,26 +92,3 @@ class TestToGameState:
         state = sm.to_game_state("test")
         assert state.arrival_queue == ["a1", "a2"]
         assert state.departure_queue == ["a3"]
-
-
-class TestOfficePhase:
-    """Tests for OfficePhase enum."""
-
-    def test_all_phases_exist(self) -> None:
-        """All expected phases should exist."""
-        phases = [
-            OfficePhase.EMPTY,
-            OfficePhase.STARTING,
-            OfficePhase.IDLE,
-            OfficePhase.WORKING,
-            OfficePhase.DELEGATING,
-            OfficePhase.BUSY,
-            OfficePhase.COMPLETING,
-            OfficePhase.ENDED,
-        ]
-        assert len(phases) == 8
-
-    def test_phases_are_unique(self) -> None:
-        """All phases should have unique values."""
-        values = [p.value for p in OfficePhase]
-        assert len(values) == len(set(values))

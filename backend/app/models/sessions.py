@@ -8,21 +8,9 @@ from app.models.agents import Agent, Boss
 from app.models.common import TodoItem
 
 __all__ = [
-    "Session",
     "HistoryEntry",
     "GameState",
 ]
-
-
-class Session(BaseModel):
-    """A Claude Code session summary."""
-
-    id: str
-    created_at: datetime
-    updated_at: datetime
-    status: str  # "active" | "completed" | "error"
-    event_count: int
-    agent_count: int
 
 
 class HistoryEntry(TypedDict):

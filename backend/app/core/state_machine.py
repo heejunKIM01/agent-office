@@ -2,7 +2,6 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum, auto
 from typing import Any, cast
 
 from app.core.activity import (
@@ -195,7 +194,6 @@ def parse_todos_from_event(event: AnyEvent) -> list[TodoItem]:
 
 def _handle_session_start(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle SESSION_START: initialize office state for a new session."""
-    sm.phase = OfficePhase.STARTING
     sm.boss_state = BossState.IDLE
     sm.turn_active = False
 
@@ -212,7 +210,6 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
             sm.todos = parsed
 
     if name in SUBAGENT_TOOLS:
-        sm.phase = OfficePhase.DELEGATING
         sm.boss_state = BossState.DELEGATING
         sm.set_stuck("main", None)
     else:
@@ -329,7 +326,6 @@ def _handle_subagent_start(sm: "StateMachine", event: AnyEvent) -> None:
         sm.arrival_queue.append(agent.id)
 
     sm.agents[agent.id] = agent
-    sm.phase = OfficePhase.BUSY
 
 
 def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
@@ -354,9 +350,6 @@ def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
 
         sm.boss_state = BossState.IDLE
 
-        if not sm.agents:
-            sm.phase = OfficePhase.WORKING
-
 
 def _handle_cleanup(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle CLEANUP: remove a departed agent from all state."""
@@ -368,7 +361,6 @@ def _handle_cleanup(sm: "StateMachine", event: AnyEvent) -> None:
 def _handle_stop(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle STOP: main agent completes work, show completion message."""
     assert isinstance(event, LifecycleEvent)
-    sm.phase = OfficePhase.COMPLETING
     sm.boss_state = BossState.COMPLETING
     sm.turn_active = False
     sm.tool_activity.clear("main")
@@ -390,7 +382,6 @@ def _handle_stop(sm: "StateMachine", event: AnyEvent) -> None:
 
 def _handle_session_end(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle SESSION_END: mark session as ended."""
-    sm.phase = OfficePhase.ENDED
     sm.boss_state = BossState.IDLE
     sm.boss_current_task = None
     sm.turn_active = False
@@ -426,22 +417,6 @@ _DISPATCH_TABLE: dict[EventType, Callable[["StateMachine", AnyEvent], None]] = {
     EventType.SESSION_END: _handle_session_end,
     EventType.TEAMMATE_IDLE: _handle_teammate_idle,
 }
-
-
-# ---------------------------------------------------------------------------
-# OfficePhase enum
-# ---------------------------------------------------------------------------
-
-
-class OfficePhase(Enum):
-    EMPTY = auto()  # No active session
-    STARTING = auto()  # Session starting, boss arriving
-    IDLE = auto()  # Boss at desk, no active work
-    WORKING = auto()  # Boss actively working
-    DELEGATING = auto()  # Boss spawning agents
-    BUSY = auto()  # Multiple agents working
-    COMPLETING = auto()  # Wrapping up work
-    ENDED = auto()  # Session complete
 
 
 # ---------------------------------------------------------------------------
@@ -501,13 +476,11 @@ class StateMachine:
     """
 
     MAX_AGENTS = 8
-    MAX_CONTEXT_TOKENS = 200_000
     # Desk grid row width — keep in sync with frontend/src/constants/positions.ts
     # (DESKS_PER_ROW), where the agent machine lays out desks and queues. Agents
     # get desk numbers 1..N (Agent.desk); the backend itself does not read this.
     DESKS_PER_ROW: int = 4
 
-    phase: OfficePhase = OfficePhase.EMPTY
     boss_state: BossState = BossState.IDLE
     boss_bubble: BubbleContent | None = None
     boss_current_task: str | None = None  # Summarized user prompt

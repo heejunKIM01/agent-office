@@ -294,7 +294,6 @@ backend/
 │   │   ├── event_processor.py # Event validation and processing
 │   │   ├── jsonl_parser.py    # Claude transcript parsing
 │   │   ├── logging.py         # Logging configuration
-│   │   ├── office_layout.py   # Office layout constants and zones
 │   │   ├── overview.py        # Cross-session overview for /ws/overview
 │   │   ├── path_utils.py      # File path utilities
 │   │   ├── quotes.py          # Loading screen quotes
@@ -311,7 +310,7 @@ backend/
 │   │   ├── common.py          # Shared Pydantic models
 │   │   ├── events.py          # Event type models
 │   │   ├── overview.py        # Cross-session overview models
-│   │   ├── sessions.py        # Session state models
+│   │   ├── sessions.py        # GameState and history entry models
 │   │   └── ui.py              # UI-specific models
 │   ├── config.py              # Settings management
 │   └── main.py                # FastAPI application entry point

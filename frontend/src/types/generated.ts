@@ -302,12 +302,6 @@ export type OutputTokens5 = number | null;
 export type CacheReadTokens5 = number | null;
 export type CacheCreationTokens5 = number | null;
 export type Prompt1 = string | null;
-export type Id2 = string;
-export type CreatedAt = string;
-export type UpdatedAt = string;
-export type Status = string;
-export type EventCount = number;
-export type AgentCount = number;
 export type ProjectName6 = string | null;
 export type ProjectDir6 = string | null;
 export type WorkingDir6 = string | null;
@@ -770,21 +764,6 @@ export interface PromptEventData {
   cache_read_tokens?: CacheReadTokens5;
   cache_creation_tokens?: CacheCreationTokens5;
   prompt?: Prompt1;
-  [k: string]: unknown;
-}
-/**
- * A Claude Code session summary.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "Session".
- */
-export interface Session {
-  id: Id2;
-  created_at: CreatedAt;
-  updated_at: UpdatedAt;
-  status: Status;
-  event_count: EventCount;
-  agent_count: AgentCount;
   [k: string]: unknown;
 }
 /**
