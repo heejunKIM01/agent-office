@@ -333,3 +333,66 @@ describe("reconcileState — coding agent", () => {
     expect(useGameStore.getState().codingAgent).toBeNull();
   });
 });
+
+describe("reconcileState — returning agents", () => {
+  beforeEach(() => {
+    useGameStore.getState().resetForSessionSwitch();
+  });
+
+  const ctx = (): ReconcilerContext => ({
+    currentSessionId: "session-1",
+    processedAgents: new Set<string>(),
+    lastSeenBubbleText: new Map<string, string>(),
+    initialQueueSyncDone: { current: "session-1" },
+  });
+
+  it("brings back an agent that went home and is handed more work under the same id", () => {
+    const context = ctx();
+    reconcileState(
+      makeState({ agents: [makeAgent({ id: "sa1", state: "arriving" })] }),
+      context,
+    );
+    expect(useGameStore.getState().agents.has("sa1")).toBe(true);
+
+    // It finished and left the office.
+    useGameStore.getState().removeAgent("sa1");
+    reconcileState(makeState({ agents: [] }), context);
+    expect(useGameStore.getState().agents.has("sa1")).toBe(false);
+
+    // The same id comes back to work.
+    reconcileState(
+      makeState({ agents: [makeAgent({ id: "sa1", state: "arriving" })] }),
+      context,
+    );
+    expect(useGameStore.getState().agents.get("sa1")?.backendState).toBe(
+      "arriving",
+    );
+  });
+
+  it("lets a returning agent say again what it said last time", () => {
+    const context = ctx();
+    context.lastSeenBubbleText.set("sa1", "Found it in src/auth.py.");
+    context.processedAgents.add("sa1");
+
+    reconcileState(
+      makeState({ agents: [makeAgent({ id: "sa1", state: "arriving" })] }),
+      context,
+    );
+    expect(context.lastSeenBubbleText.has("sa1")).toBe(false);
+  });
+
+  it("does not bring back an agent the backend still lists as finished", () => {
+    const context = ctx();
+    reconcileState(
+      makeState({ agents: [makeAgent({ id: "sa1", state: "working" })] }),
+      context,
+    );
+    useGameStore.getState().removeAgent("sa1");
+
+    reconcileState(
+      makeState({ agents: [makeAgent({ id: "sa1", state: "waiting" })] }),
+      context,
+    );
+    expect(useGameStore.getState().agents.has("sa1")).toBe(false);
+  });
+});

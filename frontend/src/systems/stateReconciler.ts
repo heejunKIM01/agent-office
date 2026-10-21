@@ -121,6 +121,15 @@ export function resolveSpawn(
  *   read AND reassign it (mirrors a React ref). Once we've synced a session's
  *   queues on initial connect, frontend owns queue state.
  */
+/** Backend states of a subagent whose work is done (SUBAGENT_STOP sets waiting). */
+const FINISHED_STATES: ReadonlySet<string> = new Set([
+  "waiting",
+  "reporting_done",
+  "completed",
+  "leaving",
+  "in_elevator",
+]);
+
 export interface ReconcilerContext {
   currentSessionId: string;
   processedAgents: Set<string>;
@@ -152,11 +161,18 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
 
   // ---- Detect new agents (arrivals) ----
   for (const backendAgent of state.agents) {
+    // An agent that already went home but is at work again under the same id
+    // (handed more work: Codex resume_agent / send_input) arrives again.
+    const returning =
+      ctx.processedAgents.has(backendAgent.id) &&
+      !FINISHED_STATES.has(backendAgent.state);
     if (
       !currentAgentIds.has(backendAgent.id) &&
-      !ctx.processedAgents.has(backendAgent.id)
+      (!ctx.processedAgents.has(backendAgent.id) || returning)
     ) {
       ctx.processedAgents.add(backendAgent.id);
+      // A new stint: what it said last time may well be said again.
+      ctx.lastSeenBubbleText.delete(backendAgent.id);
 
       const decision = resolveSpawn(backendAgent, state);
 
