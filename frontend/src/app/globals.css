@@ -12,6 +12,7 @@
   --font-mono: var(--font-geist-mono);
   --animate-tour-ring: tour-ring-pulse 1.5s ease-in-out infinite;
   --animate-slide-up: slide-up 300ms ease-out forwards;
+  --animate-elevator: elevator-lamp 1.6s ease-in-out forwards;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,6 +39,23 @@ body {
     box-shadow:
       0 0 0 5px rgba(249, 115, 22, 0.4),
       0 0 30px 8px rgba(249, 115, 22, 0.3);
+  }
+}
+
+/* The floor guide's 「▲ 3F」 lamp while the office changes floors. */
+@keyframes elevator-lamp {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15%,
+  75% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
   }
 }
 

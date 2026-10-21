@@ -208,7 +208,7 @@ export function IsoSidePanel({
                 )}
                 <p className="text-[10px] text-slate-400">
                   {t("iso.panel.tools", {
-                    tools: row.tools,
+                    count: row.tools,
                     seconds: seconds.get(row.id) ?? 0,
                   })}
                 </p>
