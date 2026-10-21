@@ -1,24 +1,20 @@
 /**
  * Office slice (ARC-005).
  *
- * Session/scalar office state: desks, elevator, phone, compaction animation
- * phase, todos, event log, conversation. Self-contained apart
- * from the @/types shapes it carries.
+ * Session/scalar office state: compaction animation phase, todos, event log,
+ * conversation. Self-contained apart from the @/types shapes it carries.
  */
 import type { StateCreator } from "zustand";
 import type { GameStore } from "../gameStore";
 import type {
-  ElevatorState,
   EventDetail,
   EventType,
-  PhoneState,
   TodoItem,
   HistoryEntry,
   WebSocketMessage,
   ConversationEntry,
 } from "@/types";
 import type { EventLogEntry, CompactionAnimationPhase } from "./types";
-import { MIN_DESK_COUNT } from "@/constants/positions";
 
 const MAX_EVENT_LOG = 500;
 
@@ -38,30 +34,18 @@ function eventLogKey(event: {
 
 export type OfficeSlice = {
   sessionId: string;
-  deskCount: number;
-  elevatorState: ElevatorState;
-  phoneState: PhoneState;
-  contextUtilization: number;
-  toolUsesSinceCompaction: number;
   isCompacting: boolean;
   compactionPhase: CompactionAnimationPhase;
-  printReport: boolean;
   todos: TodoItem[];
   eventLog: EventLogEntry[];
   codingAgent: string | null;
   conversation: ConversationEntry[];
 
   setSessionId: (id: string) => void;
-  setElevatorState: (state: ElevatorState) => void;
-  setPhoneState: (state: PhoneState) => void;
-  setDeskCount: (count: number) => void;
-  setContextUtilization: (utilization: number) => void;
-  setToolUsesSinceCompaction: (count: number) => void;
   triggerCompaction: () => void;
   setCompactionPhase: (phase: CompactionAnimationPhase) => void;
   setIsCompacting: (isCompacting: boolean) => void;
   setTodos: (todos: TodoItem[]) => void;
-  setPrintReport: (printReport: boolean) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
@@ -70,14 +54,8 @@ export type OfficeSlice = {
 
 export const initialOfficeState = {
   sessionId: "None",
-  deskCount: MIN_DESK_COUNT,
-  elevatorState: "closed" as ElevatorState,
-  phoneState: "idle" as PhoneState,
-  contextUtilization: 0.0,
-  toolUsesSinceCompaction: 0,
   isCompacting: false,
   compactionPhase: "idle" as CompactionAnimationPhase,
-  printReport: false,
   todos: [] as TodoItem[],
   eventLog: [] as EventLogEntry[],
   codingAgent: null as string | null,
@@ -90,27 +68,16 @@ export const createOfficeSlice: StateCreator<GameStore, [], [], OfficeSlice> = (
   ...initialOfficeState,
 
   setSessionId: (id) => set({ sessionId: id }),
-  setElevatorState: (elevatorState) => set({ elevatorState }),
-  setPhoneState: (phoneState) => set({ phoneState }),
-  setDeskCount: (deskCount) => set({ deskCount }),
-  setContextUtilization: (contextUtilization) =>
-    // Only update context utilization - don't reset compaction state
-    // The compaction animation system controls when compaction ends via setCompactionPhase
-    set({ contextUtilization }),
-  setToolUsesSinceCompaction: (toolUsesSinceCompaction) =>
-    set({ toolUsesSinceCompaction }),
   triggerCompaction: () => {
     // Start compaction animation - boss will walk to trash can and jump on it
     set({
       isCompacting: true,
-      toolUsesSinceCompaction: 0,
       compactionPhase: "walking_to_trash",
     });
   },
   setCompactionPhase: (compactionPhase) => set({ compactionPhase }),
   setIsCompacting: (isCompacting) => set({ isCompacting }),
   setTodos: (todos) => set({ todos }),
-  setPrintReport: (printReport) => set({ printReport }),
 
   addEventLog: (event) =>
     set((state) => {

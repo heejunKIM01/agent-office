@@ -19,7 +19,6 @@ from app.core.handlers.agent_handler import (
     handle_subagent_stop,
 )
 from app.core.handlers.conversation_handler import (
-    detect_and_set_print_report,
     extract_and_set_boss_speech,
     handle_stop,
     handle_user_prompt_submit,
@@ -57,7 +56,6 @@ __all__ = [
     "handle_user_prompt_submit",
     "handle_stop",
     "extract_and_set_boss_speech",
-    "detect_and_set_print_report",
     # team
     "handle_task_created",
     "handle_task_completed",

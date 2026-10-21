@@ -26,10 +26,6 @@ export type {
   SpeechContent,
   TodoStatus,
   TodoItem,
-  // Office state
-  OfficeState,
-  ElevatorState,
-  PhoneState,
   // Sessions
   GameState,
   Session,

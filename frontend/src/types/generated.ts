@@ -141,13 +141,6 @@ export type Text1 = string;
 export type Timestamp = string;
 export type Toolname = string;
 /**
- * Visual states for the elevator.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "ElevatorState".
- */
-export type ElevatorState = "closed" | "arriving" | "open" | "departing";
-/**
  * Types of events sent from Claude Code hooks.
  *
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
@@ -238,18 +231,6 @@ export type CacheReadTokens3 = number | null;
 export type CacheCreationTokens3 = number | null;
 export type Sessionid = string;
 export type Agents = Agent[];
-export type Deskcount = number;
-/**
- * Visual states for the elevator.
- */
-export type ElevatorState1 = "closed" | "arriving" | "open" | "departing";
-/**
- * Visual states for the boss's phone.
- */
-export type PhoneState = "idle" | "ringing" | "in_use";
-export type Contextutilization = number;
-export type Toolusessincecompaction = number;
-export type Printreport = boolean;
 export type Lastupdated = string;
 export type Id2 = string;
 export type Type = string;
@@ -309,13 +290,6 @@ export type Subagentcount = number;
 export type Turnactive1 = boolean;
 export type Entries = OverviewEntry[];
 export type Lastupdated1 = string;
-/**
- * Visual states for the boss's phone.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "PhoneState".
- */
-export type PhoneState1 = "idle" | "ringing" | "in_use";
 export type ProjectName5 = string | null;
 export type ProjectDir5 = string | null;
 export type WorkingDir5 = string | null;
@@ -455,8 +429,8 @@ export interface Position {
 /**
  * Payload for SUBAGENT_START, SUBAGENT_INFO, SUBAGENT_STOP, AGENT_UPDATE, CLEANUP.
  *
- * Note: `agent_transcript_path` is inherited from EventDataBase because
- * token_tracker.update_from_event reads it on any event type. `success`
+ * Note: `agent_transcript_path` is inherited from EventDataBase, where any
+ * event type may carry it. `success`
  * appears here (and on ToolEventData) because the SUBAGENT_STOP formatter
  * reads it for the native-hook success/failure marker.
  *
@@ -647,8 +621,8 @@ export interface EventData {
 /**
  * Fields every event may carry.
  *
- * Covers routing/project context, token accounting, and team context — all
- * read by code paths that run regardless of event_type.
+ * Covers routing/project context, transcript paths, team context and token
+ * counts — producers may send any of them with any event_type.
  *
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
  * via the `definition` "EventDataBase".
@@ -684,7 +658,6 @@ export interface GameState {
   sessionId: Sessionid;
   boss: Boss1;
   agents: Agents;
-  office: OfficeState;
   lastUpdated: Lastupdated;
   history?: History;
   todos?: Todos;
@@ -692,21 +665,6 @@ export interface GameState {
   departureQueue?: Departurequeue;
   conversation?: Conversation;
   codingAgent?: Codingagent;
-  [k: string]: unknown;
-}
-/**
- * Represents the overall state of the office environment.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "OfficeState".
- */
-export interface OfficeState {
-  deskCount?: Deskcount;
-  elevatorState?: ElevatorState1;
-  phoneState?: PhoneState;
-  contextUtilization?: Contextutilization;
-  toolUsesSinceCompaction?: Toolusessincecompaction;
-  printReport?: Printreport;
   [k: string]: unknown;
 }
 /**

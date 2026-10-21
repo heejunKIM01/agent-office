@@ -146,42 +146,6 @@ class TestGenerateAgentNameFallback:
         assert result == "The Intern"
 
 
-class TestDetectReportRequestFallback:
-    """Tests for detect_report_request keyword fallback."""
-
-    @pytest.mark.asyncio
-    async def test_empty_prompt_returns_false(self, service: SummaryService) -> None:
-        """Empty prompt should return False."""
-        assert await service.detect_report_request("") is False
-
-    @pytest.mark.asyncio
-    async def test_report_keyword_detected(self, service: SummaryService) -> None:
-        """Report-related keywords should be detected."""
-        assert await service.detect_report_request("Create a report") is True
-        assert await service.detect_report_request("Update the readme") is True
-        assert await service.detect_report_request("Write documentation") is True
-
-    @pytest.mark.asyncio
-    async def test_md_file_pattern_detected(self, service: SummaryService) -> None:
-        """Patterns like 'create X.md' should be detected."""
-        assert await service.detect_report_request("Create README.md") is True
-        assert await service.detect_report_request("Update the ARCHITECTURE.md") is True
-        assert await service.detect_report_request("Write CHANGELOG.md") is True
-
-    @pytest.mark.asyncio
-    async def test_non_report_returns_false(self, service: SummaryService) -> None:
-        """Non-report requests should return False."""
-        assert await service.detect_report_request("Fix the bug") is False
-        assert await service.detect_report_request("Add unit tests") is False
-        assert await service.detect_report_request("Refactor the code") is False
-
-    @pytest.mark.asyncio
-    async def test_case_insensitive(self, service: SummaryService) -> None:
-        """Detection should be case-insensitive."""
-        assert await service.detect_report_request("CREATE A REPORT") is True
-        assert await service.detect_report_request("Write a README") is True
-
-
 class TestSummarizeUserPrompt:
     """Tests for summarize_user_prompt method."""
 

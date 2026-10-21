@@ -421,53 +421,6 @@ class SummaryService:
             n += 1
         return f"{base_name} {n}"
 
-    async def detect_report_request(self, prompt: str) -> bool:
-        """Detect if the user's prompt requests a report or document."""
-        if not prompt:
-            return False
-
-        prompt_lower = prompt.lower()
-        report_keywords = [
-            "report",
-            "document",
-            "documentation",
-            "readme",
-            "write up",
-            "writeup",
-            "summary report",
-            "create a doc",
-            "generate a doc",
-            "write a doc",
-            "pdf",
-            "markdown file",
-            "md file",
-            ".md",  # Any .md file reference
-            "architecture",
-            "changelog",
-            "contributing",
-            "license",
-            "guide",
-        ]
-        keyword_match = any(keyword in prompt_lower for keyword in report_keywords)
-
-        create_md_pattern = re.search(
-            r"\b(create|write|generate|update|add)\b.*\.md\b", prompt_lower
-        )
-        fallback_result = keyword_match or bool(create_md_pattern)
-
-        if not self.enabled:
-            return fallback_result
-
-        truncated = _sanitize_untrusted(prompt[:1000] if len(prompt) > 1000 else prompt)
-        result = await self._call_with_retry(
-            "Does this request ask for a report, document, or documentation to be created? "
-            f"Reply with ONLY 'yes' or 'no':\n{_UNTRUSTED_START}{truncated}{_UNTRUSTED_END}"
-        )
-
-        if result:
-            return result.strip().lower() == "yes"
-        return fallback_result
-
     async def summarize_response(self, response_text: str) -> str:
         """Generate a short summary of Claude's response."""
         fallback = self._extract_first_sentence(response_text, max_len=100)

@@ -9,16 +9,12 @@ import type {
   BubbleContent,
   BossState,
   AgentState as BackendAgentState,
-  ElevatorState,
-  PhoneState,
   TodoItem,
   HistoryEntry,
   WebSocketMessage,
   Agent as BackendAgent,
-  GameState as BackendGameState,
   ConversationEntry,
 } from "@/types";
-import { MIN_DESK_COUNT } from "@/constants/positions";
 
 // ============================================================================
 // SHARED STORE TYPES (ARC-005)
@@ -180,30 +176,18 @@ export interface GameStore {
 
   // ========== Office State ==========
   sessionId: string;
-  deskCount: number;
-  elevatorState: ElevatorState;
-  phoneState: PhoneState;
-  contextUtilization: number; // 0.0 to 1.0 representing context window usage
-  toolUsesSinceCompaction: number; // Counter for safety sign - resets on compaction
   isCompacting: boolean; // True when context compaction animation is active
   compactionPhase: CompactionAnimationPhase; // Phase of the compaction animation
-  printReport: boolean; // True when user requested a report and session ended
   todos: TodoItem[];
   eventLog: EventLogEntry[];
   codingAgent: string | null; // Coding agent running the session (name tag)
 
   // Office actions
   setSessionId: (id: string) => void;
-  setElevatorState: (state: ElevatorState) => void;
-  setPhoneState: (state: PhoneState) => void;
-  setDeskCount: (count: number) => void;
-  setContextUtilization: (utilization: number) => void;
-  setToolUsesSinceCompaction: (count: number) => void;
   triggerCompaction: () => void; // Trigger context compaction animation
   setCompactionPhase: (phase: CompactionAnimationPhase) => void; // Set compaction animation phase
   setIsCompacting: (isCompacting: boolean) => void; // Set isCompacting flag
   setTodos: (todos: TodoItem[]) => void;
-  setPrintReport: (printReport: boolean) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
@@ -240,7 +224,6 @@ export interface GameStore {
   reset: () => void;
   resetForReplay: () => void;
   resetForSessionSwitch: () => void;
-  processBackendState: (state: BackendGameState) => void;
 }
 
 // ============================================================================
@@ -309,11 +292,6 @@ export const useGameStore = create<GameStore>()(
         bossErrand: initialBossErrandState,
         agentErrands: new Map(),
         sessionId: "None",
-        deskCount: MIN_DESK_COUNT,
-        elevatorState: "closed",
-        phoneState: "idle",
-        contextUtilization: 0.0,
-        toolUsesSinceCompaction: 0,
         isCompacting: false,
         compactionPhase: "idle",
         todos: [],
@@ -326,73 +304,6 @@ export const useGameStore = create<GameStore>()(
         currentReplayIndex: -1,
         conversation: [], // Clear conversation for new session
         // Debug settings are preserved (not reset)
-      }),
-
-    processBackendState: (backendState) =>
-      set((state) => {
-        // This is called when we receive a full state update from backend.
-        // It reconciles the backend agent list with our frontend state.
-
-        const currentAgentIds = new Set(state.agents.keys());
-        const backendAgentIds = new Set(backendState.agents.map((a) => a.id));
-
-        const newAgents = new Map(state.agents);
-        const newArrivalQueue = [...state.arrivalQueue];
-        const newDepartureQueue = [...state.departureQueue];
-
-        // Handle new agents (arrivals)
-        for (const backendAgent of backendState.agents) {
-          if (!currentAgentIds.has(backendAgent.id)) {
-            // New agent - will be added via state machine event, not here
-          } else {
-            // Existing agent - update backend state
-            const existing = newAgents.get(backendAgent.id);
-            if (existing) {
-              newAgents.set(backendAgent.id, {
-                ...existing,
-                backendState: backendAgent.state,
-                currentTask: backendAgent.currentTask ?? null,
-                desk: backendAgent.desk ?? null,
-                name: backendAgent.name ?? null,
-              });
-            }
-          }
-        }
-
-        // Handle removed agents (departures)
-        for (const agentId of currentAgentIds) {
-          if (!backendAgentIds.has(agentId)) {
-            // Will be handled by state machine event when agent is idle
-          }
-        }
-
-        // Update boss
-        const newBoss: BossAnimationState = {
-          ...state.boss,
-          backendState: backendState.boss.state,
-          currentTask: backendState.boss.currentTask ?? null,
-        };
-
-        // Process bubbles from backend state
-        // (These are enqueued separately via state machine events)
-
-        return {
-          agents: newAgents,
-          arrivalQueue: newArrivalQueue,
-          departureQueue: newDepartureQueue,
-          boss: newBoss,
-          sessionId: backendState.sessionId,
-          deskCount: backendState.office.deskCount,
-          // NOTE: elevatorState is NOT synced from backend - it's controlled by
-          // the frontend's agent state machine for smooth animations
-          phoneState: backendState.office.phoneState,
-          contextUtilization: backendState.office.contextUtilization ?? 0.0,
-          toolUsesSinceCompaction:
-            backendState.office.toolUsesSinceCompaction ?? 0,
-          printReport: backendState.office.printReport ?? false,
-          todos: backendState.todos,
-          conversation: backendState.conversation ?? [],
-        };
       }),
   })),
 );
@@ -416,16 +327,10 @@ export const selectShowQueueSlots = (state: GameStore) => state.showQueueSlots;
 export const selectShowPhaseLabels = (state: GameStore) =>
   state.showPhaseLabels;
 export const selectShowObstacles = (state: GameStore) => state.showObstacles;
-export const selectElevatorState = (state: GameStore) => state.elevatorState;
-export const selectContextUtilization = (state: GameStore) =>
-  state.contextUtilization;
 export const selectIsCompacting = (state: GameStore) => state.isCompacting;
 export const selectCompactionPhase = (state: GameStore) =>
   state.compactionPhase;
 export const selectTodos = (state: GameStore) => state.todos;
 export const selectEventLog = (state: GameStore) => state.eventLog;
 export const selectCodingAgent = (state: GameStore) => state.codingAgent;
-export const selectToolUsesSinceCompaction = (state: GameStore) =>
-  state.toolUsesSinceCompaction;
-export const selectPrintReport = (state: GameStore) => state.printReport;
 export const selectConversation = (state: GameStore) => state.conversation;

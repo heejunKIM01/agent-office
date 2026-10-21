@@ -68,23 +68,6 @@ describe("addAgent", () => {
     // currentTask follows the backend `?? null` coercion.
     expect(agent?.currentTask).toBeNull();
   });
-
-  it("grows deskCount to the next multiple of 4 that fits all agents", () => {
-    addAgent("A");
-    // deskCount starts at 8; one agent stays within the first row of 4, but
-    // the formula is ceil((size + 1) / 4) * 4, so 1 agent → 8.
-    expect(useGameStore.getState().deskCount).toBe(8);
-
-    addAgent("B");
-    addAgent("C");
-    addAgent("D");
-    addAgent("E");
-    addAgent("F");
-    addAgent("G");
-    addAgent("H");
-    // 8 agents → ceil((8+1)/4)*4 = ceil(2.25)*4 = 12.
-    expect(useGameStore.getState().deskCount).toBe(12);
-  });
 });
 
 describe("removeAgent", () => {
@@ -426,7 +409,6 @@ describe("reset variants", () => {
     addAgent("A");
     useGameStore.getState().enqueueArrival("A");
     useGameStore.getState().setSessionId("sess-123");
-    useGameStore.getState().setDeskCount(16);
     useGameStore.getState().setDebugMode(true);
     useGameStore.getState().setReplaying(true);
     useGameStore.getState().setCodingAgent("opencode");
@@ -441,7 +423,6 @@ describe("reset variants", () => {
       expect(s.agents.size).toBe(0);
       expect(s.arrivalQueue).toEqual([]);
       expect(s.sessionId).toBe("None");
-      expect(s.deskCount).toBe(8);
     });
 
     it("forgets the coding agent", () => {
@@ -470,7 +451,6 @@ describe("reset variants", () => {
       expect(s.agents.size).toBe(0);
       expect(s.arrivalQueue).toEqual([]);
       expect(s.sessionId).toBe("None");
-      expect(s.deskCount).toBe(8);
       expect(s.isReplaying).toBe(true);
     });
   });
@@ -478,14 +458,13 @@ describe("reset variants", () => {
   describe("resetForSessionSwitch()", () => {
     beforeEach(seedNonDefaults);
 
-    it("clears game state (agents, queues, sessionId, deskCount)", () => {
+    it("clears game state (agents, queues, sessionId)", () => {
       useGameStore.getState().resetForSessionSwitch();
       const s = useGameStore.getState();
       expect(s.agents.size).toBe(0);
       expect(s.arrivalQueue).toEqual([]);
       expect(s.departureQueue).toEqual([]);
       expect(s.sessionId).toBe("None");
-      expect(s.deskCount).toBe(8);
     });
 
     it("forgets the previous session's coding agent", () => {

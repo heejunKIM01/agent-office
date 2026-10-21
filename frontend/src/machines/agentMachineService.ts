@@ -630,13 +630,11 @@ class AgentMachineService implements AnimationListener {
 
   private handleOpenElevator(): void {
     this.elevatorUsageCount++;
-    useGameStore.getState().setElevatorState("open");
   }
 
   private handleCloseElevator(): void {
     this.elevatorUsageCount = Math.max(0, this.elevatorUsageCount - 1);
     if (this.elevatorUsageCount === 0) {
-      useGameStore.getState().setElevatorState("closed");
       this.notifyElevatorDoorClosing();
     }
   }

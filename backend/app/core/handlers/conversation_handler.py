@@ -4,7 +4,6 @@ Responsibilities:
 - Summarising user prompts and storing them on the StateMachine.
 - Capturing conversation history entries for user, assistant, and thinking roles.
 - Extracting boss speech from transcripts on STOP.
-- Detecting report requests on STOP.
 """
 
 import asyncio
@@ -24,7 +23,6 @@ __all__ = [
     "handle_stop",
     "extract_and_set_boss_speech",
     "set_boss_speech",
-    "detect_and_set_print_report",
 ]
 
 logger = logging.getLogger(__name__)
@@ -74,8 +72,7 @@ async def handle_stop(
     """Handle a STOP event.
 
     Extracts the assistant's last response from the transcript, sets the boss
-    speech bubble, captures the response in conversation history, and checks
-    whether the user prompt requested a report.
+    speech bubble, and captures the response in conversation history.
 
     Args:
         sm: The StateMachine for this session.
@@ -108,9 +105,6 @@ async def handle_stop(
             "timestamp": event.timestamp.isoformat(),
         }
         sm.append_capped(assistant_entry)
-
-    await detect_and_set_print_report(sm)
-    logger.info(f"STOP event: print_report = {sm.print_report}")
 
     await broadcast_state(event.session_id, sm)
 
@@ -166,18 +160,3 @@ async def set_boss_speech(sm: StateMachine, response: str) -> str:
         logger.debug(f"Set boss speech: {summary[:50]}...")
 
     return response
-
-
-async def detect_and_set_print_report(sm: StateMachine) -> None:
-    """Detect if the user's prompt requested a report and set the print_report flag.
-
-    Args:
-        sm: The StateMachine whose print_report flag should be updated.
-    """
-    if not sm.last_user_prompt:
-        return
-
-    summary_service = get_summary_service()
-    sm.print_report = await summary_service.detect_report_request(sm.last_user_prompt)
-    if sm.print_report:
-        logger.debug(f"Report request detected in prompt: {sm.last_user_prompt[:50]}...")

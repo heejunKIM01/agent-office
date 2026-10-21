@@ -67,8 +67,8 @@ graph TD
 
 1. Claude Code hooks send events to `/api/v1/events`
 2. Event processor validates and routes to appropriate handlers
-3. Handlers enrich events (AI summaries, token usage) and update state machine
-4. State machine updates office state (boss, agents, context)
+3. Handlers enrich events (AI summaries, transcript replies) and update state machine
+4. State machine updates office state (boss, agents, queues, todos)
 5. Broadcast service orchestrates state changes to WebSocket manager
 6. WebSocket manager broadcasts changes to connected clients
 7. Events are persisted to SQLite for replay
@@ -303,8 +303,7 @@ backend/
 │   │   ├── summary_service.py # AI-powered summaries
 │   │   ├── task_file_poller.py # Claude task file monitoring
 │   │   ├── task_persistence.py # Task database persistence
-│   │   ├── token_tracker.py   # Token usage and tool-use tracking
-│   │   └── transcript_poller.py # Token usage extraction
+│   │   └── transcript_poller.py # Subagent transcript tool-use polling
 │   ├── db/
 │   │   ├── database.py        # SQLAlchemy async setup
 │   │   └── models.py          # Database models

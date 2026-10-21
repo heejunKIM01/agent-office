@@ -23,7 +23,6 @@ import type {
   AgentErrandState,
   AgentMovement,
 } from "./types";
-import { DESKS_PER_ROW } from "@/constants/positions";
 import { createEmptyBubbleState } from "./shared";
 
 export type AgentSlice = {
@@ -116,13 +115,7 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
         };
         newAgents.set(backendAgent.id, animState);
 
-        // Update desk count if needed
-        const newDeskCount = Math.max(
-          state.deskCount,
-          Math.ceil((newAgents.size + 1) / DESKS_PER_ROW) * DESKS_PER_ROW,
-        );
-
-        return { agents: newAgents, deskCount: newDeskCount };
+        return { agents: newAgents };
       }),
 
     removeAgent: (agentId) =>

@@ -18,7 +18,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 from app.models.agents import (  # noqa: E402  # type: ignore[import]
     Agent,
     Boss,
-    OfficeState,
 )
 from app.models.common import (  # noqa: E402  # type: ignore[import]
     BubbleContent,
@@ -51,7 +50,6 @@ from pydantic.json_schema import models_json_schema  # noqa: E402
 MODELS = [
     Agent,
     Boss,
-    OfficeState,
     BubbleContent,
     SpeechContent,
     TodoItem,

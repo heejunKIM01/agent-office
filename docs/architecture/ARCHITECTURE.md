@@ -122,7 +122,7 @@ graph LR
 | `core/handlers/session_handler.py` | Session lifecycle event handling |
 | `core/handlers/tool_handler.py` | Tool use event handling |
 | `core/summary_service.py` | AI-powered summarization for agent tasks and prompts |
-| `core/transcript_poller.py` | Polls Claude Code JSONL transcript files for token usage |
+| `core/transcript_poller.py` | Polls subagent JSONL transcript files for their tool calls |
 | `core/jsonl_parser.py` | Parses Claude Code JSONL transcript format |
 | `core/quotes.py` | Quote generation for boss completion messages |
 | `core/office_layout.py` | Desk and position constants |
@@ -132,7 +132,6 @@ graph LR
 | `core/beads_poller.py` | Polls beads issue tracker for task list integration |
 | `core/broadcast_service.py` | Service for broadcasting state updates to WebSocket clients |
 | `core/overview.py` | Builds the cross-session overview sent on `/ws/overview` |
-| `core/token_tracker.py` | Token usage tracking from JSONL transcripts, tool-use counting, thinking-block extraction |
 | `core/handlers/team_handler.py` | Event handlers for Agent Teams (task_created, task_completed, teammate_idle) |
 | `core/constants.py` | Shared constants |
 | `core/logging.py` | Logging configuration |
@@ -142,7 +141,7 @@ graph LR
 | `api/routes/preferences.py` | User preferences API endpoints |
 | `db/database.py` | SQLite database connection and initialization |
 | `db/models.py` | SQLAlchemy database models |
-| `models/agents.py` | Agent, Boss, Office state models |
+| `models/agents.py` | Agent and Boss models |
 | `models/events.py` | Event and EventData models |
 | `models/sessions.py` | GameState and session models |
 | `models/common.py` | Shared models (BubbleContent, SpeechContent, TodoItem) |
@@ -207,7 +206,7 @@ graph LR
 - Perform minimal transformations (e.g., field renaming, timestamp formatting)
 - Never read files, parse transcripts, or do heavy processing
 
-If data needs to be extracted from JSONL transcript files (e.g., token usage, thinking blocks), that extraction belongs in the **backend**, not the hooks.
+If data needs to be extracted from JSONL transcript files (e.g., the last assistant reply, a subagent's tool calls), that extraction belongs in the **backend**, not the hooks.
 
 ## Event System
 
@@ -366,7 +365,7 @@ const { boss, agents } = useGameStore((state) => ({ boss: state.boss, agents: st
 **Key State Areas:**
 - Agent state (phase, bubbles)
 - Boss state (backend state, typing, task)
-- Office state (todos, context utilization)
+- Office state (todos, event log)
 - Queues (arrival and departure queues)
 - UI state (connection, replay)
 

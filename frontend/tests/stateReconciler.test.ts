@@ -42,7 +42,6 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     sessionId: "session-1",
     boss: { state: "idle" },
     agents: [],
-    office: {},
     lastUpdated: "0",
     ...overrides,
   };

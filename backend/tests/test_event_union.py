@@ -132,7 +132,7 @@ _FAMILY_SAMPLES: dict[str, dict[str, Any]] = {
                 "persistent": False,
             },
             "speech_content": {"boss": None, "agent": "hi", "boss_phone": None},
-            # agent_transcript_path lives on EventDataBase (token_tracker).
+            # agent_transcript_path lives on EventDataBase.
             "agent_transcript_path": "/tmp/agent.jsonl",
         },
     },
@@ -223,12 +223,9 @@ def test_extra_payload_fields_are_ignored_not_rejected() -> None:
 
 
 def test_agent_transcript_path_is_on_base_payload() -> None:
-    """Regression guard: token_tracker.update_from_event reads
-    agent_transcript_path on the slow path for ANY event type (not just
-    AgentEvent family events). If a non-agent event's payload omits this
-    attribute, the fast/slow token-read path raises AttributeError.
-
-    The field therefore lives on EventDataBase, inherited by every variant.
+    """Regression guard: any event type may carry agent_transcript_path (not
+    just AgentEvent family events), so the field lives on EventDataBase,
+    inherited by every variant, and reading it never raises AttributeError.
     """
     # A PromptEvent (not an AgentEvent) carrying agent_transcript_path.
     event = EventAdapter.validate_python(

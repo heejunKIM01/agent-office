@@ -4,7 +4,7 @@ from typing import NotRequired, TypedDict, cast
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from app.models.agents import Agent, Boss, OfficeState
+from app.models.agents import Agent, Boss
 from app.models.common import TodoItem
 
 __all__ = [
@@ -56,7 +56,6 @@ class GameState(BaseModel):
     session_id: str
     boss: Boss
     agents: list[Agent]
-    office: OfficeState
     last_updated: datetime
     history: list[HistoryEntry] = Field(default_factory=lambda: cast(list[HistoryEntry], []))
     todos: list[TodoItem] = Field(default_factory=lambda: cast(list[TodoItem], []))

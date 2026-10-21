@@ -12,9 +12,6 @@ __all__ = [
     "BossState",
     "Agent",
     "Boss",
-    "ElevatorState",
-    "PhoneState",
-    "OfficeState",
 ]
 
 
@@ -113,33 +110,3 @@ class Boss(BaseModel):
     # long think mid-turn (ponder) from an idle session.
     turn_active: bool = False
     position: dict[str, int] = {"x": 640, "y": 830}
-
-
-class ElevatorState(StrEnum):
-    """Visual states for the elevator."""
-
-    CLOSED = "closed"
-    ARRIVING = "arriving"
-    OPEN = "open"
-    DEPARTING = "departing"
-
-
-class PhoneState(StrEnum):
-    """Visual states for the boss's phone."""
-
-    IDLE = "idle"
-    RINGING = "ringing"
-    IN_USE = "in_use"
-
-
-class OfficeState(BaseModel):
-    """Represents the overall state of the office environment."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    desk_count: int = 8
-    elevator_state: ElevatorState = ElevatorState.CLOSED
-    phone_state: PhoneState = PhoneState.IDLE
-    context_utilization: float = 0.0
-    tool_uses_since_compaction: int = 0
-    print_report: bool = False

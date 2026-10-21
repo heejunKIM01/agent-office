@@ -17,16 +17,12 @@ from app.core.coding_agent import coding_agent_of
 from app.core.path_utils import compress_path, compress_paths_in_text, truncate_long_words
 from app.core.quotes import get_random_job_completion_quote
 from app.core.summary_service import get_summary_service
-from app.core.token_tracker import TokenTracker
 from app.models.agents import (
     Activity,
     Agent,
     AgentState,
     Boss,
     BossState,
-    ElevatorState,
-    OfficeState,
-    PhoneState,
     StuckReason,
 )
 from app.models.common import BubbleContent, BubbleType, TodoItem, TodoStatus
@@ -212,11 +208,6 @@ def _handle_session_start(sm: "StateMachine", event: AnyEvent) -> None:
     sm.turn_active = False
 
 
-def _handle_context_compaction(sm: "StateMachine", event: AnyEvent) -> None:
-    """Handle CONTEXT_COMPACTION: reset the tool counter."""
-    sm.tool_uses_since_compaction = 0
-
-
 def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle PRE_TOOL_USE: update boss/agent state and process TodoWrite events."""
     assert isinstance(event, ToolEvent)
@@ -231,7 +222,6 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     if name in SUBAGENT_TOOLS:
         sm.phase = OfficePhase.DELEGATING
         sm.boss_state = BossState.DELEGATING
-        sm.elevator_state = ElevatorState.ARRIVING
         sm.set_stuck("main", None)
     else:
         agent_id = sm.tool_character_id(event)
@@ -272,9 +262,7 @@ def _handle_user_prompt_submit(sm: "StateMachine", event: AnyEvent) -> None:
     sm.sync_activity("main")
     sm.set_stuck("main", None)
     prompt_text = event.data.prompt
-    sm.print_report = False
     sm.turn_active = True
-    sm.last_user_prompt = prompt_text
     if prompt_text:
         sm.boss_bubble = BubbleContent(
             type=BubbleType.SPEECH,
@@ -307,7 +295,7 @@ def _handle_permission_request(sm: "StateMachine", event: AnyEvent) -> None:
 
 
 def _handle_post_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
-    """Handle POST_TOOL_USE: increment tool counter and reset agent state."""
+    """Handle POST_TOOL_USE: finish the tool and reset agent state."""
     assert isinstance(event, ToolEvent)
     agent_id = sm.tool_character_id(event)
     sm.tool_activity.finish(agent_id, event.data.tool_name, event.data.tool_use_id)
@@ -327,8 +315,6 @@ def _handle_post_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     elif agent_id in sm.agents and sm.agents[agent_id].state == AgentState.WAITING_PERMISSION:
         sm.agents[agent_id].state = AgentState.WORKING
 
-    sm.tool_uses_since_compaction += 1
-
 
 def _handle_subagent_start(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle SUBAGENT_START: create a new agent and add to arrival queue."""
@@ -346,7 +332,6 @@ def _handle_subagent_start(sm: "StateMachine", event: AnyEvent) -> None:
         return
     agent = sm.create_agent(event.data)
     sm.boss_state = BossState.DELEGATING
-    sm.elevator_state = ElevatorState.OPEN
 
     if agent.id not in sm.arrival_queue:
         sm.arrival_queue.append(agent.id)
@@ -356,7 +341,7 @@ def _handle_subagent_start(sm: "StateMachine", event: AnyEvent) -> None:
 
 
 def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
-    """Handle SUBAGENT_STOP: resolve agent, add to departure queue, credit tool uses."""
+    """Handle SUBAGENT_STOP: resolve agent and add it to the departure queue."""
     assert isinstance(event, AgentEvent)
     resolved = resolve_agent_for_stop(
         agents=sm.agents,
@@ -379,12 +364,6 @@ def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
 
         if not sm.agents:
             sm.phase = OfficePhase.WORKING
-
-        # Subagent tool-use crediting (formerly a full-file transcript read
-        # here) moved to the async handler `handle_subagent_stop` in
-        # agent_handler.py — see ARC-003. Replay (which only calls
-        # transition()) no longer credits the safety-sign counter; cosmetic
-        # only, the counter is not persisted.
 
 
 def _handle_cleanup(sm: "StateMachine", event: AnyEvent) -> None:
@@ -444,7 +423,6 @@ def _handle_teammate_idle(sm: "StateMachine", event: AnyEvent) -> None:
 
 _DISPATCH_TABLE: dict[EventType, Callable[["StateMachine", AnyEvent], None]] = {
     EventType.SESSION_START: _handle_session_start,
-    EventType.CONTEXT_COMPACTION: _handle_context_compaction,
     EventType.PRE_TOOL_USE: _handle_pre_tool_use,
     EventType.USER_PROMPT_SUBMIT: _handle_user_prompt_submit,
     EventType.PERMISSION_REQUEST: _handle_permission_request,
@@ -533,11 +511,10 @@ class StateMachine:
     MAX_AGENTS = 8
     MAX_CONTEXT_TOKENS = 200_000
     MAX_CONVERSATION_ENTRIES = 500
-    # Desk grid shape — keep in sync with frontend/src/constants/positions.ts
-    # (DESKS_PER_ROW / MIN_DESK_COUNT). A shared cross-component source is
-    # intentionally out of scope; update both sides together when changing the grid.
+    # Desk grid row width — keep in sync with frontend/src/constants/positions.ts
+    # (DESKS_PER_ROW), where the agent machine lays out desks and queues. Agents
+    # get desk numbers 1..N (Agent.desk); the backend itself does not read this.
     DESKS_PER_ROW: int = 4
-    MIN_DESK_COUNT: int = 8
 
     phase: OfficePhase = OfficePhase.EMPTY
     boss_state: BossState = BossState.IDLE
@@ -545,21 +522,16 @@ class StateMachine:
     boss_current_task: str | None = None  # Summarized user prompt
     boss_activity: Activity | None = None  # Mirrors tool_activity for "main"
     boss_stuck: StuckReason | None = None  # Failed tool / permission wait
-    elevator_state: ElevatorState = ElevatorState.CLOSED
     agents: dict[str, Agent] = field(default_factory=_empty_agents)
     arrival_queue: list[str] = field(default_factory=_empty_str_list)
     handin_queue: list[str] = field(default_factory=_empty_str_list)
     history: list[HistoryEntry] = field(default_factory=_empty_history_list)
     todos: list[TodoItem] = field(default_factory=_empty_todo_list)
-    token_tracker: TokenTracker = field(default_factory=TokenTracker)
-    tool_uses_since_compaction: int = 0
-    print_report: bool = False
     # True from the moment a user prompt arrives until the turn completes
     # (STOP) or the session ends. Lets the overview treat the brief idle
     # *between* tool calls as "still working" instead of flickering the
     # session into the "done" bucket and back every tool cycle.
     turn_active: bool = False
-    last_user_prompt: str | None = None
     conversation: list[ConversationEntry] = field(default_factory=_empty_conversation)
 
     # Coding agent running the session (first event that names one wins)
@@ -597,7 +569,7 @@ class StateMachine:
     def to_game_state(self, session_id: str) -> GameState:
         """Convert current state to a GameState for frontend consumption.
 
-        Builds a complete snapshot including boss, agents, office layout,
+        Builds a complete snapshot including boss, agents, history, todos,
         queues, and conversation history.
 
         Args:
@@ -615,33 +587,12 @@ class StateMachine:
             turn_active=self.turn_active,
         )
 
-        desk_count = min(
-            self.MAX_AGENTS,
-            max(
-                self.MIN_DESK_COUNT,
-                ((len(self.agents) + self.DESKS_PER_ROW - 1) // self.DESKS_PER_ROW)
-                * self.DESKS_PER_ROW,
-            ),
-        )
-
         agents_list: list[Agent] = list(self.agents.values())
-
-        context_utilization = self.token_tracker.context_utilization
-
-        office = OfficeState(
-            desk_count=desk_count,
-            elevator_state=self.elevator_state,
-            phone_state=PhoneState.IDLE,  # Simplified
-            context_utilization=context_utilization,
-            tool_uses_since_compaction=self.tool_uses_since_compaction,
-            print_report=self.print_report,
-        )
 
         return GameState(
             session_id=session_id,
             boss=boss,
             agents=agents_list,
-            office=office,
             last_updated=datetime.now(UTC),
             history=self.history,
             todos=self.todos,
@@ -672,20 +623,13 @@ class StateMachine:
         """Process an event and update state accordingly.
 
         Uses a dispatch table mapping :class:`EventType` to a handler
-        callable instead of an if/elif chain.  Token usage is always
-        updated first via :attr:`token_tracker`.
+        callable instead of an if/elif chain.
 
         If the handler raises an exception, a warning is logged but the
         event is not silently swallowed.  State may be partially updated;
         callers that need full rollback should wrap this in a higher-level
         transaction.
         """
-        # Invariant: token reads inside update_from_event are tail-bounded
-        # (_TOKEN_READ_SIZE = 20_000, see token_tracker.py); offloading them to
-        # a thread would break replay token accounting, which relies on this
-        # call being synchronous and deterministic.
-        self.token_tracker.update_from_event(event)
-
         if self.coding_agent is None:
             self.coding_agent = coding_agent_of(event.data)
 
