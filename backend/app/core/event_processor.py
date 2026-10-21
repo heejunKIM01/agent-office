@@ -663,6 +663,12 @@ class EventProcessor:
             val = getattr(event.data, src, None)
             if val is not None:
                 detail[dst] = val
+        # A turn's reply rides with STOP in speech_content; the log shows it.
+        speech = getattr(event.data, "speech_content", None)
+        if event.event_type == EventType.STOP and speech is not None:
+            reply = speech.boss or speech.boss_phone
+            if reply:
+                detail.setdefault("message", reply)
 
         event_dict: HistoryEntry = {
             "id": str(event.timestamp.timestamp()),

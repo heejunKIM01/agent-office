@@ -1,9 +1,11 @@
 """Tool → office activity mapping and per-character in-flight tracking.
 
 A character reading files walks to the archive; a character running a shell
-command stands in the server room (docs/plan/spec.md R1, R2). The mapping is
-agent-agnostic: tool names from Claude Code, OpenCode, Gemini CLI and Codex
-CLI are matched case-insensitively against one table.
+command stands in the server room (docs/plan/spec.md R1, R2). The isometric
+office adds editing, browsing (web and MCP tools), planning and asking (spec
+「방 ↔ 도구」). The mapping is agent-agnostic: tool names from Claude Code,
+OpenCode, Gemini CLI and Codex CLI are matched case-insensitively against one
+table.
 
 Characters are keyed by the same id the state machine uses for bubbles:
 ``"main"`` for the boss, the agent id for a subagent.
@@ -18,6 +20,10 @@ from typing import Any, Literal, NamedTuple, cast
 from app.models.agents import Activity
 
 __all__ = [
+    "ASKING_TOOLS",
+    "BROWSING_TOOLS",
+    "EDITING_TOOLS",
+    "PLANNING_TOOLS",
     "READING_TOOLS",
     "RUNNING_TOOLS",
     "SUBAGENT_TOOLS",
@@ -38,9 +44,7 @@ READING_TOOLS: frozenset[str] = frozenset(
         "glob",
         "ls",
         "notebookread",
-        "webfetch",
-        "websearch",
-        # OpenCode (read/grep/glob/webfetch/websearch shared above)
+        # OpenCode (read/grep/glob shared above)
         "list",
         # Gemini CLI
         "read_file",
@@ -48,8 +52,23 @@ READING_TOOLS: frozenset[str] = frozenset(
         "grep_search",
         "search_file_content",
         "list_directory",
-        "web_fetch",
-        "google_web_search",
+    }
+)
+
+EDITING_TOOLS: frozenset[str] = frozenset(
+    {
+        # Claude Code (OpenCode shares edit/write)
+        "edit",
+        "write",
+        "multiedit",
+        "notebookedit",
+        # OpenCode
+        "patch",
+        # Gemini CLI
+        "replace",
+        "write_file",
+        # Codex CLI
+        "apply_patch",
     }
 )
 
@@ -67,6 +86,44 @@ RUNNING_TOOLS: frozenset[str] = frozenset(
         "shell",
         "local_shell",
         "exec_command",
+    }
+)
+
+# Web tools; MCP tools (``mcp__<server>__<tool>``) browse too.
+BROWSING_TOOLS: frozenset[str] = frozenset(
+    {
+        # Claude Code (OpenCode shares webfetch/websearch)
+        "webfetch",
+        "websearch",
+        # Gemini CLI
+        "web_fetch",
+        "google_web_search",
+    }
+)
+MCP_TOOL_PREFIX = "mcp__"
+
+PLANNING_TOOLS: frozenset[str] = frozenset(
+    {
+        # Claude Code (OpenCode shares todowrite)
+        "todowrite",
+        "enterplanmode",
+        "exitplanmode",
+        "skill",
+        # Gemini CLI
+        "write_todos",
+        # Codex CLI
+        "update_plan",
+    }
+)
+
+ASKING_TOOLS: frozenset[str] = frozenset(
+    {
+        # Claude Code
+        "askuserquestion",
+        # Codex CLI
+        "request_user_input",
+        # Gemini CLI
+        "ask_user",
     }
 )
 
@@ -212,6 +269,14 @@ def activity_for_tool(tool_name: str | None) -> Activity | None:
         return Activity.READING
     if name in RUNNING_TOOLS:
         return Activity.RUNNING
+    if name in EDITING_TOOLS:
+        return Activity.EDITING
+    if name in BROWSING_TOOLS or name.startswith(MCP_TOOL_PREFIX):
+        return Activity.BROWSING
+    if name in PLANNING_TOOLS:
+        return Activity.PLANNING
+    if name in ASKING_TOOLS:
+        return Activity.ASKING
     return None
 
 

@@ -39,12 +39,19 @@ class Activity(StrEnum):
     """What a character is doing with its current tool, in office terms.
 
     Drives where the character walks: reading tools send it to the archive,
-    command tools to the server room (docs/plan/spec.md R1, R2). ``None`` on a
-    character means no mapped tool is running.
+    command tools to the server room (docs/plan/spec.md R1, R2), and in the
+    isometric office editing keeps it at its desk, browsing sends it to the
+    search room, planning to the meeting room and asking to my desk
+    (spec 「방 ↔ 도구」). ``None`` on a character means no mapped tool is
+    running.
     """
 
     READING = "reading"
     RUNNING = "running"
+    EDITING = "editing"
+    BROWSING = "browsing"
+    PLANNING = "planning"
+    ASKING = "asking"
 
 
 class StuckReason(StrEnum):
@@ -87,6 +94,7 @@ class Agent(BaseModel):
     activity: Activity | None = None  # set from in-flight tools, see core/activity.py
     stuck: StuckReason | None = None  # failed tool / permission wait until it moves on
     character_type: str | None = None  # "lead" | "teammate" | "subagent"
+    agent_type: str | None = None  # subagent type it was started as, e.g. "general-purpose"
     parent_session_id: str | None = None  # session that owns this character
     parent_id: str | None = None  # for subagents: parent lead/teammate id
 

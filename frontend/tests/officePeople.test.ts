@@ -1,0 +1,191 @@
+import { describe, expect, it } from "vitest";
+import type { AgentAnimationState, BubbleState } from "@/stores/slices/types";
+import { officePeople, type PeopleWords } from "@/systems/officePeople";
+
+const WORDS: PeopleWords = {
+  agentName: "Claude",
+  me: "나",
+  generalType: "범용",
+};
+const NO_BUBBLE: BubbleState = {
+  content: null,
+  displayStartTime: null,
+  queue: [],
+};
+
+function boss(
+  fields: Partial<Parameters<typeof officePeople>[0]["boss"]> = {},
+) {
+  return {
+    activity: null,
+    stuck: null,
+    bubble: NO_BUBBLE,
+    quietSince: null,
+    ...fields,
+  };
+}
+
+function agent(
+  id: string,
+  fields: Partial<AgentAnimationState>,
+): AgentAnimationState {
+  return {
+    id,
+    name: null,
+    currentTask: null,
+    activity: null,
+    stuck: null,
+    agentType: null,
+    phase: "idle",
+    backendState: "working",
+    bubble: NO_BUBBLE,
+    ...fields,
+  } as AgentAnimationState;
+}
+
+describe("officePeople", () => {
+  it("puts Claude and me first, Claude with the boss's activity", () => {
+    const people = officePeople(
+      { boss: boss({ activity: "reading" }), agents: new Map() },
+      WORDS,
+    );
+    expect(people).toMatchObject([
+      {
+        id: "claude",
+        kind: "claude",
+        label: "Claude",
+        activity: "reading",
+        stuck: false,
+      },
+      {
+        id: "me",
+        kind: "me",
+        label: "나",
+        activity: null,
+        stuck: false,
+        thinking: false,
+      },
+    ]);
+  });
+
+  it("labels a subagent with its type and task", () => {
+    const agents = new Map([
+      [
+        "a1",
+        agent("a1", {
+          agentType: "general-purpose",
+          currentTask: "T-013 부속 작성",
+          activity: "running",
+        }),
+      ],
+      [
+        "a2",
+        agent("a2", {
+          agentType: "Explore",
+          currentTask: "Find the login code",
+        }),
+      ],
+      ["a3", agent("a3", { name: "Scout" })],
+    ]);
+    const people = officePeople({ boss: boss(), agents }, WORDS);
+    expect(people.slice(2).map((p) => [p.id, p.label, p.activity])).toEqual([
+      ["a1", "범용 · T-013 부속 작성", "running"],
+      ["a2", "Explore · Find the login code", null],
+      ["a3", "Scout", null],
+    ]);
+  });
+
+  it("keeps subagents whose work is done, marked leaving, so they can go home", () => {
+    const agents = new Map([
+      ["a1", agent("a1", { currentTask: "stays" })],
+      ["a2", agent("a2", { currentTask: "leaves", phase: "departing" })],
+      ["a3", agent("a3", { currentTask: "gone", phase: "in_elevator" })],
+      // SUBAGENT_STOP: the backend marks it waiting before it removes it.
+      ["a4", agent("a4", { currentTask: "done", backendState: "waiting" })],
+    ]);
+    const people = officePeople({ boss: boss(), agents }, WORDS);
+    expect(people.slice(2).map((p) => [p.id, p.leaving, p.thinking])).toEqual([
+      ["a1", false, true],
+      ["a2", true, false],
+      ["a3", true, false],
+      ["a4", true, false],
+    ]);
+  });
+
+  it("brings a subagent the backend just made by elevator", () => {
+    const agents = new Map([
+      ["a1", agent("a1", { backendState: "arriving" })],
+      // SUBAGENT_START walks it to its desk at once, until its first tool.
+      ["a2", agent("a2", { backendState: "walking_to_desk" })],
+      ["a3", agent("a3", { backendState: "working" })],
+    ]);
+    const people = officePeople({ boss: boss(), agents }, WORDS);
+    expect(people.map((p) => p.arriving)).toEqual([
+      false,
+      false,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("dresses Explore in green and Plan in purple, the rest in blue", () => {
+    const agents = new Map(
+      ["Explore", "Plan", "general-purpose", null].map((type, i) => [
+        `a${i}`,
+        agent(`a${i}`, { agentType: type }),
+      ]),
+    );
+    const people = officePeople({ boss: boss(), agents }, WORDS);
+    expect(people.slice(2).map((p) => p.outfit)).toEqual([
+      "explore",
+      "plan",
+      "general",
+      "general",
+    ]);
+  });
+
+  it("sends a person waiting for a permission to my desk, and keeps a failed one in place", () => {
+    const agents = new Map([
+      ["a1", agent("a1", { activity: "running", stuck: "tool_failed" })],
+    ]);
+    const [claude, , a1] = officePeople(
+      {
+        boss: boss({ activity: "running", stuck: "waiting_permission" }),
+        agents,
+      },
+      WORDS,
+    );
+    expect(claude).toMatchObject({ activity: "asking", stuck: false });
+    expect(a1).toMatchObject({ activity: "running", stuck: true });
+  });
+
+  it("passes on the latest bubble and who is thinking", () => {
+    const bubble: BubbleState = {
+      content: { type: "speech", text: "Done.", icon: "💬", persistent: false },
+      displayStartTime: 1234,
+      queue: [],
+    };
+    const agents = new Map([
+      ["a1", agent("a1", {})],
+      ["a2", agent("a2", { activity: "reading" })],
+      ["a3", agent("a3", { backendState: "waiting" })],
+      ["a4", agent("a4", { backendState: "arriving" })],
+    ]);
+    const people = officePeople(
+      { boss: boss({ bubble, quietSince: 99 }), agents },
+      WORDS,
+    );
+    expect(people[0]).toMatchObject({
+      bubble: bubble.content,
+      bubbleAt: 1234,
+      thinking: true,
+    });
+    expect(people.slice(2).map((p) => p.thinking)).toEqual([
+      true,
+      false,
+      false,
+      true,
+    ]);
+  });
+});

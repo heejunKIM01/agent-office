@@ -166,3 +166,39 @@ def test_session_list_includes_label_field():
     assert list_response.status_code == 200
     session = next(s for s in list_response.json() if s["id"] == session_id)
     assert "label" in session
+
+
+def _seed_prompts(session_id: str, *prompts: str) -> None:
+    for prompt in prompts:
+        event = EventAdapter.validate_python(
+            {
+                "event_type": EventType.USER_PROMPT_SUBMIT,
+                "session_id": session_id,
+                "timestamp": datetime.now(UTC),
+                "data": {"prompt": prompt},
+            }
+        )
+        asyncio.run(event_processor.process_event(event))
+
+
+def test_session_list_titles_sessions_by_their_first_prompt():
+    """A session's title is the first line of its first prompt; no prompt, no title."""
+    titled = _seed_session()
+    untitled = _seed_session()
+    _seed_prompts(titled, "  Fix the login timeout\nand add a test", "Second prompt")
+
+    listed = {s["id"]: s for s in client.get("/api/v1/sessions").json()}
+    assert listed[titled]["title"] == "Fix the login timeout"
+    assert listed[untitled]["title"] is None
+
+
+def test_session_title_is_one_short_line():
+    spaced, long, blank = _seed_session(), _seed_session(), _seed_session()
+    _seed_prompts(spaced, "\n\n  a   b  \nc")
+    _seed_prompts(long, "x" * 200)
+    _seed_prompts(blank, "   ")
+
+    listed = {s["id"]: s for s in client.get("/api/v1/sessions").json()}
+    assert listed[spaced]["title"] == "a b"
+    assert listed[long]["title"] == "x" * 79 + "…"
+    assert listed[blank]["title"] is None

@@ -74,7 +74,14 @@ TOOL_CATEGORIES: dict[str, str] = {
     "apply_patch": "edit",
 }
 
-_ACTIVITY_CATEGORIES: dict[Activity, str] = {Activity.READING: "read", Activity.RUNNING: "bash"}
+_ACTIVITY_CATEGORIES: dict[Activity, str] = {
+    Activity.READING: "read",
+    Activity.RUNNING: "bash",
+    Activity.EDITING: "edit",
+    Activity.BROWSING: "web",
+    Activity.PLANNING: "todo",
+    Activity.ASKING: "other",
+}
 
 # Tool inputs kept from PRE_TOOL_USE for producers whose POST_TOOL_USE omits
 # them (the OpenCode plugin), bounded in case a POST never arrives.

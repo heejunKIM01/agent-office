@@ -17,6 +17,8 @@ import { apiFetch } from "@/utils/api";
 export interface Session {
   id: string;
   label: string | null;
+  /** The first line of its first prompt, as coding agents name sessions. */
+  title: string | null;
   displayName: string | null;
   projectName: string | null;
   projectRoot: string | null;

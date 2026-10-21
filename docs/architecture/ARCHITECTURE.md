@@ -22,6 +22,7 @@ System architecture and design documentation for Claude Office Visualizer.
 - [Wall Clock](#wall-clock)
 - [User Preferences](#user-preferences)
 - [Internationalization](#internationalization)
+- [Isometric Office](#isometric-office)
 - [PixiJS Rendering](#pixijs-rendering)
 - [Multi-Floor / Agent Teams](#multi-floor--agent-teams)
 - [Command Center](#command-center)
@@ -31,6 +32,8 @@ System architecture and design documentation for Claude Office Visualizer.
 ## Overview
 
 Claude Office Visualizer transforms Claude Code operations into a real-time pixel art office simulation. A "boss" character (main Claude agent) manages work, spawns "employee" agents (subagents), and orchestrates tasks visually.
+
+In this fork the main page (`/`) is an isometric office drawn with three.js (see [Isometric Office](#isometric-office)). The original 2D pixel office, with the whiteboard, the Command Center and the Building view, is at `/classic`; both read the same store and backend.
 
 **Design Principle:** The backend is the source of truth. The frontend is a "dumb" renderer that displays whatever state it receives via WebSocket.
 
@@ -632,6 +635,24 @@ The frontend supports multiple languages via a lightweight i18n system in `front
 **Usage:** The `useTranslation` hook provides a `t()` function with parameter interpolation. Translations are key-value; English serves as the fallback for missing keys.
 
 **Adding a language:** Create a new file (e.g., `fr.ts`) with all `TranslationKey` entries, register it in `index.ts`, and add the locale to the `Locale` type.
+
+## Isometric Office
+
+The main page, after the video in [the spec](../plan/spec.md) (「화면 재설계」): one bright floor with seven rooms, the floor guide on the left and the people, activity log and room legend on the right. It reads the same Zustand store as the 2D office; the 2D office's animation loop does not run here, so the page drains bubble queues and seats newcomers itself.
+
+| File | Purpose |
+|------|---------|
+| `app/page.tsx` | The page: floor guide, scene, side panel, settings, links to `/classic` (`/iso` redirects here) |
+| `constants/isoFloorPlan.ts` | Rooms, walls and furniture in metres; seats, room spots, the elevator and the report spots |
+| `components/iso/isoView.ts` | three.js orthographic 2:1 camera, lights, MapControls, CSS2D name chips and bubbles |
+| `components/iso/buildIsoOffice.ts` · `isoFurniture.ts` · `isoPalette.ts` | The floor plate, walls, labels and furniture as simple solids |
+| `components/iso/isoCharacters.ts` | Two-head-tall people: poses (sit, type, walk, work, stand, wave, phone), outfits (Explore green with a cap, Plan purple with glasses) |
+| `components/iso/isoPeople.ts` | The people on the floor: walking by the errand rules, bubbles, elevator trips |
+| `components/iso/isoEffects.ts` | Room effects: rack lights, code on iMacs, whiteboard writing, elevator doors |
+| `components/iso/IsoFloorGuide.tsx` · `IsoSidePanel.tsx` | 「층별 안내」 and the right-hand panels |
+| `systems/isoErrands.ts` | Pure walker rules: rooms by tool, linger, stuck, and the trip in by elevator and home after reporting |
+| `systems/isoNavGrid.ts` | 0.5 m walk grid over the floor plan for the shared A* path finder |
+| `systems/officePeople.ts` · `officeBubbles.ts` · `officeRoster.ts` · `floors.ts` | Who is in the office, which bubble each shows, the panel rows and log lines, projects as floors |
 
 ## PixiJS Rendering
 
