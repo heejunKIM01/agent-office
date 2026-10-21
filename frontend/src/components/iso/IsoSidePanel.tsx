@@ -4,7 +4,8 @@
  * The right-hand column of the isometric office (docs/plan/spec.md
  * 「화면 재설계」, wording after the video): the project and session,
  * 「사무실 사람들」 with what each person is doing, 「활동 로그」 and
- * 「어디서 무엇을 하나」.
+ * 「어디서 무엇을 하나」. ``className`` places it: a column beside the
+ * office, or a sheet on phones.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -100,8 +101,10 @@ function Avatar({ row }: { row: RosterRow }): React.ReactNode {
 
 export function IsoSidePanel({
   session,
+  className,
 }: {
   session: Session | undefined;
+  className: string;
 }): React.ReactNode {
   const { t } = useTranslation();
   const agentName = useCodingAgentName();
@@ -157,7 +160,7 @@ export function IsoSidePanel({
   }, [eventLog, people, agentName, words, t]);
 
   return (
-    <aside className="hidden w-[240px] shrink-0 flex-col gap-2 py-3 pr-3 lg:flex">
+    <aside className={className}>
       <section
         className={`${card} grid grid-cols-[3.5em_1fr] gap-x-2 gap-y-0.5 text-[11px]`}
       >

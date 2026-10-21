@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Building2, Gamepad2, LayoutGrid, Settings } from "lucide-react";
+import { Building2, Gamepad2, LayoutGrid, Settings, Users } from "lucide-react";
 import { AgentLogo } from "@/components/iso/AgentLogo";
 import { IsoFloorGuide } from "@/components/iso/IsoFloorGuide";
 import { IsoOffice } from "@/components/iso/IsoOffice";
@@ -94,16 +94,16 @@ export default function IsoOfficePage(): React.ReactNode {
   // as in the 2D header) and the 2D office open at /classic.
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Below 1024px the floor guide column is hidden; a button opens it as a sheet.
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  // Below 1024px both columns are hidden; buttons open them as sheets.
+  const [sheet, setSheet] = useState<"guide" | "panel" | null>(null);
   useEffect(() => {
-    if (!isGuideOpen) return;
+    if (!sheet) return;
     const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setIsGuideOpen(false);
+      if (event.key === "Escape") setSheet(null);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isGuideOpen]);
+  }, [sheet]);
   const router = useRouter();
   const goToCommand = useNavigationStore((s) => s.goToCommand);
   const goToSingle = useNavigationStore((s) => s.goToSingle);
@@ -126,7 +126,7 @@ export default function IsoOfficePage(): React.ReactNode {
         onSelectSession={goToSession}
         className="hidden w-[184px] shrink-0 flex-col gap-2 py-3 pl-3 lg:flex"
       />
-      {isGuideOpen && (
+      {sheet === "guide" && (
         <div
           role="dialog"
           aria-modal="true"
@@ -138,7 +138,7 @@ export default function IsoOfficePage(): React.ReactNode {
             sessionId={sessionId}
             now={now}
             onSelectSession={(id) => {
-              setIsGuideOpen(false);
+              setSheet(null);
               goToSession(id);
             }}
             className="flex h-full w-[260px] max-w-[85vw] flex-col gap-2 bg-[#f5f7fa] p-3 shadow-xl"
@@ -146,7 +146,7 @@ export default function IsoOfficePage(): React.ReactNode {
           <button
             type="button"
             aria-label="close floor guide"
-            onClick={() => setIsGuideOpen(false)}
+            onClick={() => setSheet(null)}
             className="flex-1 bg-slate-900/30"
           />
         </div>
@@ -190,10 +190,19 @@ export default function IsoOfficePage(): React.ReactNode {
             type="button"
             aria-label="floor guide"
             title={t("iso.floor.title")}
-            onClick={() => setIsGuideOpen(true)}
+            onClick={() => setSheet("guide")}
             className={`${toolButton} lg:hidden`}
           >
             <Building2 size={14} />
+          </button>
+          <button
+            type="button"
+            aria-label="people"
+            title={t("iso.panel.people")}
+            onClick={() => setSheet("panel")}
+            className={`${toolButton} lg:hidden`}
+          >
+            <Users size={14} />
           </button>
           <button
             type="button"
@@ -235,11 +244,36 @@ export default function IsoOfficePage(): React.ReactNode {
             <span
               className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-slate-300"}`}
             />
-            {isConnected ? t("iso.live") : t("iso.offline")}
+            {/* Phones keep just the dot: the top row is shared with the header. */}
+            <span className="sr-only sm:not-sr-only">
+              {isConnected ? t("iso.live") : t("iso.offline")}
+            </span>
           </div>
         </div>
       </div>
-      <IsoSidePanel session={session} />
+      <IsoSidePanel
+        session={session}
+        className="hidden w-[240px] shrink-0 flex-col gap-2 py-3 pr-3 lg:flex"
+      />
+      {sheet === "panel" && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="people"
+          className="fixed inset-0 z-40 flex lg:hidden"
+        >
+          <button
+            type="button"
+            aria-label="close people"
+            onClick={() => setSheet(null)}
+            className="flex-1 bg-slate-900/30"
+          />
+          <IsoSidePanel
+            session={session}
+            className="flex h-full w-[280px] max-w-[85vw] flex-col gap-2 overflow-y-auto bg-[#f5f7fa] p-3 shadow-xl"
+          />
+        </div>
+      )}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
