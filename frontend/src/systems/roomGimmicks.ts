@@ -91,3 +91,47 @@ export function bookPile(
   }
   return { count: Math.min(MAX_PILE, pile.count + 1), lastBubbleAt: bubbleAt };
 }
+
+/** Typing at its desk, it scratches its head this long every so often (ms). */
+export const SCRATCH_EVERY_MS = 8_000;
+export const SCRATCH_MS = 1_200;
+
+/** Scratching its head ``typingForMs`` into typing: the last moments of each round. */
+export function scratchesHead(typingForMs: number): boolean {
+  return typingForMs % SCRATCH_EVERY_MS >= SCRATCH_EVERY_MS - SCRATCH_MS;
+}
+
+/** How long it cheers after its tests pass (ms). */
+export const CHEER_MS = 2_500;
+
+/** A shell command that runs tests: one with ``test`` (or a test runner) in it. */
+export function isTestCommand(command: unknown): boolean {
+  return (
+    typeof command === "string" &&
+    /\b(tests?|pytest|vitest|jest)\b/i.test(command)
+  );
+}
+
+/**
+ * The log id of ``agentId``'s latest test command when it passed, or null
+ * when its latest one failed or it ran none. A failed tool carries an
+ * errorType. The office cheers when a new id shows up, not by the event's
+ * time: the backend dates a finished tool near its start.
+ */
+export function lastPassedTestId(
+  eventLog: readonly {
+    id: string;
+    type: string;
+    agentId: string;
+    detail?: { toolInput?: unknown; errorType?: string };
+  }[],
+  agentId: string,
+): string | null {
+  for (const entry of eventLog) {
+    if (entry.type !== "post_tool_use" || entry.agentId !== agentId) continue;
+    const input = entry.detail?.toolInput as { command?: unknown } | undefined;
+    if (!isTestCommand(input?.command)) continue;
+    return entry.detail?.errorType ? null : entry.id;
+  }
+  return null;
+}

@@ -17,6 +17,7 @@
  */
 
 import type { BreakRoomId } from "@/constants/isoFloorPlan";
+import { lastPassedTestId } from "@/systems/roomGimmicks";
 import type { Activity, BubbleContent, StuckReason } from "@/types";
 import type {
   AgentAnimationState,
@@ -59,6 +60,8 @@ export interface IsoPerson {
   idleSince: number | null;
   /** Me: when I last sent a question (Date.now ms), to type it out. */
   typedAt: number | null;
+  /** The log id of its latest test command when it passed, to cheer a new one. */
+  passedTest: string | null;
   outfit: Outfit;
 }
 
@@ -234,6 +237,7 @@ export function officePeople(
           ? (state.eventLog[0]?.timestamp.getTime() ?? null)
           : null,
       typedAt: null,
+      passedTest: lastPassedTestId(state.eventLog, "main"),
       outfit: "general",
     },
     {
@@ -252,6 +256,7 @@ export function officePeople(
       breakRoom: null,
       idleSince: null,
       typedAt: lastPromptAt(state.eventLog),
+      passedTest: null,
       outfit: "general",
     },
   ];
@@ -274,6 +279,7 @@ export function officePeople(
       breakRoom: null,
       idleSince: null,
       typedAt: null,
+      passedTest: lastPassedTestId(state.eventLog, agent.id),
       outfit: outfitOf(agent.agentType),
     });
   }
@@ -293,6 +299,7 @@ export function officePeople(
       breakRoom: null,
       idleSince: null,
       typedAt: null,
+      passedTest: null,
       outfit: "general",
     });
   }

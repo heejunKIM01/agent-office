@@ -10,8 +10,14 @@ import type { IsoPose, IsoRoomId } from "@/systems/isoErrands";
 import type { LoungeAct } from "@/systems/loungeActs";
 import { MAX_PILE } from "@/systems/roomGimmicks";
 
-/** Something a person is up to besides its pose: a lounge pastime, or waiting on a command. */
-export type PoseAct = LoungeAct | "watch";
+/**
+ * Something a person is up to besides its pose: a lounge pastime, waiting
+ * on a command, scratching its head while typing, or cheering passed tests.
+ */
+export type PoseAct = LoungeAct | "watch" | "scratch" | "cheer";
+
+const isPastime = (act: PoseAct): act is LoungeAct =>
+  act !== "watch" && act !== "scratch" && act !== "cheer";
 import type { Outfit, PersonKind } from "@/systems/officePeople";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, cylinder, material } from "./isoFurniture";
@@ -378,7 +384,9 @@ function drip(sweat: THREE.Group, seconds: number): void {
  * it raises its left arm, and on the phone (seated) it holds a handset to
  * its ear. Seated in the lounge it keeps busy with ``act`` (a coffee, its
  * phone, a book, the TV, a doze); at the rack, waiting on a long command, it
- * crosses its arms and checks its watch. ``seconds`` drives the motion.
+ * crosses its arms and checks its watch; typing it scratches its head now
+ * and then; and when its tests pass it throws its arms up. ``seconds``
+ * drives the motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
@@ -390,7 +398,8 @@ export function poseCharacter(
 ): void {
   const [legL, legR] = rig.legs;
   const [armL, armR] = rig.arms;
-  const pastime = pose === "sit" && !stuck && act !== "watch" ? act : null;
+  const pastime =
+    pose === "sit" && !stuck && act !== null && isPastime(act) ? act : null;
   const waiting = pose === "work" && !stuck && act === "watch";
   rig.watch.visible = waiting;
   rig.book.visible =
@@ -415,7 +424,20 @@ export function poseCharacter(
       HIP_HEIGHT + 0.05 * Math.abs(Math.cos(seconds * STRIDE_RATE));
     return;
   }
-  if (pose === "sit" || pose === "type" || pose === "phone") {
+  const seated = pose === "sit" || pose === "type" || pose === "phone";
+  if (act === "cheer" && !stuck) {
+    // Both arms up and out, swinging, with a hop when on its feet.
+    const swing = 0.25 * Math.sin(seconds * 9);
+    armL.rotation.set(0, 0, -2.6 + swing);
+    armR.rotation.set(0, 0, 2.6 - swing);
+    legL.rotation.x = seated ? -Math.PI / 2 : 0;
+    legR.rotation.x = seated ? -Math.PI / 2 : 0;
+    rig.hips.position.y = seated
+      ? SEATED_HIP_HEIGHT
+      : HIP_HEIGHT + 0.08 * Math.abs(Math.sin(seconds * 9));
+    return;
+  }
+  if (seated) {
     const tap = pose === "type" ? 0.12 * Math.sin(seconds * 14) : 0;
     const rest = pose === "type" ? -1.1 : -0.35;
     legL.rotation.x = -Math.PI / 2;
@@ -428,6 +450,12 @@ export function poseCharacter(
     }
     if (pastime) {
       [armL.rotation.x, armR.rotation.x] = loungeArms(pastime, seconds);
+    }
+    if (pose === "type" && act === "scratch" && !stuck) {
+      // The right arm up beside the head, the hand scratching its side;
+      // raised out to the side it shows from behind as well as in front.
+      armR.rotation.x = -0.4;
+      armR.rotation.z = 2.7 + 0.12 * Math.sin(seconds * 16);
     }
     rig.hips.position.y = SEATED_HIP_HEIGHT;
     return;

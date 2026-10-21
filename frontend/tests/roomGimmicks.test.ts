@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  SCRATCH_EVERY_MS,
+  SCRATCH_MS,
+  isTestCommand,
+  lastPassedTestId,
+  scratchesHead,
   GLOBE_SPIN_SPEED,
   MAX_PILE,
   NO_PILE,
@@ -84,5 +89,62 @@ describe("bookPile", () => {
     for (let at = 1; at <= 10; at++) pile = bookPile(pile, true, true, at);
     expect(pile.count).toBe(MAX_PILE);
     expect(bookPile(pile, false, true, 11)).toEqual(NO_PILE);
+  });
+});
+
+describe("scratchesHead", () => {
+  it("scratches for a moment at the end of each round of typing", () => {
+    expect(scratchesHead(0)).toBe(false);
+    expect(scratchesHead(SCRATCH_EVERY_MS - SCRATCH_MS - 1)).toBe(false);
+    expect(scratchesHead(SCRATCH_EVERY_MS - SCRATCH_MS)).toBe(true);
+    expect(scratchesHead(SCRATCH_EVERY_MS)).toBe(false);
+    expect(scratchesHead(2 * SCRATCH_EVERY_MS - 1)).toBe(true);
+  });
+});
+
+describe("test passes", () => {
+  const post = (
+    agentId: string,
+    command: string,
+    id: number,
+    errorType?: string,
+  ) => ({
+    id: String(id),
+    type: "post_tool_use",
+    agentId,
+    detail: { toolInput: { command }, ...(errorType ? { errorType } : {}) },
+  });
+
+  it("knows a test command when it sees one", () => {
+    for (const command of [
+      "npm test",
+      "pytest -q",
+      "bun run test:unit",
+      "go test ./...",
+    ]) {
+      expect(isTestCommand(command)).toBe(true);
+    }
+    for (const command of ["npm run build", "git status", undefined]) {
+      expect(isTestCommand(command)).toBe(false);
+    }
+  });
+
+  it("names the agent's latest test run when it passed", () => {
+    const log = [
+      post("main", "git status", 30),
+      post("sub", "npm test", 20, "tool_error"),
+      post("main", "npm test", 10),
+    ];
+    expect(lastPassedTestId(log, "main")).toBe("10");
+    expect(lastPassedTestId(log, "sub")).toBeNull();
+    expect(lastPassedTestId(log, "other")).toBeNull();
+  });
+
+  it("does not cheer when the latest run failed after a pass", () => {
+    const log = [
+      post("main", "npm test", 20, "tool_error"),
+      post("main", "npm test", 10),
+    ];
+    expect(lastPassedTestId(log, "main")).toBeNull();
   });
 });
