@@ -14,6 +14,9 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.autoFollowDesc":
     "Alternar automaticamente para novas sessões no projeto atual",
   "settings.language": "Idioma",
+  "settings.theme": "Tema",
+  "settings.theme.light": "Claro",
+  "settings.theme.dark": "Escuro",
   "settings.tabs.general": "Geral",
   "settings.tabs.connect": "Conectar",
   "settings.connect.intro":

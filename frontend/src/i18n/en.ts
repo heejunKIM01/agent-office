@@ -12,6 +12,9 @@ const en = {
   "settings.autoFollowDesc":
     "Automatically switch to new sessions in the current project",
   "settings.language": "Language",
+  "settings.theme": "Theme",
+  "settings.theme.light": "Light",
+  "settings.theme.dark": "Dark",
   "settings.tabs.general": "General",
   "settings.tabs.connect": "Connect",
   "settings.connect.intro":

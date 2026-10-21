@@ -14,6 +14,9 @@ const ko: Record<TranslationKey, string> = {
   "settings.autoFollowDesc":
     "같은 프로젝트에서 새 세션이 시작되면 자동으로 전환해요",
   "settings.language": "언어",
+  "settings.theme": "테마",
+  "settings.theme.light": "밝게",
+  "settings.theme.dark": "어둡게",
   "settings.tabs.general": "일반",
   "settings.tabs.connect": "연결",
   "settings.connect.intro":

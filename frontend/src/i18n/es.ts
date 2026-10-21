@@ -14,6 +14,9 @@ const es: Record<TranslationKey, string> = {
   "settings.autoFollowDesc":
     "Cambiar automáticamente a nuevas sesiones en el proyecto actual",
   "settings.language": "Idioma",
+  "settings.theme": "Tema",
+  "settings.theme.light": "Claro",
+  "settings.theme.dark": "Oscuro",
   "settings.tabs.general": "General",
   "settings.tabs.connect": "Conectar",
   "settings.connect.intro":
