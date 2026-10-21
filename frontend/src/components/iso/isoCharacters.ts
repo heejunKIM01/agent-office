@@ -452,9 +452,10 @@ export function poseCharacter(
       [armL.rotation.x, armR.rotation.x] = loungeArms(pastime, seconds);
     }
     if (pose === "type" && act === "scratch" && !stuck) {
-      // The right hand up at the head, scratching.
-      armR.rotation.x = -2.7 + 0.12 * Math.sin(seconds * 16);
-      armR.rotation.z = -0.35;
+      // The right arm up beside the head, the hand scratching its side;
+      // raised out to the side it shows from behind as well as in front.
+      armR.rotation.x = -0.4;
+      armR.rotation.z = 2.7 + 0.12 * Math.sin(seconds * 16);
     }
     rig.hips.position.y = SEATED_HIP_HEIGHT;
     return;

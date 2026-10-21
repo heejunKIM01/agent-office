@@ -39,7 +39,7 @@ function person(fields: Partial<IsoPerson>): IsoPerson {
     breakRoom: null,
     idleSince: null,
     typedAt: null,
-    cheeredAt: null,
+    passedTest: null,
     outfit: "general",
     ...fields,
   };

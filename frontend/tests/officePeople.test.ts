@@ -300,10 +300,10 @@ describe("officePeople — breaks", () => {
       },
       WORDS,
     );
-    expect(people.map((p) => [p.id, p.cheeredAt])).toEqual([
-      ["claude", 5_000],
+    expect(people.map((p) => [p.id, p.passedTest])).toEqual([
+      ["claude", "main5000"],
       ["me", null],
-      ["a1", 9_000],
+      ["a1", "a19000"],
     ]);
   });
 

@@ -3,7 +3,7 @@ import {
   SCRATCH_EVERY_MS,
   SCRATCH_MS,
   isTestCommand,
-  lastPassedTestAt,
+  lastPassedTestId,
   scratchesHead,
   GLOBE_SPIN_SPEED,
   MAX_PILE,
@@ -106,12 +106,12 @@ describe("test passes", () => {
   const post = (
     agentId: string,
     command: string,
-    at: number,
+    id: number,
     errorType?: string,
   ) => ({
+    id: String(id),
     type: "post_tool_use",
     agentId,
-    timestamp: new Date(at),
     detail: { toolInput: { command }, ...(errorType ? { errorType } : {}) },
   });
 
@@ -129,15 +129,15 @@ describe("test passes", () => {
     }
   });
 
-  it("dates the agent's latest test run when it passed", () => {
+  it("names the agent's latest test run when it passed", () => {
     const log = [
       post("main", "git status", 30),
       post("sub", "npm test", 20, "tool_error"),
       post("main", "npm test", 10),
     ];
-    expect(lastPassedTestAt(log, "main")).toBe(10);
-    expect(lastPassedTestAt(log, "sub")).toBeNull();
-    expect(lastPassedTestAt(log, "other")).toBeNull();
+    expect(lastPassedTestId(log, "main")).toBe("10");
+    expect(lastPassedTestId(log, "sub")).toBeNull();
+    expect(lastPassedTestId(log, "other")).toBeNull();
   });
 
   it("does not cheer when the latest run failed after a pass", () => {
@@ -145,6 +145,6 @@ describe("test passes", () => {
       post("main", "npm test", 20, "tool_error"),
       post("main", "npm test", 10),
     ];
-    expect(lastPassedTestAt(log, "main")).toBeNull();
+    expect(lastPassedTestId(log, "main")).toBeNull();
   });
 });

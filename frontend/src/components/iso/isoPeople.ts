@@ -132,6 +132,9 @@ interface Placed {
   pile: BookPile;
   /** When it started typing at its desk (performance.now ms), while it types. */
   typingSince: number | null;
+  /** The passed test run it has cheered (or found when placed), and until when it cheers. */
+  seenPass: string | null;
+  cheerUntil: number;
   walker: IsoWalker;
   seat: IsoSpot;
   /** What it tells Claude when its work is done, read when it gets there. */
@@ -237,6 +240,9 @@ export class IsoPeople {
         runningSince: null,
         pile: NO_PILE,
         typingSince: null,
+        // A pass from before it was placed is old news: no cheer for it.
+        seenPass: person.passedTest,
+        cheerUntil: 0,
         walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
@@ -289,9 +295,13 @@ export class IsoPeople {
       }
       const act = this.actOf(placed, now);
       placed.rig.root.position.set(walker.x, 0, walker.z);
-      // Waiting on a long command it turns from the rack to face the room.
-      placed.rig.root.rotation.y =
-        act === "watch" ? walker.facing + Math.PI : walker.facing;
+      // Waiting on a long command, or cheering on its feet in a room, it
+      // turns from the rack or shelf to face the room.
+      const facesRoom =
+        act === "watch" || (act === "cheer" && walker.pose === "work");
+      placed.rig.root.rotation.y = facesRoom
+        ? walker.facing + Math.PI
+        : walker.facing;
       const calling =
         placed.person.kind === "claude" &&
         now < this.callUntil &&
@@ -413,13 +423,11 @@ export class IsoPeople {
     if (walker.pose === "type") placed.typingSince ??= now;
     else placed.typingSince = null;
     // Its tests just passed: arms up, wherever it is (not mid-walk).
-    if (
-      !walker.path &&
-      person.cheeredAt !== null &&
-      Date.now() - person.cheeredAt < CHEER_MS
-    ) {
-      return "cheer";
+    if (person.passedTest !== placed.seenPass) {
+      placed.seenPass = person.passedTest;
+      if (person.passedTest !== null) placed.cheerUntil = now + CHEER_MS;
     }
+    if (!walker.path && now < placed.cheerUntil) return "cheer";
     const lounging =
       walker.goal === "lounge" && !walker.path && walker.pose === "sit";
     if (!lounging) placed.loungeSince = null;

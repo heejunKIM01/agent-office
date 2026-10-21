@@ -113,23 +113,25 @@ export function isTestCommand(command: unknown): boolean {
 }
 
 /**
- * When ``agentId``'s latest test command passed (Date.now ms), or null when
- * its latest one failed or it ran none. A failed tool carries an errorType.
+ * The log id of ``agentId``'s latest test command when it passed, or null
+ * when its latest one failed or it ran none. A failed tool carries an
+ * errorType. The office cheers when a new id shows up, not by the event's
+ * time: the backend dates a finished tool near its start.
  */
-export function lastPassedTestAt(
+export function lastPassedTestId(
   eventLog: readonly {
+    id: string;
     type: string;
     agentId: string;
-    timestamp: Date;
     detail?: { toolInput?: unknown; errorType?: string };
   }[],
   agentId: string,
-): number | null {
+): string | null {
   for (const entry of eventLog) {
     if (entry.type !== "post_tool_use" || entry.agentId !== agentId) continue;
     const input = entry.detail?.toolInput as { command?: unknown } | undefined;
     if (!isTestCommand(input?.command)) continue;
-    return entry.detail?.errorType ? null : entry.timestamp.getTime();
+    return entry.detail?.errorType ? null : entry.id;
   }
   return null;
 }
