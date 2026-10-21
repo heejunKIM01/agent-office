@@ -19,7 +19,8 @@ System architecture and design documentation for Claude Office Visualizer.
 - [User Preferences](#user-preferences)
 - [Internationalization](#internationalization)
 - [Isometric Office](#isometric-office)
-- [Multi-Floor / Agent Teams](#multi-floor--agent-teams)
+- [Cross-Session Overview](#cross-session-overview)
+- [Agent Teams](#agent-teams)
 - [Configuration Reference](#configuration-reference)
 - [Related Documentation](#related-documentation)
 
@@ -131,9 +132,7 @@ graph LR
 | `core/beads_poller.py` | Polls beads issue tracker for task list integration |
 | `core/broadcast_service.py` | Service for broadcasting state updates to WebSocket clients |
 | `core/whiteboard_tracker.py` | Tracks whiteboard data (tool usage, agent lifespans, etc.) |
-| `core/floor_config.py` | Building/floor/room configuration models for multi-floor navigation |
-| `core/product_mapper.py` | Maps sessions to floors/rooms based on repo/project name resolution |
-| `core/room_orchestrator.py` | Merges multiple session states into a single GameState for team views |
+| `core/overview.py` | Builds the cross-session overview sent on `/ws/overview` |
 | `core/token_tracker.py` | Token usage tracking from JSONL transcripts, tool-use counting, thinking-block extraction |
 | `core/handlers/team_handler.py` | Event handlers for Agent Teams (task_created, task_completed, teammate_idle) |
 | `core/constants.py` | Shared constants |
@@ -142,15 +141,13 @@ graph LR
 | `api/routes/events.py` | Event ingestion API endpoint |
 | `api/routes/sessions.py` | Session management API endpoints |
 | `api/routes/preferences.py` | User preferences API endpoints |
-| `api/routes/floors.py` | Building/floor configuration API endpoint |
-| `services/git_service.py` | Git repository status service |
 | `db/database.py` | SQLite database connection and initialization |
 | `db/models.py` | SQLAlchemy database models |
 | `models/agents.py` | Agent, Boss, Office state models |
 | `models/events.py` | Event and EventData models |
 | `models/sessions.py` | GameState and session models |
 | `models/common.py` | Shared models (BubbleContent, SpeechContent, TodoItem) |
-| `models/git.py` | Git status models |
+| `models/overview.py` | `OverviewEntry` / `OverviewState` for `/ws/overview` |
 | `models/ui.py` | UI-specific model re-exports |
 | `main.py` | FastAPI application entry point |
 | `config.py` | Application configuration |
@@ -182,6 +179,7 @@ graph LR
 | `systems/animationSystem.ts` · `pathfinding.ts` · `navigationGrid.ts` · `pathSmoothing.ts` · `agentCollision.ts` · `queuePositions.ts` · `bossErrands.ts` · `agentErrands.ts` | The agent machine's grid, paths and queue positions |
 | `hooks/useWebSocketEvents.ts` | WebSocket handler with state machine integration |
 | `hooks/useSessions.ts` | Session listing and management hooks |
+| `hooks/useFloorColleagues.ts` | Reads `/ws/overview` for the other live sessions on the same floor |
 | `hooks/useSessionSwitch.ts` | Session switching logic with auto-follow |
 | `hooks/useTranslation.ts` · `useCodingAgentName.ts` · `useNow.ts` | i18n, the session's coding agent name, a ticking clock |
 | `machines/agentMachine.ts` · `agentArrivalMachine.ts` · `agentDepartureMachine.ts` · `agentMachineCommon.ts` | XState agent lifecycle |
@@ -513,58 +511,22 @@ The main page, after the video in [the spec](../plan/spec.md) (「화면 재설�
 | `systems/isoNavGrid.ts` | 0.5 m walk grid over the floor plan for the shared A* path finder |
 | `systems/officePeople.ts` · `officeBubbles.ts` · `officeRoster.ts` · `floors.ts` | Who is in the office, which bubble each shows, the panel rows and log lines, projects as floors |
 
-## Multi-Floor / Agent Teams
+## Cross-Session Overview
 
-When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is enabled, Claude Code can run multiple sessions that collaborate as a team. The visualizer maps each team session onto a floor/room model so multiple sessions render as a single shared office view.
+`/ws/overview` sends the boss (main agent) of every live session in one `OverviewState` (`backend/app/models/overview.py`). `build_overview` in `backend/app/core/overview.py` builds it from the `EventProcessor`'s sessions: for each one the boss state, a status bucket (`needs_you`, `working`, `done`), the current task, todo counts, the subagent count, the activity, the stuck reason, the bubble and whether a turn is running. Every session is an equal peer; nothing is merged.
 
-### Components
+The `EventProcessor` sends a fresh overview at most once per 50 ms after events and skips building it while nobody is connected. A new connection gets the current overview at once. At most 16 clients connect at a time.
 
-| File | Purpose |
-|------|---------|
-| `backend/app/core/floor_config.py` | Pydantic models (`BuildingConfig`, `FloorConfig`, `RoomConfig`) that define which projects belong to which floors and rooms. Configuration is stored as JSON in the `user_preferences` table under the key `building_config`, or loaded from `floors.toml` for development. |
-| `backend/app/core/room_orchestrator.py` | `RoomOrchestrator` merges multiple session `StateMachine` instances into a single `GameState`. Solo sessions (one session, no `team_name`) pass through unchanged. Team sessions get lead/teammate/subagent character allocation and a merged kanban board. |
-| `backend/app/core/handlers/team_handler.py` | Handlers for `task_created`, `task_completed`, and `teammate_idle` events. These are fired by Claude Code Agent Teams and add logging and room-level notifications alongside the state machine transitions. |
+The isometric office reads it in `frontend/src/hooks/useFloorColleagues.ts`. With 「같은 층 세션 함께 보기」 on, the other live sessions on the shown floor (the same project) send their lead agent into the office as colleagues (`systems/officePeople.ts`), walking to the rooms their own session works in.
 
-### Data Flow
+| Path | Description |
+|------|-------------|
+| `/ws/{session_id}` | The shown session: `state_update` (its `GameState`), `event`, `reload`, `session_deleted`, `error` |
+| `/ws/overview` | Every live session's boss (`state_update` carrying an `OverviewState`) |
 
-```mermaid
-graph TD
-    CC[Claude Code Sessions]
-    EP[EventProcessor]
-    SM1[StateMachine Session 1]
-    SM2[StateMachine Session 2]
-    RO[RoomOrchestrator]
-    GS[Merged GameState]
-    WS[WebSocket /ws/room/room_id]
+## Agent Teams
 
-    CC -->|Events| EP
-    EP --> SM1
-    EP --> SM2
-    SM1 --> RO
-    SM2 --> RO
-    RO --> GS
-    GS --> WS
-
-    style CC fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
-    style EP fill:#e65100,stroke:#ff9800,stroke-width:3px,color:#ffffff
-    style SM1 fill:#1b5e20,stroke:#4caf50,stroke-width:2px,color:#ffffff
-    style SM2 fill:#1b5e20,stroke:#4caf50,stroke-width:2px,color:#ffffff
-    style RO fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
-    style GS fill:#1a237e,stroke:#3f51b5,stroke-width:2px,color:#ffffff
-    style WS fill:#880e4f,stroke:#c2185b,stroke-width:2px,color:#ffffff
-```
-
-**Flow sequence:**
-
-1. Multiple Claude Code sessions (a lead plus teammates) send events to the same backend
-2. `EventProcessor` creates one `StateMachine` per session and resolves floor/room assignment via `ProductMapper` and `BuildingConfig`
-3. After processing each event, the `EventProcessor` updates the `RoomOrchestrator` for the session's room
-4. The `RoomOrchestrator` merges all session states into a single `GameState` with lead and teammate characters
-5. The merged state is broadcast to room-level WebSocket connections
-
-### Team Event Types
-
-Agent Teams emit three additional event types:
+When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is enabled, Claude Code can run multiple sessions that collaborate as a team. Each team session is still its own session in the office; the backend keeps its team context and handles three extra event types.
 
 | Event Type | Description | State Machine Effect |
 |------------|-------------|---------------------|
@@ -572,54 +534,7 @@ Agent Teams emit three additional event types:
 | `task_completed` | A team task is completed | Updates the `KanbanTask` status to `completed` |
 | `teammate_idle` | A teammate session goes idle | Sets the teammate's boss state to `IDLE` |
 
-### Team Character Mapping
-
-The `RoomOrchestrator` maps each teammate's `BossState` to an `AgentState` for character rendering:
-
-| BossState | AgentState (Teammate Rendering) |
-|-----------|--------------------------------|
-| `IDLE` | `IDLE` |
-| `PHONE_RINGING` | `WAITING` |
-| `ON_PHONE` | `WORKING` |
-| `RECEIVING` | `THINKING` |
-| `WORKING` | `WORKING` |
-| `DELEGATING` | `WORKING` |
-| `WAITING_PERMISSION` | `WAITING_PERMISSION` |
-| `REVIEWING` | `WORKING` |
-| `COMPLETING` | `COMPLETED` |
-
-Teammates are assigned colors in order of arrival: blue, green, purple, orange, pink, teal. The lead is always gold (`#f59e0b`).
-
-### Floor Configuration
-
-Floors can be configured via a `floors.toml` file in the backend directory or through the preferences API. Each floor has a name, floor number, accent color, icon, and a list of rooms (repos).
-
-```toml
-[[floors]]
-id = "engineering"
-name = "Engineering"
-floor_number = 1
-accent = "#6366f1"
-icon = "office"
-
-[[floors.rooms]]
-id = "main-app"
-repo_name = "my-application"
-```
-
-### API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/floors` | Return the current building/floor configuration |
-
-### WebSocket
-
-| Path | Description |
-|------|-------------|
-| `/ws/room/{room_id}` | Real-time state updates for all sessions in a room (team view) |
-
-The room WebSocket broadcasts the merged `GameState` from the `RoomOrchestrator`. The 2D office's floor view connected to this endpoint; the isometric office reads the session-level `/ws/{session_id}` only.
+`EventProcessor` copies `team_name` and `teammate_name` from the event data onto the session's `StateMachine` and its `sessions` row; a session with a `team_name` and no `teammate_name` is the lead. A teammate's `teammate_name` becomes the assignee of the kanban tasks it creates. `backend/app/core/handlers/team_handler.py` logs the three events. `scripts/simulate_events.py teams` runs a lead and two teammates.
 
 ## Configuration Reference
 
@@ -628,7 +543,6 @@ All configuration is managed via environment variables or a `.env` file in the `
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite+aiosqlite:///<backend dir>/visualizer.db` | Database connection string (absolute path; `docker-compose` overrides to `/app/data/visualizer.db`) |
-| `GIT_POLL_INTERVAL` | `5` | Git status polling interval in seconds |
 | `CLAUDE_CODE_OAUTH_TOKEN` | (empty) | OAuth token for AI summaries via Claude API |
 | `SUMMARY_ENABLED` | `True` | Enable or disable AI-powered summaries |
 | `SUMMARY_MODEL` | `claude-haiku-4-5-20251001` | Claude model used for summary generation |

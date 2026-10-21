@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import subprocess
-import sys
 from datetime import UTC
 from typing import Annotated, Any, TypedDict
 
@@ -16,7 +15,6 @@ from app.core.event_processor import get_event_processor
 from app.core.transcript_title import transcript_titles
 from app.db.database import get_db
 from app.db.models import EventRecord, SessionRecord, TaskRecord, UserPreference
-from app.services.git_service import git_service
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +59,6 @@ class SessionSummary(TypedDict):
     updatedAt: str
     status: str
     eventCount: int
-    floorId: str | None
-    roomId: str | None
     codingAgent: str | None
 
 
@@ -155,8 +151,6 @@ class ReplayEntry(TypedDict):
 @router.get("")
 async def list_sessions(
     db: Annotated[AsyncSession, Depends(get_db)],
-    room_id: str | None = None,
-    floor_id: str | None = None,
     status: str | None = None,
     limit: int = 100,
 ) -> list[SessionSummary]:
@@ -169,15 +163,13 @@ async def list_sessions(
 
     Args:
         db: Database session dependency.
-        room_id: Optional filter to only return sessions in a specific room.
-        floor_id: Optional filter to only return sessions on a specific floor.
         status: Optional filter by session status (``active``, ``completed``).
         limit: Maximum sessions to return (default 100, max 500).
 
     Returns:
         List of session summaries matching the given filters.
     """
-    logger.debug("API: list_sessions called (room_id=%s, floor_id=%s)", room_id, floor_id)
+    logger.debug("API: list_sessions called (status=%s)", status)
     # Single query with GROUP BY to get event counts for all sessions.
     # Replaces N+1 pattern where each session required a separate COUNT query.
     event_count_subq = (
@@ -198,11 +190,6 @@ async def list_sessions(
         .order_by(SessionRecord.updated_at.desc())
     )
 
-    # Apply optional room/floor filters
-    if room_id is not None:
-        stmt = stmt.where(SessionRecord.room_id == room_id)
-    if floor_id is not None:
-        stmt = stmt.where(SessionRecord.floor_id == floor_id)
     if status is not None:
         stmt = stmt.where(SessionRecord.status == status)
 
@@ -253,8 +240,6 @@ async def list_sessions(
                 "updatedAt": updated_utc.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                 "status": rec.status,
                 "eventCount": count,
-                "floorId": rec.floor_id,
-                "roomId": rec.room_id,
                 "codingAgent": rec.coding_agent,
             }
         )
@@ -356,129 +341,6 @@ async def update_session(
     return await _apply_session_update(
         session_id, body, db, success_message=f"Session {session_id} updated"
     )
-
-
-class FocusRequest(BaseModel):
-    """Request body for focusing a session terminal."""
-
-    message: str | None = None
-
-    model_config = {"str_max_length": 100_000}
-
-
-def _validate_clipboard_message(message: str | None) -> str | None:
-    """Validate and truncate clipboard message to a safe maximum length.
-
-    Args:
-        message: The raw clipboard text from the request body.
-
-    Returns:
-        The validated message, truncated to 1 MB if necessary.
-
-    Raises:
-        HTTPException: If the message exceeds a hard maximum of 10 MB.
-    """
-    if message is None:
-        return None
-
-    hard_max = 10 * 1024 * 1024  # 10 MB
-    soft_max = 1024 * 1024  # 1 MB
-
-    if len(message) > hard_max:
-        raise HTTPException(
-            status_code=413,
-            detail="Clipboard message too large (max 10 MB)",
-        )
-
-    if len(message) > soft_max:
-        logger.warning(
-            "Clipboard message truncated from %d to %d bytes",
-            len(message),
-            soft_max,
-        )
-        return message[:soft_max]
-
-    return message
-
-
-@router.post("/{session_id}/focus")
-async def focus_session(
-    session_id: str,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    body: FocusRequest | None = None,
-) -> dict[str, str]:
-    """Bring a session's terminal to the foreground and optionally copy a message to clipboard.
-
-    Uses platform-appropriate commands (macOS AppleScript, Linux wmctrl/xdg-terminal).
-    Clipboard copy uses ``pbcopy`` (macOS), ``xclip`` (Linux), or ``clip`` (Windows).
-
-    Args:
-        session_id: Identifier for the session to focus.
-        body: Optional request body with a message to copy to clipboard.
-        db: Database session dependency.
-
-    Returns:
-        A status payload confirming the focus action.
-
-    Raises:
-        HTTPException: 404 if the session is not found. Any other failure
-        propagates to the app-level exception handler (ARC-024).
-    """
-    result = await db.execute(select(SessionRecord).where(SessionRecord.id == session_id))
-    session = result.scalar_one_or_none()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    # Bring Terminal to foreground (non-blocking async subprocess)
-    if sys.platform == "darwin":
-        await asyncio.create_subprocess_exec(
-            "osascript",
-            "-e",
-            'tell application "Terminal" to activate',
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-    elif sys.platform == "linux":
-        # Try common Linux terminal activators; non-fatal if unavailable.
-        for cmd in [
-            ["xdg-terminal", "wait"],
-            ["wmctrl", "-xa", "terminal"],
-        ]:
-            try:
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                await proc.wait()
-                break
-            except FileNotFoundError:
-                continue
-
-    # Optionally copy message to clipboard (non-blocking async subprocess)
-    clipboard_message = _validate_clipboard_message(body.message if body else None)
-    if clipboard_message:
-        clipboard_cmd: list[str] = []
-        if sys.platform == "darwin":
-            clipboard_cmd = ["pbcopy"]
-        elif sys.platform == "linux":
-            clipboard_cmd = ["xclip", "-selection", "clipboard"]
-        elif sys.platform == "win32":
-            clipboard_cmd = ["clip"]
-
-        if clipboard_cmd:
-            try:
-                proc = await asyncio.create_subprocess_exec(
-                    *clipboard_cmd,
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                await proc.communicate(input=clipboard_message.encode("utf-8"))
-            except FileNotFoundError:
-                logger.warning("Clipboard command not found: %s", clipboard_cmd[0])
-
-    return {"status": "success", "message": f"Session {session_id} focused"}
 
 
 @router.get("/{session_id}/replay")
@@ -615,25 +477,18 @@ async def trigger_simulation() -> dict[str, str]:
 
 @router.delete("")
 async def clear_database(db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
-    """Clear all sessions and events from the database."""
+    """Clear all sessions, events, tasks and preferences from the database."""
     # Offload the blocking terminate()+wait(timeout=5) to a worker thread
     # so the event loop is not stalled for up to 5 seconds (ARC-003).
     simulation_killed = await asyncio.to_thread(kill_simulation)
 
-    # Preserve building/floor configuration while clearing everything else.
-    await db.execute(delete(UserPreference).where(UserPreference.key != "building_config"))
+    await db.execute(delete(UserPreference))
     await db.execute(delete(TaskRecord))
     await db.execute(delete(EventRecord))
     await db.execute(delete(SessionRecord))
     await db.commit()
 
-    # Re-invalidate cached building config in case other preferences changed.
-    from app.core.floor_config import invalidate_building_config
-
-    invalidate_building_config()
-
     await get_event_processor().clear_all_sessions()
-    git_service.clear()
 
     await get_manager().broadcast_all({"type": "reload", "timestamp": ""})
 

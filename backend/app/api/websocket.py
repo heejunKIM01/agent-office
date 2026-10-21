@@ -22,7 +22,7 @@ from app.core.connection_manager import (
     override_manager as override_manager,
 )
 
-# Valid session/room IDs: alphanumeric, dashes, underscores only
+# Valid session IDs: alphanumeric, dashes, underscores only
 _VALID_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
 
 

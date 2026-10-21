@@ -29,12 +29,10 @@ from app.core.broadcast_service import (
     broadcast_error,
     broadcast_event,
     broadcast_overview_state,
-    broadcast_room_state,
     broadcast_state,
 )
 from app.core.coding_agent import coding_agent_of
 from app.core.connection_manager import get_manager
-from app.core.floor_config import get_cached_building_config
 from app.core.handlers import (
     enrich_agent_from_transcript,
     ensure_task_poller_running,
@@ -52,8 +50,6 @@ from app.core.handlers import (
     handle_user_prompt_submit,
 )
 from app.core.jsonl_parser import get_last_assistant_response
-from app.core.product_mapper import get_product_mapper
-from app.core.room_orchestrator import RoomOrchestrator
 from app.core.state_machine import StateMachine
 from app.core.task_file_poller import init_task_file_poller
 from app.core.task_persistence import load_tasks, save_tasks
@@ -78,7 +74,6 @@ from app.models.events import (
 )
 from app.models.overview import OverviewState
 from app.models.sessions import ConversationEntry, GameState, HistoryEntry
-from app.services.git_service import git_service
 
 logger = logging.getLogger(__name__)
 
@@ -189,9 +184,8 @@ class EventProcessor:
     """
 
     def __init__(self) -> None:
-        """Initialize the EventProcessor with empty session and orchestrator registries."""
+        """Initialize the EventProcessor with an empty session registry."""
         self.sessions: dict[str, StateMachine] = {}
-        self.orchestrators: dict[str, RoomOrchestrator] = {}
         self._sessions_lock = asyncio.Lock()
         self._transcript_poller_initialized = False
         self._task_poller_initialized = False
@@ -214,7 +208,7 @@ class EventProcessor:
         # (attributed by the subagent's native id) and from the subagent
         # transcript poller. The first copy wins; see _is_duplicate_tool_event.
         self._seen_tool_events: dict[str, OrderedDict[tuple[str, str], None]] = {}
-        # Coalesces Command Center overview broadcasts: bursts of events schedule
+        # Coalesces /ws/overview broadcasts: bursts of events schedule
         # a single deferred flush instead of rebuilding the full peer-merge once
         # per event (O(N x events/sec)). See ``_schedule_overview_broadcast``.
         self._overview_flush_task: asyncio.Task[None] | None = None
@@ -337,13 +331,6 @@ class EventProcessor:
             session_id: Identifier for the session to purge.
         """
         async with self._sessions_lock:
-            sm = self.sessions.get(session_id)
-            if sm and sm.room_id:
-                orchestrator = self.orchestrators.get(sm.room_id)
-                if orchestrator:
-                    orchestrator.remove_session(session_id)
-                    if orchestrator.is_empty:
-                        del self.orchestrators[sm.room_id]
             self.sessions.pop(session_id, None)
         self._recovery_checked.discard(session_id)
         self._seen_tool_events.pop(session_id, None)
@@ -540,13 +527,12 @@ class EventProcessor:
         """Persist event, update state machine, build history, and delegate to handlers.
 
         This is the core processing pipeline:
-        1. Resolve floor/room assignment from building config
-        2. Restore (from earlier stored events) or create the session StateMachine
-        3. Persist the event to the database
-        4. Run ``sm.transition(event)`` via the dispatch table
-        5. Build a HistoryEntry and append to the session history
-        6. Delegate to typed handler functions for enrichment
-        7. Broadcast state updates to WebSocket clients
+        1. Restore (from earlier stored events) or create the session StateMachine
+        2. Persist the event to the database
+        3. Run ``sm.transition(event)`` via the dispatch table
+        4. Build a HistoryEntry and append to the session history
+        5. Delegate to typed handler functions for enrichment
+        6. Broadcast state updates to WebSocket clients
 
         Args:
             event: The incoming hook event.
@@ -567,26 +553,6 @@ class EventProcessor:
             self._recovery_checked.add(event.session_id)
             if not await self._session_has_start_record(event.session_id):
                 await self._process_event_internal(self._build_recovered_start(event))
-
-        # Resolve floor/room assignment BEFORE persisting so the assignment
-        # is written in the same DB session (avoids StaleDataError from a
-        # separate _sync_room_to_db call).
-        resolved_floor_id: str | None = None
-        resolved_room_id: str | None = None
-        building_config = get_cached_building_config()
-        if building_config.floors:
-            mapper = get_product_mapper(building_config)
-            project_name = event.data.project_name
-            project_dir = event.data.project_dir
-            working_dir = event.data.working_dir
-            assignment = mapper.resolve(
-                project_name=project_name,
-                project_dir=project_dir,
-                working_dir=working_dir,
-            )
-            if assignment:
-                resolved_floor_id = assignment.floor_id
-                resolved_room_id = assignment.room_id
 
         # Rebuild a session that is not in memory from its stored events BEFORE
         # this event is stored, so the replay holds only earlier events and this
@@ -618,18 +584,13 @@ class EventProcessor:
             # ``evict_idle_sessions`` sees a consistent timestamp for this slot.
             sm.last_event_at = datetime.now(UTC)
 
-        await self._persist_event(event, resolved_floor_id, resolved_room_id)
+        await self._persist_event(event)
 
         # A recovered session_start must not reset a live session's in-memory
         # state (upgrade scenario: the DB already knows the session, only the
         # event row was missing). Fresh/unknown sessions transition normally.
         if not (event.data.source == "recovered" and sm_preexisting):
             sm.transition(event)
-
-        # Apply resolved floor/room to in-memory state machine.
-        if resolved_floor_id:
-            sm.floor_id = resolved_floor_id
-            sm.room_id = resolved_room_id
 
         # Sync team fields from event data.
         if event.data.team_name is not None:
@@ -688,15 +649,6 @@ class EventProcessor:
         if event.event_type == EventType.SESSION_START:
             await handle_session_start(sm, event, self._ensure_task_file_poller)
             await self._start_beads_if_available(event.session_id)
-            # Configure git service immediately so polling starts without waiting
-            # for a WebSocket reconnect (avoids race condition where WS connects
-            # before the session_start event is persisted to the DB).
-            project_root = await self.get_project_root(event.session_id)
-            if project_root:
-                git_service.configure(
-                    session_id=event.session_id,
-                    project_root=project_root,
-                )
 
         # ------------------------------------------------------------------
         # Auto-start task polling for missed SESSION_START (backend restart)
@@ -726,17 +678,6 @@ class EventProcessor:
         await broadcast_event(event.session_id, event_dict)
 
         # ------------------------------------------------------------------
-        # Room orchestrator broadcast (team sessions)
-        # ------------------------------------------------------------------
-        if sm.room_id:
-            orchestrator = self.orchestrators.get(sm.room_id)
-            if orchestrator is None:
-                orchestrator = RoomOrchestrator(sm.room_id)
-                self.orchestrators[sm.room_id] = orchestrator
-            orchestrator.update_session(event.session_id, sm)
-            await broadcast_room_state(sm.room_id, orchestrator)
-
-        # ------------------------------------------------------------------
         # Post-broadcast async enrichment (single dispatch).
         #
         # Replaces ten sequential ``if event.event_type ==`` blocks. Each event
@@ -750,7 +691,7 @@ class EventProcessor:
             await enricher(sm, event, agent_id)
 
         # ------------------------------------------------------------------
-        # Cross-session overview broadcast (Command Center). Scheduled LAST so
+        # Cross-session overview broadcast (/ws/overview). Scheduled LAST so
         # it reflects the field mutations applied by the event-type-specific
         # handlers above (e.g. boss_current_task, agents). Debounced so a burst
         # of events produces at most one broadcast per ~50 ms instead of one per
@@ -759,7 +700,7 @@ class EventProcessor:
         self._schedule_overview_broadcast()
 
     # ------------------------------------------------------------------
-    # Command Center overview (debounced cross-session broadcast)
+    # Cross-session overview (debounced broadcast on /ws/overview)
     # ------------------------------------------------------------------
 
     def _schedule_overview_broadcast(self) -> None:
@@ -806,7 +747,7 @@ class EventProcessor:
         consistent registry (no concurrent resize) without the caller touching
         the private lock directly.
         """
-        from app.core.room_orchestrator import build_overview
+        from app.core.overview import build_overview
 
         async with self._sessions_lock:
             return build_overview(self.sessions)
@@ -1009,12 +950,7 @@ class EventProcessor:
                 # that machine is newer, so keep it.
                 self.sessions.setdefault(session_id, sm)
 
-    async def _persist_event(
-        self,
-        event: AnyEvent,
-        floor_id: str | None = None,
-        room_id: str | None = None,
-    ) -> None:
+    async def _persist_event(self, event: AnyEvent) -> None:
         """Save event to database and manage session records.
 
         Uses ``INSERT ... ON CONFLICT DO UPDATE`` for atomic upsert that
@@ -1067,11 +1003,6 @@ class EventProcessor:
                 select(SessionRecord).where(SessionRecord.id == event.session_id)
             )
             session_rec = result.scalar_one()
-
-            # Persist floor/room assignment in the same session/transaction.
-            if floor_id and room_id:
-                session_rec.floor_id = floor_id
-                session_rec.room_id = room_id
 
             # Update project info if not yet set on the existing record.
             if project_name and not session_rec.project_name:

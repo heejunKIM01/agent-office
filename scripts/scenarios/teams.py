@@ -4,7 +4,7 @@ Multi-session team simulation with one lead and two teammate sessions.
 Each teammate has its own session ID and sends events independently.
 The lead coordinates work, teammates execute tasks, then all wrap up.
 
-Exercises the room orchestrator merge path and team field sync.
+Exercises team field sync, kanban task assignees and ``teammate_idle``.
 """
 
 from __future__ import annotations

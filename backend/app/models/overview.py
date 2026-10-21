@@ -1,10 +1,10 @@
-"""Cross-session overview models for the Command Center view.
+"""Cross-session overview models for ``/ws/overview``.
 
-The Command Center gathers the boss (main agent) of every live session into a
-single compact payload so the user can see, at a glance, which terminals are
-working, which need attention, and which are done.  Unlike the room-level merge,
-there is no lead/teammate hierarchy and no desk layout — every session is an
-equal "peer".
+The overview gathers the boss (main agent) of every live session into a single
+compact payload: which sessions are working, which need attention, and which
+are done. The isometric office shows the other sessions on the same floor from
+it. There is no lead/teammate hierarchy and no desk layout — every session is
+an equal "peer".
 """
 
 from __future__ import annotations
@@ -24,14 +24,14 @@ __all__ = [
     "OverviewState",
 ]
 
-# Status buckets used to place a peer into a zone on the Command Center canvas.
+# Status buckets a peer is sorted into on the overview.
 # The "ended" bucket is applied frontend-side from the session list, so it is
 # not part of the live backend payload.
 OverviewBucket = Literal["needs_you", "working", "done"]
 
 
 class OverviewEntry(BaseModel):
-    """A single session's boss snapshot for the Command Center."""
+    """A single session's boss snapshot for the overview."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

@@ -12,7 +12,6 @@ import type {
   ElevatorState,
   PhoneState,
   TodoItem,
-  GitStatus,
   HistoryEntry,
   WebSocketMessage,
   Agent as BackendAgent,
@@ -196,7 +195,6 @@ export interface GameStore {
   compactionPhase: CompactionAnimationPhase; // Phase of the compaction animation
   printReport: boolean; // True when user requested a report and session ended
   todos: TodoItem[];
-  gitStatus: GitStatus | null;
   eventLog: EventLogEntry[];
   codingAgent: string | null; // Coding agent running the session (name tag)
 
@@ -212,7 +210,6 @@ export interface GameStore {
   setIsCompacting: (isCompacting: boolean) => void; // Set isCompacting flag
   setTodos: (todos: TodoItem[]) => void;
   setPrintReport: (printReport: boolean) => void;
-  setGitStatus: (status: GitStatus | null) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
@@ -339,7 +336,6 @@ export const useGameStore = create<GameStore>()(
         isCompacting: false,
         compactionPhase: "idle",
         todos: [],
-        gitStatus: null,
         eventLog: [], // Clear event log for new session
         codingAgent: null,
         whiteboardData: { ...initialWhiteboardState.whiteboardData },
@@ -478,7 +474,6 @@ export const selectIsCompacting = (state: GameStore) => state.isCompacting;
 export const selectCompactionPhase = (state: GameStore) =>
   state.compactionPhase;
 export const selectTodos = (state: GameStore) => state.todos;
-export const selectGitStatus = (state: GameStore) => state.gitStatus;
 export const selectEventLog = (state: GameStore) => state.eventLog;
 export const selectCodingAgent = (state: GameStore) => state.codingAgent;
 export const selectToolUsesSinceCompaction = (state: GameStore) =>

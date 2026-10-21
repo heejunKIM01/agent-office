@@ -16,14 +16,12 @@ from rich.logging import RichHandler
 from sqlalchemy import delete, select, update
 
 from app.api.middleware import ApiKeyMiddleware, LocalhostOnlyMiddleware
-from app.api.routes import agent_hooks, events, floors, preferences, sessions, websockets
+from app.api.routes import agent_hooks, events, preferences, sessions, websockets
 from app.config import get_settings
 from app.core.event_processor import EventProcessor, get_event_processor
-from app.core.summary_service import get_summary_service
 from app.db.database import Base, get_engine
 from app.db.migrate import migrate_schema
 from app.db.models import EventRecord, SessionRecord
-from app.services.git_service import git_service
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 
@@ -79,13 +77,11 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
             "the same Docker network can reach this API unauthenticated."
         )
 
-    git_service.start()
-
     # Periodic idle-session eviction (ARC-015). Drops in-memory StateMachine
     # instances that have not seen activity for ``SESSION_IDLE_EVICT_SECONDS``
-    # (default 6h); state is replayable from the DB on next access. Mirrors
-    # the git_service.start()/stop() pattern: started before yield, cancelled
-    # and awaited on shutdown so the loop never outlives the app.
+    # (default 6h); state is replayable from the DB on next access. Started
+    # before yield, cancelled and awaited on shutdown so the loop never
+    # outlives the app.
     idle_evictor = asyncio.create_task(
         _idle_eviction_loop(
             get_event_processor(),
@@ -101,7 +97,6 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     idle_evictor.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await idle_evictor
-    await git_service.stop()
     await get_engine().dispose()
 
 
@@ -201,7 +196,6 @@ app.add_middleware(
 
 app.include_router(agent_hooks.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(events.router, prefix=f"{settings.API_V1_STR}")
-app.include_router(floors.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(preferences.router, prefix=f"{settings.API_V1_STR}")
 app.include_router(sessions.router, prefix=f"{settings.API_V1_STR}")
 # WebSocket routes (no prefix). Registered before the SERVE_STATIC catch-all
@@ -228,21 +222,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
-
-
-@app.get(f"{settings.API_V1_STR}/status")
-async def get_status() -> dict[str, bool | str | None]:
-    """Get server status including AI summary availability.
-
-    The API key is no longer returned over HTTP (SEC-001). The frontend receives
-    it out-of-band via the ``?token=`` launch URL printed to the server console;
-    see ``initApiKeyFromBrowser`` on the frontend side.
-    """
-    summary_service = get_summary_service()
-    return {
-        "aiSummaryEnabled": summary_service.enabled,
-        "aiSummaryModel": summary_service.model if summary_service.enabled else None,
-    }
 
 
 def _safe_static_path(requested_path: str) -> Path | None:

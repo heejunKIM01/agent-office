@@ -25,7 +25,6 @@ The backend serves as the central hub for the Claude Office Visualizer:
 - **Real-time Updates**: Broadcasts state changes to frontend clients via WebSocket
 - **Persistence**: Stores sessions and events in SQLite for replay functionality
 - **AI Summaries**: Generates human-readable descriptions using Claude Haiku API
-- **Git Integration**: Polls git status for connected sessions
 
 ## Architecture
 
@@ -40,7 +39,6 @@ graph TD
     WS[WebSocket Manager]
     DB[SQLite Database]
     AI[Summary Service]
-    Git[Git Service]
     FE[Frontend Clients]
 
     Hooks -->|HTTP POST| API
@@ -50,7 +48,6 @@ graph TD
     EP --> DB
     EP --> AI
     SM --> BS
-    Git --> BS
     BS --> WS
     WS -->|WebSocket| FE
 
@@ -63,7 +60,6 @@ graph TD
     style WS fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
     style DB fill:#1a237e,stroke:#3f51b5,stroke-width:2px,color:#ffffff
     style AI fill:#ff6f00,stroke:#ffa726,stroke-width:2px,color:#ffffff
-    style Git fill:#37474f,stroke:#78909c,stroke-width:2px,color:#ffffff
     style FE fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
 ```
 
@@ -151,7 +147,6 @@ Configuration is managed via environment variables or a `.env` file in the backe
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite+aiosqlite:///<backend dir>/visualizer.db` | Database connection string (absolute path; `docker-compose` overrides to `/app/data/visualizer.db`) |
-| `GIT_POLL_INTERVAL` | `5` | Git status polling interval (seconds) |
 | `CLAUDE_CODE_OAUTH_TOKEN` | (empty) | OAuth token for AI summaries |
 | `SUMMARY_ENABLED` | `True` | Enable/disable AI summaries |
 | `SUMMARY_MODEL` | `claude-haiku-4-5-20251001` | Model for summaries |
@@ -181,7 +176,7 @@ Keys are compared in constant time (`hmac.compare_digest`).
 
 | Mode | How the key is set | What requires the key |
 |------|--------------------|-----------------------|
-| Auto-generated (default) | A random token is generated on every launch | State-changing operations: `DELETE /api/v1/sessions`, `POST /api/v1/sessions/simulate`, and `POST /api/v1/sessions/{id}/focus` (terminal activation + clipboard write) |
+| Auto-generated (default) | A random token is generated on every launch | State-changing operations: `DELETE /api/v1/sessions` and `POST /api/v1/sessions/simulate` |
 | Explicit | `CLAUDE_OFFICE_API_KEY` env var or `backend/.env` | All endpoints except `/health`, `/docs`, `/redoc`, the OpenAPI schema, and CORS preflight |
 
 Example:
@@ -191,7 +186,7 @@ curl -X DELETE http://localhost:8000/api/v1/sessions \
   -H "X-API-Key: $CLAUDE_OFFICE_API_KEY"
 ```
 
-**Discovery**: The auto-generated key is never sent over HTTP. At startup the server logs it to the console (visible only to the launching user) alongside a `?token=<key>` launch URL; the frontend reads `?token=` once on first load (stripped from the address bar via `replaceState`) and persists it to `sessionStorage` for reloads. An explicitly configured `CLAUDE_OFFICE_API_KEY` is never echoed. `GET /api/v1/status` reports AI-summary availability but does **not** return the key.
+**Discovery**: The auto-generated key is never sent over HTTP. At startup the server logs it to the console (visible only to the launching user) alongside a `?token=<key>` launch URL; the frontend reads `?token=` once on first load (stripped from the address bar via `replaceState`) and persists it to `sessionStorage` for reloads. An explicitly configured `CLAUDE_OFFICE_API_KEY` is never echoed.
 
 **Clients**: the Claude Code hooks send `X-API-Key` automatically when `CLAUDE_OFFICE_API_KEY` is set (env var or `~/.claude/claude-office-config.env`, with the env var taking precedence). The OpenCode plugin does not yet send a key — see its Known Limitations.
 
@@ -205,12 +200,6 @@ curl -X DELETE http://localhost:8000/api/v1/sessions \
 |--------|------|-------------|
 | `GET` | `/health` | Server health status |
 
-### Status
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/status` | Server status including AI summary availability |
-
 ### Events
 
 | Method | Path | Description |
@@ -221,21 +210,14 @@ curl -X DELETE http://localhost:8000/api/v1/sessions \
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/v1/sessions` | List all sessions (supports `room_id` and `floor_id` query filters) |
-| `DELETE` | `/api/v1/sessions` | Clear all sessions and events |
+| `GET` | `/api/v1/sessions` | List sessions (supports a `status` query filter) |
+| `DELETE` | `/api/v1/sessions` | Clear all sessions, events, tasks and preferences |
 | `GET` | `/api/v1/sessions/{id}` | Get session details |
 | `PATCH` | `/api/v1/sessions/{id}` | Update session display name |
 | `DELETE` | `/api/v1/sessions/{id}` | Delete a single session |
 | `GET` | `/api/v1/sessions/{id}/replay` | Get replay data for a session |
-| `POST` | `/api/v1/sessions/{id}/focus` | Bring session terminal to foreground (macOS) and optionally copy message to clipboard |
 | `PATCH` | `/api/v1/sessions/{id}/label` | Update session label |
 | `POST` | `/api/v1/sessions/simulate` | Start background simulation |
-
-### Floors
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/floors` | Return building/floor configuration |
 
 ### Preferences
 
@@ -257,8 +239,7 @@ Preferences are stored as key-value pairs and persist across sessions. Current p
 | Path | Description |
 |------|-------------|
 | `/ws/{session_id}` | Real-time state updates for a session |
-| `/ws/room/{room_id}` | Real-time state updates for all sessions in a room (team view) |
-| `/ws/overview` | Cross-session Command Center feed (`OverviewState`, max 16 clients) |
+| `/ws/overview` | Every live session's boss in one `OverviewState` (max 16 clients); the office shows the other sessions on the same floor from it |
 
 ## Supported Event Types
 
@@ -298,7 +279,6 @@ backend/
 │   ├── api/
 │   │   ├── routes/
 │   │   │   ├── events.py      # Event ingestion endpoint
-│   │   │   ├── floors.py      # Building/floor configuration endpoint
 │   │   │   ├── preferences.py # User preferences endpoints
 │   │   │   └── sessions.py    # Session management endpoints
 │   │   └── websocket.py       # WebSocket connection manager
@@ -313,14 +293,12 @@ backend/
 │   │   ├── broadcast_service.py   # State broadcast orchestration
 │   │   ├── constants.py       # Shared constants
 │   │   ├── event_processor.py # Event validation and processing
-│   │   ├── floor_config.py    # Building/floor/room configuration models
 │   │   ├── jsonl_parser.py    # Claude transcript parsing
 │   │   ├── logging.py         # Logging configuration
 │   │   ├── office_layout.py   # Office layout constants and zones
+│   │   ├── overview.py        # Cross-session overview for /ws/overview
 │   │   ├── path_utils.py      # File path utilities
-│   │   ├── product_mapper.py  # Session-to-floor/room project mapping
 │   │   ├── quotes.py          # Loading screen quotes
-│   │   ├── room_orchestrator.py # Multi-session merge for team views
 │   │   ├── state_machine.py   # Office state management
 │   │   ├── summary_service.py # AI-powered summaries
 │   │   ├── task_file_poller.py # Claude task file monitoring
@@ -335,12 +313,9 @@ backend/
 │   │   ├── agents.py          # Agent state models
 │   │   ├── common.py          # Shared Pydantic models
 │   │   ├── events.py          # Event type models
-│   │   ├── git.py             # Git status models
-│   │   ├── overview.py        # Command Center overview models
+│   │   ├── overview.py        # Cross-session overview models
 │   │   ├── sessions.py        # Session state models
 │   │   └── ui.py              # UI-specific models
-│   ├── services/
-│   │   └── git_service.py     # Git status polling service
 │   ├── config.py              # Settings management
 │   └── main.py                # FastAPI application entry point
 ├── tests/                     # 21 test files + conftest.py (state machine, pollers, security, regression suites)

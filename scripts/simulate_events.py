@@ -8,7 +8,7 @@ Runs one of six pre-built scenarios against the backend API:
   edge_cases  Error handling, permissions, orphan cleanup (~2 min)
   quick       Fast (~30 s) full-lifecycle smoke scenario
   errands     Archive and server-room errands (~70 s)
-  teams       Multi-session team scenario (room-orchestrator merge path)
+  teams       Multi-session team scenario (lead plus two teammates)
 
 Usage::
 

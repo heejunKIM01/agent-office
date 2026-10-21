@@ -534,61 +534,20 @@ class TestEffectiveApiKey:
 
 
 # ---------------------------------------------------------------------------
-# SEC-001 — /api/v1/status must not disclose the effective API key
+# SEC-001 — the API key is never served over HTTP
 # ---------------------------------------------------------------------------
 
 
-class TestStatusEndpointKeyDisclosure:
-    """GET /api/v1/status must not return the effective API key (SEC-001)."""
+class TestStatusEndpointRemoved:
+    """``GET /api/v1/status`` once carried the API key (SEC-001); it is gone."""
 
-    def test_status_does_not_disclose_api_key(self) -> None:
+    def test_status_route_is_gone(self) -> None:
         from app.main import app
 
         client = TestClient(app)
         resp = client.get("/api/v1/status")
-        assert resp.status_code == 200
-        body = resp.json()
-        assert "apiKey" not in body
+        assert resp.status_code == 404
         assert get_settings().effective_api_key not in resp.text
-
-
-# ---------------------------------------------------------------------------
-# SEC-002 — focus/clipboard endpoint must require the effective API key
-# ---------------------------------------------------------------------------
-
-
-class TestFocusEndpointAuth:
-    """POST /sessions/{id}/focus must require the effective API key (SEC-002)."""
-
-    def test_focus_requires_key(self) -> None:
-        from app.main import app
-
-        settings = get_settings()
-        original = settings.CLAUDE_OFFICE_API_KEY
-        settings.CLAUDE_OFFICE_API_KEY = ""
-        try:
-            client = TestClient(app)
-            resp = client.post(f"{settings.API_V1_STR}/sessions/some-session/focus")
-            assert resp.status_code == 401
-        finally:
-            settings.CLAUDE_OFFICE_API_KEY = original
-
-    def test_focus_with_effective_key_passes_auth(self) -> None:
-        from app.main import app
-
-        settings = get_settings()
-        original = settings.CLAUDE_OFFICE_API_KEY
-        settings.CLAUDE_OFFICE_API_KEY = ""
-        try:
-            client = TestClient(app)
-            resp = client.post(
-                f"{settings.API_V1_STR}/sessions/does-not-exist/focus",
-                headers={"X-API-Key": settings.effective_api_key},
-            )
-            # Past auth; session lookup fails → 404 (or 500 if DB unavailable).
-            assert resp.status_code in (404, 500)
-        finally:
-            settings.CLAUDE_OFFICE_API_KEY = original
 
 
 # ---------------------------------------------------------------------------

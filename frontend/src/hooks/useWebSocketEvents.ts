@@ -5,7 +5,7 @@
  * to React and dispatches incoming messages to the appropriate domain module:
  *   - `state_update` → {@link reconcileState} (agent diff, spawn policy, office sync)
  *   - `pre/post_tool_use` → {@link TypingTracker} (min-duration typing timer)
- *   - `event` / `git_status` / `reload` / `session_deleted` → handled inline
+ *   - `event` / `reload` / `session_deleted` → handled inline
  *
  * All heavy logic has been extracted so this file is just plumbing: refs that
  * persist across renders, a controller instance, and a `useEffect` that opens
@@ -69,7 +69,6 @@ export function useWebSocketEvents({
   // ---- Store actions (stable zustand references) ----
   const setConnected = useGameStore.getState().setConnected;
   const setSessionId = useGameStore.getState().setSessionId;
-  const setGitStatus = useGameStore.getState().setGitStatus;
   const addEventLog = useGameStore.getState().addEventLog;
 
   // ---- Reconnect bookkeeping (clears stale tracking state on a fresh socket) ----
@@ -142,12 +141,6 @@ export function useWebSocketEvents({
             }
             break;
 
-          case "git_status":
-            if (message.gitStatus) {
-              setGitStatus(message.gitStatus);
-            }
-            break;
-
           case "reload":
             window.location.reload();
             break;
@@ -166,7 +159,7 @@ export function useWebSocketEvents({
         console.error("[WS] Failed to parse message:", error);
       }
     },
-    [addEventLog, setGitStatus],
+    [addEventLog],
   );
 
   // ---- WebSocket transport controller (created once, opts synced each render) ----

@@ -9,8 +9,6 @@ sweep so it cannot silently regress:
 * ``EventProcessor`` session-creation race (concurrent events for a brand-new
   session must not clobber each other's StateMachine).
 * Session restore crashing on an unknown persisted ``event_type``.
-* ``GitService`` multi-session correctness (per-root change detection and
-  session-scoped status resolution).
 """
 
 # pyright: reportPrivateUsage=false
@@ -30,8 +28,6 @@ from app.core.transcript_poller import TranscriptPoller
 from app.db.database import AsyncSessionLocal, Base, override_engine
 from app.db.models import EventRecord, SessionRecord
 from app.models.events import EventAdapter, EventType
-from app.models.git import GitStatus
-from app.services.git_service import GitService
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -191,57 +187,3 @@ async def test_restore_session_skips_unknown_event_type() -> None:
     await ep._restore_session(session_id)
 
     assert session_id in ep.sessions
-
-
-# ---------------------------------------------------------------------------
-# GitService multi-session correctness
-# ---------------------------------------------------------------------------
-
-
-def _status(branch: str, repo_path: str) -> GitStatus:
-    return GitStatus(
-        branch=branch,
-        ahead=0,
-        behind=0,
-        changed_files=[],
-        commits=[],
-        last_updated=datetime.now(UTC),
-        repo_path=repo_path,
-    )
-
-
-def test_git_status_changed_tracks_each_root_independently() -> None:
-    """Distinct project roots keep separate change-detection baselines.
-
-    With a single ``_last_status`` field, polling root A then root B made each
-    look perpetually "changed" because they overwrote each other's baseline.
-    """
-    svc = GitService()
-    status_a = _status("main", "/repo/a")
-    status_b = _status("dev", "/repo/b")
-
-    # First sighting of each root is reported as changed.
-    assert svc._status_changed(status_a, "/repo/a") is True
-    svc._last_status["/repo/a"] = status_a
-
-    # Polling a different root must not be measured against root A's baseline.
-    assert svc._status_changed(status_b, "/repo/b") is True
-    svc._last_status["/repo/b"] = status_b
-
-    # Re-polling each unchanged root now reports no change.
-    assert svc._status_changed(status_a, "/repo/a") is False
-    assert svc._status_changed(status_b, "/repo/b") is False
-
-
-def test_git_get_status_resolves_root_by_session(tmp_path: Path) -> None:
-    """get_status resolves the caller's own root, never an arbitrary one."""
-    svc = GitService()
-    svc.configure(session_id="A", project_root=str(tmp_path / "a"))
-    svc.configure(session_id="B", project_root=str(tmp_path / "b"))
-
-    # Ambiguous (two roots, no session) must not guess — returns None.
-    assert svc.get_status() is None
-    # Unknown session resolves to no root.
-    assert svc.get_status(session_id="unknown") is None
-    # A known session resolves to its own (here non-existent) root without error.
-    assert svc.get_status(session_id="A") is None

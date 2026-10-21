@@ -26,8 +26,6 @@ export interface Session {
   updatedAt: string;
   status: string;
   eventCount: number;
-  floorId: string | null;
-  roomId: string | null;
   codingAgent: string | null;
 }
 

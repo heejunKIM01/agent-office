@@ -645,22 +645,19 @@ class StateMachine:
     tool_uses_since_compaction: int = 0
     print_report: bool = False
     # True from the moment a user prompt arrives until the turn completes
-    # (STOP) or the session ends. Lets the Command Center treat the brief
-    # idle *between* tool calls as "still working" instead of flickering the
-    # terminal into the "done" zone and back every tool cycle.
+    # (STOP) or the session ends. Lets the overview treat the brief idle
+    # *between* tool calls as "still working" instead of flickering the
+    # session into the "done" bucket and back every tool cycle.
     turn_active: bool = False
     last_user_prompt: str | None = None
     background_tasks: list[BackgroundTask] = field(default_factory=_empty_background_tasks)
     conversation: list[ConversationEntry] = field(default_factory=_empty_conversation)
 
-    # Floor/room assignment for multi-floor building navigation
-    floor_id: str | None = None
-    room_id: str | None = None
-
     # Coding agent running the session (first event that names one wins)
     coding_agent: str | None = None
 
-    # Agent Teams support (used by RoomOrchestrator)
+    # Agent Teams context, synced from event data by EventProcessor.
+    # teammate_name becomes the assignee of the session's kanban tasks.
     is_lead: bool = True
     teammate_name: str | None = None
     team_name: str | None = None
@@ -704,7 +701,7 @@ class StateMachine:
         """Convert current state to a GameState for frontend consumption.
 
         Builds a complete snapshot including boss, agents, office layout,
-        whiteboard data, queues, conversation history, and floor assignment.
+        whiteboard data, queues, and conversation history.
 
         Args:
             session_id: The session identifier to include in the GameState.
@@ -776,8 +773,6 @@ class StateMachine:
             departure_queue=self.handin_queue.copy(),
             whiteboard_data=whiteboard_data,
             conversation=self.conversation.copy(),
-            floor_id=self.floor_id,
-            room_id=self.room_id,
             coding_agent=self.coding_agent,
         )
 

@@ -3,7 +3,7 @@
 These events are fired by Claude Code Agent Teams when
 ``CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`` is enabled.  The state machine
 transitions (kanban updates, boss idle) are handled in ``state_machine.py``;
-this module adds logging and room-level notifications.
+this module only logs them.
 """
 
 import logging
@@ -18,9 +18,7 @@ async def handle_task_created(sm: StateMachine, event: TaskEvent) -> None:
     """Handle a ``task_created`` team event.
 
     The state machine has already created a ``KanbanTask`` entry via
-    ``StateMachine.transition()``.  This handler logs the creation and
-    allows the room orchestrator broadcast (in ``EventProcessor``) to
-    propagate the updated kanban board to teammates.
+    ``StateMachine.transition()``.  This handler logs the creation.
 
     Args:
         sm: The session's state machine (already transitioned).
@@ -50,8 +48,7 @@ async def handle_teammate_idle(sm: StateMachine, event: LifecycleEvent) -> None:
     """Handle a ``teammate_idle`` team event.
 
     The state machine has already set boss to IDLE and cleared the bubble
-    via ``StateMachine.transition()``.  This handler logs the idle state
-    so the room orchestrator broadcast propagates the teammate's status.
+    via ``StateMachine.transition()``.  This handler logs the idle state.
 
     Args:
         sm: The session's state machine (already transitioned).
