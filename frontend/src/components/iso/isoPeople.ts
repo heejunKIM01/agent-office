@@ -352,8 +352,16 @@ export class IsoPeople {
     drawBubble(placed.bubbleHolder, bubble, this.words);
   }
 
-  dispose(): void {
+  /** Take everyone off the floor; the next `sync` places them afresh. */
+  clear(): void {
     for (const [id, placed] of this.placed) this.remove(id, placed);
+    this.departed.clear();
+    this.callPending = false;
+    this.callUntil = 0;
+  }
+
+  dispose(): void {
+    this.clear();
   }
 
   /**

@@ -36,6 +36,8 @@ export interface IsoView {
   setPeople(people: IsoPerson[]): void;
   setBubbleWords(words: BubbleWords): void;
   setTheme(theme: Theme): void;
+  /** Take everyone off the floor, to place them afresh. */
+  clearPeople(): void;
   zoomBy(factor: number): void;
   resetView(): void;
   dispose(): void;
@@ -256,6 +258,9 @@ export function createIsoView(
     },
     setBubbleWords(words: BubbleWords): void {
       people.setWords(words);
+    },
+    clearPeople(): void {
+      people.clear();
     },
     setTheme(theme: Theme): void {
       const { color, ambient, sun } = LIGHTING[theme];

@@ -74,6 +74,8 @@ export function IsoOffice({
   const theme = usePreferencesStore(selectTheme);
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<IsoView | null>(null);
+  /** The session snapshot the people on the floor were placed from. */
+  const placedForRef = useRef<string | null>(null);
   const words = useMemo<PeopleWords>(
     () => ({
       agentName,
@@ -94,6 +96,7 @@ export function IsoOffice({
     return () => {
       view.dispose();
       viewRef.current = null;
+      placedForRef.current = null;
     };
   }, []);
 
@@ -121,15 +124,20 @@ export function IsoOffice({
     const show = (): void => {
       // Moving bubbles up changes the store and calls back in here.
       if (showing) return;
-      // A chosen session's people wait for its snapshot, so they start where
-      // it puts them (at work, on the sofa, in the cafe) instead of walking
-      // there from where the empty office had them.
+      // A chosen session's people wait for its snapshot, and a new snapshot
+      // places everyone afresh: they start where it puts them (at work, on
+      // the sofa, in the cafe) instead of walking there from where the empty
+      // office or the last session had them.
       const store = useGameStore.getState();
       if (
         store.sessionId !== "None" &&
         store.snapshotSessionId !== store.sessionId
       ) {
         return;
+      }
+      if (store.snapshotSessionId !== placedForRef.current) {
+        placedForRef.current = store.snapshotSessionId;
+        viewRef.current?.clearPeople();
       }
       showing = true;
       seatNewcomers();
