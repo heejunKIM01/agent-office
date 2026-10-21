@@ -72,6 +72,7 @@ const ko: Record<TranslationKey, string> = {
   "iso.panel.working": "작업 중",
   "iso.panel.tools": "도구 {count}회 · {seconds}s",
   "iso.panel.tools_one": "도구 {count}회 · {seconds}s",
+  "iso.panel.colleague": "같은 층 다른 세션 · {seconds}s",
   "iso.panel.tools_other": "도구 {count}회 · {seconds}s",
   "iso.panel.log": "활동 로그",
   "iso.panel.logTime": "{h}시 {m}분 {s}초",

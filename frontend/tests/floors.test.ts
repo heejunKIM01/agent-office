@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { Session } from "@/hooks/useSessions";
 import {
   buildFloors,
+  floorColleagues,
   floorOfSession,
   isActiveNow,
+  MAX_COLLEAGUES,
   sessionTitle,
   splitFloors,
 } from "@/systems/floors";
@@ -71,6 +73,40 @@ describe("buildFloors", () => {
   it("finds a session's floor", () => {
     expect(floorOfSession(buildFloors(sessions), "b1")?.number).toBe(2);
     expect(floorOfSession(buildFloors(sessions), "missing")).toBeUndefined();
+  });
+});
+
+describe("floorColleagues", () => {
+  const now = Date.parse("2026-10-03T05:01:00Z");
+  const working = (id: string, project: string, updated: string): Session =>
+    session(id, project, "2026-10-03T00:00:00Z", updated, "active");
+
+  it("brings in the other sessions working on the same floor, newest first", () => {
+    const floors = buildFloors(
+      [
+        working("shown", "p", "2026-10-03T05:00:50Z"),
+        working("older", "p", "2026-10-03T05:00:10Z"),
+        working("newer", "p", "2026-10-03T05:00:40Z"),
+        working("idle", "p", "2026-10-03T04:00:00Z"),
+        session("done", "p", "2026-10-03T00:00:00Z", "2026-10-03T05:00:55Z"),
+        working("elsewhere", "q", "2026-10-03T05:00:58Z"),
+      ],
+      now,
+    );
+    const floor = floorOfSession(floors, "shown");
+    expect(floorColleagues(floor, "shown", now).map((s) => s.id)).toEqual([
+      "newer",
+      "older",
+    ]);
+  });
+
+  it("leaves the rest of the dev chairs to subagents", () => {
+    const busy = Array.from({ length: 8 }, (_, i) =>
+      working(`s${i}`, "p", `2026-10-03T05:00:${10 + i}Z`),
+    );
+    const floor = buildFloors(busy, now)[0];
+    expect(floorColleagues(floor, "s7", now)).toHaveLength(MAX_COLLEAGUES);
+    expect(floorColleagues(undefined, null, now)).toEqual([]);
   });
 });
 

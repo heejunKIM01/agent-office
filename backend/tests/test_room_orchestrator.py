@@ -3,8 +3,8 @@
 
 from app.core.room_orchestrator import RoomOrchestrator, build_overview
 from app.core.state_machine import StateMachine
-from app.models.agents import Agent, AgentState, BossState
-from app.models.common import TodoItem, TodoStatus
+from app.models.agents import Activity, Agent, AgentState, BossState, StuckReason
+from app.models.common import BubbleContent, BubbleType, TodoItem, TodoStatus
 from app.models.events import AnyEvent, EventAdapter, EventType
 
 
@@ -190,6 +190,22 @@ class TestBuildOverview:
         ov = build_overview({"s-a": a, "s-b": b})
         by_id = {e.session_id: e for e in ov.entries}
         assert set(by_id) == {"s-a", "s-b"}
+
+    def test_carries_what_the_boss_is_doing(self) -> None:
+        # The office walks another live session's boss to the room it works in.
+        sm = _make_sm()
+        sm.boss_state = BossState.WORKING
+        sm.boss_activity = Activity.READING
+        sm.boss_stuck = StuckReason.TOOL_FAILED
+        sm.boss_bubble = BubbleContent(type=BubbleType.THOUGHT, text="src/auth.py", icon="📖")
+        sm.turn_active = True
+        entry = build_overview({"s": sm}).entries[0]
+        assert entry.activity == Activity.READING
+        assert entry.stuck == StuckReason.TOOL_FAILED
+        assert entry.bubble is not None and entry.bubble.text == "src/auth.py"
+        assert entry.turn_active
+        dumped = entry.model_dump(mode="json", by_alias=True)
+        assert dumped["activity"] == "reading" and dumped["turnActive"] is True
 
     def test_bucket_mapping(self) -> None:
         cases = {

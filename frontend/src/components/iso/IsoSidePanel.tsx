@@ -13,7 +13,7 @@ import type { Session } from "@/hooks/useSessions";
 import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useGameStore } from "@/stores/gameStore";
-import { officePeople } from "@/systems/officePeople";
+import { officePeople, type Colleague } from "@/systems/officePeople";
 import { OUTFIT_COLORS } from "./isoPalette";
 import {
   logLines,
@@ -85,7 +85,7 @@ function useSecondsInState(rows: RosterRow[]): Map<string, number> {
 }
 
 function Avatar({ row }: { row: RosterRow }): React.ReactNode {
-  const claude = row.kind === "claude";
+  const claude = row.kind === "claude" || row.kind === "colleague";
   return (
     <span
       aria-hidden="true"
@@ -101,9 +101,12 @@ function Avatar({ row }: { row: RosterRow }): React.ReactNode {
 
 export function IsoSidePanel({
   session,
+  colleagues,
   className,
 }: {
   session: Session | undefined;
+  /** Other sessions' lead agents working on this floor. */
+  colleagues: Colleague[];
   className: string;
 }): React.ReactNode {
   const { t } = useTranslation();
@@ -136,8 +139,9 @@ export function IsoSidePanel({
           me: t("iso.me"),
           generalType: t("iso.agentType.general"),
         },
+        colleagues,
       ),
-    [boss, agents, agentName, t],
+    [boss, agents, agentName, t, colleagues],
   );
   const rows = useMemo(
     () => rosterRows(people, toolCounts(eventLog), words),
@@ -215,10 +219,15 @@ export function IsoSidePanel({
                   </p>
                 )}
                 <p className="text-[10px] text-slate-400">
-                  {t("iso.panel.tools", {
-                    count: row.tools,
-                    seconds: seconds.get(row.id) ?? 0,
-                  })}
+                  {/* Its tools are logged in its own session, not this one. */}
+                  {row.kind === "colleague"
+                    ? t("iso.panel.colleague", {
+                        seconds: seconds.get(row.id) ?? 0,
+                      })
+                    : t("iso.panel.tools", {
+                        count: row.tools,
+                        seconds: seconds.get(row.id) ?? 0,
+                      })}
                 </p>
               </div>
             </li>

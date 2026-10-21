@@ -8,7 +8,11 @@ import { agentMachineService } from "@/machines/agentMachineService";
 import { useGameStore } from "@/stores/gameStore";
 import { selectTheme, usePreferencesStore } from "@/stores/preferencesStore";
 import type { AgentPhase } from "@/stores/slices/types";
-import { officePeople, type PeopleWords } from "@/systems/officePeople";
+import {
+  officePeople,
+  type Colleague,
+  type PeopleWords,
+} from "@/systems/officePeople";
 import type { BubbleWords } from "./isoBubbles";
 import { createIsoView, type IsoView } from "./isoView";
 
@@ -57,9 +61,14 @@ const CONTROLS_BOTTOM =
 
 /**
  * The isometric office scene with its people, zoom buttons and control hint
- * (drag to pan, scroll to zoom, double-click to reset).
+ * (drag to pan, scroll to zoom, double-click to reset). ``colleagues`` are
+ * the lead agents of other sessions working on the same floor.
  */
-export function IsoOffice(): React.ReactNode {
+export function IsoOffice({
+  colleagues,
+}: {
+  colleagues: Colleague[];
+}): React.ReactNode {
   const { t } = useTranslation();
   const agentName = useCodingAgentName();
   const theme = usePreferencesStore(selectTheme);
@@ -114,12 +123,14 @@ export function IsoOffice(): React.ReactNode {
       showing = true;
       seatNewcomers();
       takeLatestBubbles();
-      viewRef.current?.setPeople(officePeople(useGameStore.getState(), words));
+      viewRef.current?.setPeople(
+        officePeople(useGameStore.getState(), words, colleagues),
+      );
       showing = false;
     };
     show();
     return useGameStore.subscribe(show);
-  }, [words]);
+  }, [words, colleagues]);
 
   const buttonClass =
     "flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800";

@@ -74,6 +74,7 @@ const es: Record<TranslationKey, string> = {
   "iso.panel.working": "Trabajando",
   "iso.panel.tools": "{count} herramientas · {seconds}s",
   "iso.panel.tools_one": "{count} herramienta · {seconds}s",
+  "iso.panel.colleague": "Otra sesión de este piso · {seconds}s",
   "iso.panel.tools_other": "{count} herramientas · {seconds}s",
   "iso.panel.log": "Registro de actividad",
   "iso.panel.logTime": "{h}:{m}:{s}",
