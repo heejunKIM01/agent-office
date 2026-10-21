@@ -15,8 +15,9 @@ export const RECENT_BUBBLE_MS = 8000;
 const THINKING_ICON = "💭";
 /**
  * The boss's speech carries this icon both for the user's prompt (at the
- * start of a turn) and for its reply (when the turn ends). A phone speech
- * while the boss is still thinking is the prompt, not the agent speaking.
+ * start of a turn) and for its reply (when the turn ends). Only the reply is
+ * persistent (backend state_machine), so a passing phone speech is the
+ * prompt, not the agent speaking — even when the session ended without one.
  */
 const PHONE_ICON = "📞";
 
@@ -29,7 +30,7 @@ export type IsoBubble =
 
 export interface BubbleInput {
   /** The latest bubble the backend gave this person. */
-  bubble: Pick<BubbleContent, "type" | "text" | "icon"> | null;
+  bubble: Pick<BubbleContent, "type" | "text" | "icon" | "persistent"> | null;
   /** How long ago that bubble arrived (ms). */
   bubbleAgeMs: number | null;
   activity: Activity | null;
@@ -54,7 +55,7 @@ export function pickBubble(input: BubbleInput): IsoBubble | null {
   if (bubble?.type === "thought" && bubble.icon === THINKING_ICON && recent) {
     return { kind: "thought", text: bubble.text };
   }
-  const isPrompt = bubble?.icon === PHONE_ICON && thinkingSeconds !== null;
+  const isPrompt = bubble?.icon === PHONE_ICON && !bubble.persistent;
   if (bubble?.type === "speech" && !isPrompt && recent) {
     return { kind: "speech", text: bubble.text };
   }
