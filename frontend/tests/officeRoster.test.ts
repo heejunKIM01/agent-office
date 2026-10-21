@@ -33,6 +33,9 @@ function person(fields: Partial<IsoPerson>): IsoPerson {
     bubble: null,
     bubbleAt: null,
     thinking: false,
+    arriving: false,
+    leaving: false,
+    outfit: "general",
     ...fields,
   };
 }

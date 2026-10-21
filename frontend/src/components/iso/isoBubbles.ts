@@ -14,6 +14,8 @@ export interface BubbleWords {
   thinkingFor: (seconds: number) => string;
   /** 「살펴보는 중」 under a tool's target. */
   looking: string;
+  /** 「👋 퇴근합니다!」 as a finished subagent heads home. */
+  bye: string;
 }
 
 /** Room left under a bubble for the name chip (px). */

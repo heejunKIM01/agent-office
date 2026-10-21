@@ -197,6 +197,7 @@ const en = {
   "iso.bubble.thinking": "Thinking",
   "iso.bubble.thinkingFor": "Thinking for {seconds}s",
   "iso.bubble.looking": "Looking into it",
+  "iso.bubble.bye": "👋 Heading home!",
   "iso.panel.project": "Project",
   "iso.panel.session": "Session",
   "iso.panel.people": "People in the office",

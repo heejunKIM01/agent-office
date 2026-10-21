@@ -137,7 +137,11 @@ function addLights(scene: THREE.Scene): void {
   scene.add(sun, sun.target);
 }
 
-export function createIsoView(container: HTMLElement): IsoView {
+/** ``onPersonLeft`` hears of each subagent that rode the elevator away. */
+export function createIsoView(
+  container: HTMLElement,
+  onPersonLeft?: (id: string) => void,
+): IsoView {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -156,7 +160,7 @@ export function createIsoView(container: HTMLElement): IsoView {
   const office = buildIsoOffice();
   scene.add(office);
   addLights(scene);
-  const people = new IsoPeople(scene);
+  const people = new IsoPeople(scene, onPersonLeft);
   const effects = new IsoEffects(office);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);

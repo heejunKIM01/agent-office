@@ -23,6 +23,7 @@ export type RosterStatus = "thinking" | "working" | null;
 export interface RosterRow {
   id: string;
   kind: IsoPerson["kind"];
+  outfit: IsoPerson["outfit"];
   title: string;
   typeLabel: string;
   status: RosterStatus;
@@ -72,6 +73,7 @@ export function rosterRows(
       return {
         id: person.id,
         kind: person.kind,
+        outfit: person.outfit,
         title: person.title,
         typeLabel: person.typeLabel,
         status,

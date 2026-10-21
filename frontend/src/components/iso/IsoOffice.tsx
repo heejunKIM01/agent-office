@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
+import { agentMachineService } from "@/machines/agentMachineService";
 import { useGameStore } from "@/stores/gameStore";
 import type { AgentPhase } from "@/stores/slices/types";
 import { officePeople, type PeopleWords } from "@/systems/officePeople";
@@ -74,7 +75,10 @@ export function IsoOffice(): React.ReactNode {
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
-    const view = createIsoView(mount);
+    // A subagent that rode the elevator away leaves the session's office too.
+    const view = createIsoView(mount, (id) =>
+      agentMachineService.dismissAgent(id),
+    );
     viewRef.current = view;
     return () => {
       view.dispose();
@@ -87,6 +91,7 @@ export function IsoOffice(): React.ReactNode {
       thinking: t("iso.bubble.thinking"),
       thinkingFor: (seconds) => t("iso.bubble.thinkingFor", { seconds }),
       looking: t("iso.bubble.looking"),
+      bye: t("iso.bubble.bye"),
     }),
     [t],
   );

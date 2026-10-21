@@ -7,6 +7,11 @@
  * done at its own desk. A stuck person (a failed tool) stops where it is,
  * even mid-walk, and does not move until it moves on (rule 7).
  *
+ * Subagents come and go by elevator (작성자 댓글): a newcomer steps out of
+ * the cab and goes to work; one whose work is done walks to Claude, reports,
+ * waves 「👋 퇴근합니다!」, walks back into the cab and is gone. Handed more
+ * work on the way, it turns back to work.
+ *
  * `stepIsoWalker` is pure: the path finder and the spot a walker holds in a
  * room are passed in.
  */
@@ -30,21 +35,43 @@ export const ROOM_FOR_ACTIVITY: Record<Activity, ErrandRoomId | "seat"> = {
 
 /** Walking speed in metres per second. */
 export const ISO_WALK_SPEED = 3.2;
+/** How long a finished subagent tells Claude its result, then waves goodbye (ms). */
+export const REPORT_MS = 3500;
+export const BYE_MS = 1800;
 
-/** Sitting idle, typing at the desk, walking, or working in a room. */
-export type IsoPose = "sit" | "type" | "walk" | "work";
+/** Sitting idle, typing at the desk, walking, working in a room, standing, or waving. */
+export type IsoPose = "sit" | "type" | "walk" | "work" | "stand" | "wave";
+
+/** Where a walker is heading: its seat, a room, beside Claude, the elevator door or cab. */
+export type IsoGoal = "seat" | ErrandRoomId | "report" | "elevator" | "cab";
+
+/** A subagent's way in or out of the office. */
+export type IsoTrip =
+  | { kind: "arrive" }
+  | { kind: "report"; until: number | null }
+  | { kind: "bye"; until: number }
+  | { kind: "leave" }
+  | { kind: "board" }
+  | { kind: "gone" };
+
+export interface IsoElevator {
+  door: IsoSpot;
+  cab: IsoSpot;
+}
 
 export interface IsoWalker {
   x: number;
   z: number;
   facing: number;
   /** Where it is heading or staying. */
-  goal: "seat" | ErrandRoomId;
+  goal: IsoGoal;
   /** Waypoints in metres (x, y = z) while walking. */
   path: PathState | null;
   pose: IsoPose;
   /** Set when its tool has ended: it stays in the room until then. */
   lingerUntil: number | null;
+  /** On its way in or out by elevator. */
+  trip: IsoTrip | null;
 }
 
 export interface IsoWalkerInput {
@@ -59,6 +86,11 @@ export interface IsoWalkerInput {
   now: number;
   /** Seconds since the last step. */
   dt: number;
+  /** Its work is done: it reports to Claude and goes home. */
+  leaving: boolean;
+  /** Where it stands to report beside Claude (asked only while it leaves). */
+  reportSpot: () => IsoSpot;
+  elevator: IsoElevator;
 }
 
 /** A walker sitting in its seat. */
@@ -71,39 +103,132 @@ export function seatedWalker(seat: IsoSpot): IsoWalker {
     path: null,
     pose: "sit",
     lingerUntil: null,
+    trip: null,
+  };
+}
+
+function pathThrough(points: FloorPoint[]): PathState {
+  return {
+    waypoints: points.map((p) => ({ x: p.x, y: p.z })),
+    currentIndex: 0,
+    progress: 0,
+  };
+}
+
+/** A newcomer in the elevator cab, stepping out of the door. */
+export function arrivingWalker(elevator: IsoElevator): IsoWalker {
+  const { cab, door } = elevator;
+  return {
+    x: cab.x,
+    z: cab.z,
+    facing: Math.atan2(door.x - cab.x, door.z - cab.z),
+    goal: "elevator",
+    path: pathThrough([cab, door]),
+    pose: "walk",
+    lingerUntil: null,
+    trip: { kind: "arrive" },
   };
 }
 
 function spotFor(walker: IsoWalker, input: IsoWalkerInput): IsoSpot {
-  return walker.goal === "seat" ? input.seat : input.spotIn(walker.goal);
+  switch (walker.goal) {
+    case "seat":
+      return input.seat;
+    case "report":
+      return input.reportSpot();
+    case "elevator":
+      return input.elevator.door;
+    case "cab":
+      return input.elevator.cab;
+    default:
+      return input.spotIn(walker.goal);
+  }
 }
 
 /** How it looks once it is where it was going. */
 function restingPose(walker: IsoWalker, input: IsoWalkerInput): IsoPose {
-  if (walker.goal !== "seat") return "work";
-  return input.activity === "editing" ? "type" : "sit";
+  if (walker.trip?.kind === "bye") return "wave";
+  switch (walker.goal) {
+    case "seat":
+      return input.activity === "editing" ? "type" : "sit";
+    case "report":
+    case "elevator":
+    case "cab":
+      return "stand";
+    default:
+      return "work";
+  }
 }
 
+/**
+ * Set off for ``goal``. The cab is off the floor's paths, so the steps in
+ * and out of it are straight.
+ */
 function headTo(
   walker: IsoWalker,
-  goal: IsoWalker["goal"],
+  goal: IsoGoal,
   input: IsoWalkerInput,
+  trip: IsoTrip | null = null,
+  straight = false,
 ): IsoWalker {
-  const turned = { ...walker, goal, lingerUntil: null };
+  const turned = { ...walker, goal, trip, lingerUntil: null };
   const spot = spotFor(turned, input);
-  const points = input.findPath({ x: walker.x, z: walker.z }, spot);
+  const points = straight
+    ? []
+    : input.findPath({ x: walker.x, z: walker.z }, spot);
   // No way through (should not happen on this floor): step straight there.
   const route =
     points.length > 1 ? points : [{ x: walker.x, z: walker.z }, spot];
-  return {
-    ...turned,
-    pose: "walk",
-    path: {
-      waypoints: route.map((p) => ({ x: p.x, y: p.z })),
-      currentIndex: 0,
-      progress: 0,
-    },
-  };
+  return { ...turned, pose: "walk", path: pathThrough(route) };
+}
+
+/** Where its work sends it: the room of its tool, or its seat. */
+const workGoal = (input: IsoWalkerInput): IsoGoal =>
+  input.activity ? ROOM_FOR_ACTIVITY[input.activity] : "seat";
+
+/** The next step home: to Claude, report, wave, to the elevator, into the cab. */
+function goHome(walker: IsoWalker, input: IsoWalkerInput): IsoWalker {
+  const trip = walker.trip;
+  switch (trip?.kind) {
+    case undefined:
+      return headTo(walker, "report", input, { kind: "report", until: null });
+    case "arrive":
+      // Finished before it was out of the cab: step out first.
+      return walker.path
+        ? walker
+        : headTo(walker, "report", input, { kind: "report", until: null });
+    case "report":
+      if (walker.path) return walker;
+      if (trip.until === null) {
+        return {
+          ...walker,
+          trip: { kind: "report", until: input.now + REPORT_MS },
+        };
+      }
+      return input.now < trip.until
+        ? walker
+        : { ...walker, trip: { kind: "bye", until: input.now + BYE_MS } };
+    case "bye":
+      return input.now < trip.until
+        ? walker
+        : headTo(walker, "elevator", input, { kind: "leave" });
+    case "leave":
+      return walker.path
+        ? walker
+        : headTo(walker, "cab", input, { kind: "board" }, true);
+    case "board":
+      return walker.path ? walker : { ...walker, trip: { kind: "gone" } };
+    case "gone":
+      return walker;
+  }
+}
+
+/** Handed more work on its way out: back out of the cab, or straight to work. */
+function backToWork(walker: IsoWalker, input: IsoWalkerInput): IsoWalker {
+  if (walker.trip?.kind === "board") {
+    return headTo(walker, "elevator", input, { kind: "arrive" }, true);
+  }
+  return headTo(walker, workGoal(input), input);
 }
 
 function advance(walker: IsoWalker, input: IsoWalkerInput): IsoWalker {
@@ -141,6 +266,19 @@ export function stepIsoWalker(
   walker: IsoWalker,
   input: IsoWalkerInput,
 ): IsoWalker {
+  const trip = walker.trip;
+  if (trip?.kind === "gone") return walker;
+  if (input.leaving) return advance(goHome(walker, input), input);
+  if (trip && trip.kind !== "arrive") {
+    return advance(backToWork(walker, input), input);
+  }
+  if (trip?.kind === "arrive") {
+    // Out of the cab it goes to work; the step out is not cut short.
+    return advance(
+      walker.path ? walker : headTo(walker, workGoal(input), input),
+      input,
+    );
+  }
   // Stuck: it stops right where it is, even mid-walk, and ponders there.
   if (input.stuck) {
     return walker.path || walker.lingerUntil !== null

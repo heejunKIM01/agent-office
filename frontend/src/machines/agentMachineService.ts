@@ -171,6 +171,14 @@ class AgentMachineService implements AnimationListener {
   }
 
   /**
+   * Take an agent out at once, as when it has left by elevator. The
+   * isometric office walks agents out itself, without the 2D departure.
+   */
+  dismissAgent(agentId: string): void {
+    this.handleAgentRemoved(agentId);
+  }
+
+  /**
    * Mark an agent as needing to depart once it reaches the idle state.
    * Used when the backend removes an agent before its arrival animation
    * has finished — the actual REMOVE event is dispatched in

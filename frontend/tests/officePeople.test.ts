@@ -95,14 +95,54 @@ describe("officePeople", () => {
     ]);
   });
 
-  it("leaves out subagents that have left the floor", () => {
+  it("keeps subagents whose work is done, marked leaving, so they can go home", () => {
     const agents = new Map([
       ["a1", agent("a1", { currentTask: "stays" })],
       ["a2", agent("a2", { currentTask: "leaves", phase: "departing" })],
       ["a3", agent("a3", { currentTask: "gone", phase: "in_elevator" })],
+      // SUBAGENT_STOP: the backend marks it waiting before it removes it.
+      ["a4", agent("a4", { currentTask: "done", backendState: "waiting" })],
     ]);
-    const ids = officePeople({ boss: boss(), agents }, WORDS).map((p) => p.id);
-    expect(ids).toEqual(["claude", "me", "a1"]);
+    const people = officePeople({ boss: boss(), agents }, WORDS);
+    expect(people.slice(2).map((p) => [p.id, p.leaving, p.thinking])).toEqual([
+      ["a1", false, true],
+      ["a2", true, false],
+      ["a3", true, false],
+      ["a4", true, false],
+    ]);
+  });
+
+  it("brings a subagent the backend just made by elevator", () => {
+    const agents = new Map([
+      ["a1", agent("a1", { backendState: "arriving" })],
+      // SUBAGENT_START walks it to its desk at once, until its first tool.
+      ["a2", agent("a2", { backendState: "walking_to_desk" })],
+      ["a3", agent("a3", { backendState: "working" })],
+    ]);
+    const people = officePeople({ boss: boss(), agents }, WORDS);
+    expect(people.map((p) => p.arriving)).toEqual([
+      false,
+      false,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("dresses Explore in green and Plan in purple, the rest in blue", () => {
+    const agents = new Map(
+      ["Explore", "Plan", "general-purpose", null].map((type, i) => [
+        `a${i}`,
+        agent(`a${i}`, { agentType: type }),
+      ]),
+    );
+    const people = officePeople({ boss: boss(), agents }, WORDS);
+    expect(people.slice(2).map((p) => p.outfit)).toEqual([
+      "explore",
+      "plan",
+      "general",
+      "general",
+    ]);
   });
 
   it("sends a person waiting for a permission to my desk, and keeps a failed one in place", () => {

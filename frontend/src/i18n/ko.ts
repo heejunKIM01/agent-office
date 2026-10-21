@@ -199,6 +199,7 @@ const ko: Record<TranslationKey, string> = {
   "iso.bubble.thinking": "고민 중",
   "iso.bubble.thinkingFor": "{seconds}s째 고민 중",
   "iso.bubble.looking": "살펴보는 중",
+  "iso.bubble.bye": "👋 퇴근합니다!",
   "iso.panel.project": "프로젝트",
   "iso.panel.session": "세션",
   "iso.panel.people": "사무실 사람들",

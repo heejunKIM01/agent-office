@@ -13,6 +13,7 @@ import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useGameStore } from "@/stores/gameStore";
 import { officePeople } from "@/systems/officePeople";
+import { OUTFIT_COLORS } from "./isoPalette";
 import {
   logLines,
   rosterRows,
@@ -86,9 +87,10 @@ function Avatar({ row }: { row: RosterRow }): React.ReactNode {
   return (
     <span
       aria-hidden="true"
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${
-        claude ? "bg-[#d97757]" : "bg-blue-600"
-      }`}
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+      style={{
+        background: claude ? "#d97757" : OUTFIT_COLORS[row.outfit],
+      }}
     >
       {claude ? "✳" : (row.typeLabel || row.title).slice(0, 1)}
     </span>
