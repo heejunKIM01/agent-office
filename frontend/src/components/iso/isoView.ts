@@ -13,6 +13,7 @@ import {
   WALL_HEIGHT,
 } from "@/constants/isoFloorPlan";
 import type { IsoPerson } from "@/systems/officePeople";
+import type { NoteStatus } from "@/systems/roomGimmicks";
 import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
 import type { BubbleWords } from "./isoBubbles";
@@ -38,6 +39,8 @@ export interface IsoView {
   setTheme(theme: Theme): void;
   /** Take everyone off the floor, to place them afresh. */
   clearPeople(): void;
+  /** Stick a whiteboard note per to-do (null: the board's plain notes). */
+  setNotes(statuses: readonly NoteStatus[] | null): void;
   zoomBy(factor: number): void;
   resetView(): void;
   dispose(): void;
@@ -261,6 +264,9 @@ export function createIsoView(
     },
     clearPeople(): void {
       people.clear();
+    },
+    setNotes(statuses: readonly NoteStatus[] | null): void {
+      effects.setNotes(statuses);
     },
     setTheme(theme: Theme): void {
       const { color, ambient, sun } = LIGHTING[theme];
