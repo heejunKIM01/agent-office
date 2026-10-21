@@ -9,20 +9,16 @@ full EventProcessor class.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from app.core.connection_manager import get_manager
 from app.core.state_machine import StateMachine
 from app.models.sessions import GameState, HistoryEntry
 
-if TYPE_CHECKING:
-    from app.core.room_orchestrator import RoomOrchestrator
-
 __all__ = [
     "broadcast_state",
     "broadcast_event",
     "broadcast_error",
-    "broadcast_room_state",
     "broadcast_overview_state",
 ]
 
@@ -88,29 +84,14 @@ async def broadcast_error(session_id: str, message: str, timestamp: str) -> None
     )
 
 
-async def broadcast_room_state(room_id: str, orchestrator: RoomOrchestrator) -> None:
-    """Broadcast merged room state to all WebSocket clients subscribed to a room."""
-    merged_state = orchestrator.merge()
-    if merged_state is None:
-        return
-    await get_manager().broadcast_room(
-        {
-            "type": "state_update",
-            "timestamp": merged_state.last_updated.isoformat(),
-            "state": merged_state.model_dump(mode="json", by_alias=True),
-        },
-        room_id,
-    )
-
-
 async def broadcast_overview_state(
     sessions: dict[str, StateMachine],
     sessions_lock: asyncio.Lock | None = None,
 ) -> None:
     """Broadcast the cross-session overview to all ``/ws/overview`` clients.
 
-    Skips building the payload entirely when nobody is watching the Command
-    Center, so the per-event hook stays cheap in the common case.
+    Skips building the payload entirely when nobody is watching the overview
+    feed, so the per-event hook stays cheap in the common case.
 
     ``build_overview`` reads the live session registry and each StateMachine's
     mutable collections, which concurrent event handlers rewrite (e.g.
@@ -122,7 +103,7 @@ async def broadcast_overview_state(
     if not get_manager().overview_connections:
         return
     # Local import avoids any import-order coupling at module load.
-    from app.core.room_orchestrator import build_overview
+    from app.core.overview import build_overview
 
     if sessions_lock is not None:
         async with sessions_lock:

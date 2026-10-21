@@ -236,3 +236,14 @@ def test_session_title_is_the_name_claude_code_gave_it(
     listed = {s["id"]: s for s in client.get("/api/v1/sessions").json()}
     assert listed[by_name]["title"] == "Login timeout fix"
     assert listed[by_prompt]["title"] == "Fix the login timeout"
+
+
+def test_clear_database_deletes_every_preference():
+    """Clearing the database drops every preference; none is kept back."""
+    for key in ("language", "building_config"):
+        response = client.put(f"/api/v1/preferences/{key}", json={"value": "x"})
+        assert response.status_code == 200
+
+    response = client.delete("/api/v1/sessions", headers=_auth_headers())
+    assert response.status_code == 200
+    assert client.get("/api/v1/preferences").json() == {}

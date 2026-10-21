@@ -13,7 +13,7 @@ Available scenarios
 - ``edge_cases`` — Error paths, permission requests, and unusual event sequences.
 - ``errands``    — Boss and a subagent walking to the archive and the server room.
 - ``quick``      — Fast (~30 s) full-lifecycle smoke scenario.
-- ``teams``      — Multi-session team scenario exercising the room-orchestrator merge.
+- ``teams``      — Multi-session team scenario (lead plus two teammates).
 """
 
 from collections.abc import Callable

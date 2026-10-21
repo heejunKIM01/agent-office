@@ -198,10 +198,9 @@ class SimulationContext:
 class TeamSimulationContext:
     """Groups one lead and N teammate ``SimulationContext``s for team scenarios.
 
-    The room-orchestrator merge path is only exercised when multiple sessions
-    share a ``team_name``; this context owns the member contexts so the
-    ``teams`` scenario can drive that path without re-implementing event
-    plumbing.
+    Team events only make sense when multiple sessions share a ``team_name``;
+    this context owns the member contexts so the ``teams`` scenario can drive
+    them without re-implementing event plumbing.
 
     Args:
         team_name: Identifier shared by every member's ``team_name`` field.

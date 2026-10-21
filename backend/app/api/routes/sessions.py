@@ -59,8 +59,6 @@ class SessionSummary(TypedDict):
     updatedAt: str
     status: str
     eventCount: int
-    floorId: str | None
-    roomId: str | None
     codingAgent: str | None
 
 
@@ -153,8 +151,6 @@ class ReplayEntry(TypedDict):
 @router.get("")
 async def list_sessions(
     db: Annotated[AsyncSession, Depends(get_db)],
-    room_id: str | None = None,
-    floor_id: str | None = None,
     status: str | None = None,
     limit: int = 100,
 ) -> list[SessionSummary]:
@@ -167,15 +163,13 @@ async def list_sessions(
 
     Args:
         db: Database session dependency.
-        room_id: Optional filter to only return sessions in a specific room.
-        floor_id: Optional filter to only return sessions on a specific floor.
         status: Optional filter by session status (``active``, ``completed``).
         limit: Maximum sessions to return (default 100, max 500).
 
     Returns:
         List of session summaries matching the given filters.
     """
-    logger.debug("API: list_sessions called (room_id=%s, floor_id=%s)", room_id, floor_id)
+    logger.debug("API: list_sessions called (status=%s)", status)
     # Single query with GROUP BY to get event counts for all sessions.
     # Replaces N+1 pattern where each session required a separate COUNT query.
     event_count_subq = (
@@ -196,11 +190,6 @@ async def list_sessions(
         .order_by(SessionRecord.updated_at.desc())
     )
 
-    # Apply optional room/floor filters
-    if room_id is not None:
-        stmt = stmt.where(SessionRecord.room_id == room_id)
-    if floor_id is not None:
-        stmt = stmt.where(SessionRecord.floor_id == floor_id)
     if status is not None:
         stmt = stmt.where(SessionRecord.status == status)
 
@@ -251,8 +240,6 @@ async def list_sessions(
                 "updatedAt": updated_utc.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                 "status": rec.status,
                 "eventCount": count,
-                "floorId": rec.floor_id,
-                "roomId": rec.room_id,
                 "codingAgent": rec.coding_agent,
             }
         )
@@ -490,22 +477,16 @@ async def trigger_simulation() -> dict[str, str]:
 
 @router.delete("")
 async def clear_database(db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
-    """Clear all sessions and events from the database."""
+    """Clear all sessions, events, tasks and preferences from the database."""
     # Offload the blocking terminate()+wait(timeout=5) to a worker thread
     # so the event loop is not stalled for up to 5 seconds (ARC-003).
     simulation_killed = await asyncio.to_thread(kill_simulation)
 
-    # Preserve building/floor configuration while clearing everything else.
-    await db.execute(delete(UserPreference).where(UserPreference.key != "building_config"))
+    await db.execute(delete(UserPreference))
     await db.execute(delete(TaskRecord))
     await db.execute(delete(EventRecord))
     await db.execute(delete(SessionRecord))
     await db.commit()
-
-    # Re-invalidate cached building config in case other preferences changed.
-    from app.core.floor_config import invalidate_building_config
-
-    invalidate_building_config()
 
     await get_event_processor().clear_all_sessions()
 

@@ -84,8 +84,6 @@ export type InputTokens = number | null;
 export type OutputTokens = number | null;
 export type CacheReadTokens = number | null;
 export type CacheCreationTokens = number | null;
-export type FloorId = string | null;
-export type RoomId = string | null;
 export type AgentName = string | null;
 export type AgentType = string | null;
 export type TaskDescription = string | null;
@@ -124,8 +122,6 @@ export type InputTokens1 = number | null;
 export type OutputTokens1 = number | null;
 export type CacheReadTokens1 = number | null;
 export type CacheCreationTokens1 = number | null;
-export type FloorId1 = string | null;
-export type RoomId1 = string | null;
 export type BackgroundTaskId = string | null;
 export type BackgroundTaskOutputFile = string | null;
 export type BackgroundTaskStatus = string | null;
@@ -228,8 +224,6 @@ export type BackgroundTaskOutputFile1 = string | null;
 export type BackgroundTaskStatus1 = string | null;
 export type BackgroundTaskSummary1 = string | null;
 export type TaskListId2 = string | null;
-export type FloorId2 = string | null;
-export type RoomId2 = string | null;
 export type TeamName2 = string | null;
 export type TeammateName2 = string | null;
 export type TaskId = string | null;
@@ -252,8 +246,6 @@ export type InputTokens3 = number | null;
 export type OutputTokens3 = number | null;
 export type CacheReadTokens3 = number | null;
 export type CacheCreationTokens3 = number | null;
-export type FloorId3 = string | null;
-export type RoomId3 = string | null;
 export type Filepath = string;
 export type Editcount = number;
 export type Sessionid = string;
@@ -320,8 +312,6 @@ export type Newsitems = NewsItem[];
 export type Coffeecups = number;
 export type Backgroundtasks = BackgroundTask[];
 export type Conversation = ConversationEntry[];
-export type Floorid = string | null;
-export type Roomid = string | null;
 export type Codingagent = string | null;
 export type ProjectName4 = string | null;
 export type ProjectDir4 = string | null;
@@ -341,8 +331,6 @@ export type InputTokens4 = number | null;
 export type OutputTokens4 = number | null;
 export type CacheReadTokens4 = number | null;
 export type CacheCreationTokens4 = number | null;
-export type FloorId4 = string | null;
-export type RoomId4 = string | null;
 export type NotificationType1 = string | null;
 export type ErrorType1 = string | null;
 export type Reason1 = string | null;
@@ -380,8 +368,6 @@ export type InputTokens5 = number | null;
 export type OutputTokens5 = number | null;
 export type CacheReadTokens5 = number | null;
 export type CacheCreationTokens5 = number | null;
-export type FloorId5 = string | null;
-export type RoomId5 = string | null;
 export type Prompt1 = string | null;
 export type Id3 = string;
 export type CreatedAt = string;
@@ -407,8 +393,6 @@ export type InputTokens6 = number | null;
 export type OutputTokens6 = number | null;
 export type CacheReadTokens6 = number | null;
 export type CacheCreationTokens6 = number | null;
-export type FloorId6 = string | null;
-export type RoomId6 = string | null;
 export type Reason2 = string | null;
 export type ProjectName7 = string | null;
 export type ProjectDir7 = string | null;
@@ -428,8 +412,6 @@ export type InputTokens7 = number | null;
 export type OutputTokens7 = number | null;
 export type CacheReadTokens7 = number | null;
 export type CacheCreationTokens7 = number | null;
-export type FloorId7 = string | null;
-export type RoomId7 = string | null;
 export type TaskId2 = string | null;
 export type TaskSubject1 = string | null;
 export type ProjectName8 = string | null;
@@ -450,8 +432,6 @@ export type InputTokens8 = number | null;
 export type OutputTokens8 = number | null;
 export type CacheReadTokens8 = number | null;
 export type CacheCreationTokens8 = number | null;
-export type FloorId8 = string | null;
-export type RoomId8 = string | null;
 export type ToolName1 = string | null;
 export type ToolUseId2 = string | null;
 export type ToolInput1 = {
@@ -536,8 +516,6 @@ export interface AgentEventData {
   output_tokens?: OutputTokens;
   cache_read_tokens?: CacheReadTokens;
   cache_creation_tokens?: CacheCreationTokens;
-  floor_id?: FloorId;
-  room_id?: RoomId;
   agent_name?: AgentName;
   agent_type?: AgentType;
   task_description?: TaskDescription;
@@ -614,8 +592,6 @@ export interface BackgroundTaskEventData {
   output_tokens?: OutputTokens1;
   cache_read_tokens?: CacheReadTokens1;
   cache_creation_tokens?: CacheCreationTokens1;
-  floor_id?: FloorId1;
-  room_id?: RoomId1;
   background_task_id?: BackgroundTaskId;
   background_task_output_file?: BackgroundTaskOutputFile;
   background_task_status?: BackgroundTaskStatus;
@@ -724,8 +700,6 @@ export interface EventData {
   background_task_status?: BackgroundTaskStatus1;
   background_task_summary?: BackgroundTaskSummary1;
   task_list_id?: TaskListId2;
-  floor_id?: FloorId2;
-  room_id?: RoomId2;
   team_name?: TeamName2;
   teammate_name?: TeammateName2;
   task_id?: TaskId;
@@ -735,8 +709,8 @@ export interface EventData {
 /**
  * Fields every event may carry.
  *
- * Covers routing/project context, token accounting, room assignment, and
- * team context — all read by code paths that run regardless of event_type.
+ * Covers routing/project context, token accounting, and team context — all
+ * read by code paths that run regardless of event_type.
  *
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
  * via the `definition` "EventDataBase".
@@ -760,8 +734,6 @@ export interface EventDataBase {
   output_tokens?: OutputTokens3;
   cache_read_tokens?: CacheReadTokens3;
   cache_creation_tokens?: CacheCreationTokens3;
-  floor_id?: FloorId3;
-  room_id?: RoomId3;
   [k: string]: unknown;
 }
 /**
@@ -793,8 +765,6 @@ export interface GameState {
   departureQueue?: Departurequeue;
   whiteboardData?: WhiteboardData;
   conversation?: Conversation;
-  floorId?: Floorid;
-  roomId?: Roomid;
   codingAgent?: Codingagent;
   [k: string]: unknown;
 }
@@ -932,8 +902,6 @@ export interface LifecycleEventData {
   output_tokens?: OutputTokens4;
   cache_read_tokens?: CacheReadTokens4;
   cache_creation_tokens?: CacheCreationTokens4;
-  floor_id?: FloorId4;
-  room_id?: RoomId4;
   notification_type?: NotificationType1;
   error_type?: ErrorType1;
   reason?: Reason1;
@@ -942,7 +910,7 @@ export interface LifecycleEventData {
   [k: string]: unknown;
 }
 /**
- * A single session's boss snapshot for the Command Center.
+ * A single session's boss snapshot for the overview.
  *
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
  * via the `definition` "OverviewEntry".
@@ -997,8 +965,6 @@ export interface PromptEventData {
   output_tokens?: OutputTokens5;
   cache_read_tokens?: CacheReadTokens5;
   cache_creation_tokens?: CacheCreationTokens5;
-  floor_id?: FloorId5;
-  room_id?: RoomId5;
   prompt?: Prompt1;
   [k: string]: unknown;
 }
@@ -1042,8 +1008,6 @@ export interface SessionEventData {
   output_tokens?: OutputTokens6;
   cache_read_tokens?: CacheReadTokens6;
   cache_creation_tokens?: CacheCreationTokens6;
-  floor_id?: FloorId6;
-  room_id?: RoomId6;
   reason?: Reason2;
   [k: string]: unknown;
 }
@@ -1072,8 +1036,6 @@ export interface TaskEventData {
   output_tokens?: OutputTokens7;
   cache_read_tokens?: CacheReadTokens7;
   cache_creation_tokens?: CacheCreationTokens7;
-  floor_id?: FloorId7;
-  room_id?: RoomId7;
   task_id?: TaskId2;
   task_subject?: TaskSubject1;
   [k: string]: unknown;
@@ -1103,8 +1065,6 @@ export interface ToolEventData {
   output_tokens?: OutputTokens8;
   cache_read_tokens?: CacheReadTokens8;
   cache_creation_tokens?: CacheCreationTokens8;
-  floor_id?: FloorId8;
-  room_id?: RoomId8;
   tool_name?: ToolName1;
   tool_use_id?: ToolUseId2;
   tool_input?: ToolInput1;

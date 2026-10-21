@@ -45,7 +45,7 @@ export type {
   EventType,
   EventData,
   Event,
-  // Overview (Command Center)
+  // Overview (/ws/overview)
   OverviewEntry,
   OverviewState,
 } from "./generated";

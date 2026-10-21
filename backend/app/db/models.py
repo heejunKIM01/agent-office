@@ -27,8 +27,6 @@ class SessionRecord(Base):
     status: Mapped[str] = mapped_column(String, default="active")
     label: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)
-    floor_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    room_id: Mapped[str | None] = mapped_column(String, nullable=True)
     team_name: Mapped[str | None] = mapped_column(String, nullable=True)
     teammate_name: Mapped[str | None] = mapped_column(String, nullable=True)
     is_lead: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")

@@ -117,9 +117,6 @@ class EventData(BaseModel):
     background_task_summary: str | None = None
     # Task list override (from CLAUDE_CODE_TASK_LIST_ID env var)
     task_list_id: str | None = None
-    # Room assignment (populated by ProductMapper)
-    floor_id: str | None = None
-    room_id: str | None = None
     # Agent Teams fields (Phase 4)
     team_name: str | None = None
     teammate_name: str | None = None
@@ -166,10 +163,10 @@ class Event(BaseModel):
 #
 # Field placement rules used below:
 #   - `EventDataBase` carries every field read by code paths that run for ALL
-#     event types (token_tracker.update_from_event, event_processor routing,
-#     product_mapper room assignment). Notably `agent_transcript_path` lives
-#     here, not in AgentEventData, because token_tracker reads it on the slow
-#     path for any event whose `transcript_path` is empty.
+#     event types (token_tracker.update_from_event, event_processor routing).
+#     Notably `agent_transcript_path` lives here, not in AgentEventData,
+#     because token_tracker reads it on the slow path for any event whose
+#     `transcript_path` is empty.
 #   - Family payload classes add only fields accessed solely by that family's
 #     event types. Fields needed by two families (e.g. `thinking`, `result_*`,
 #     `tool_use_id`) appear in each family class explicitly.
@@ -181,8 +178,8 @@ class Event(BaseModel):
 class EventDataBase(BaseModel):
     """Fields every event may carry.
 
-    Covers routing/project context, token accounting, room assignment, and
-    team context — all read by code paths that run regardless of event_type.
+    Covers routing/project context, token accounting, and team context — all
+    read by code paths that run regardless of event_type.
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -219,9 +216,6 @@ class EventDataBase(BaseModel):
     output_tokens: int | None = None
     cache_read_tokens: int | None = None
     cache_creation_tokens: int | None = None
-    # Room assignment (populated by ProductMapper).
-    floor_id: str | None = None
-    room_id: str | None = None
 
 
 class SessionEventData(EventDataBase):

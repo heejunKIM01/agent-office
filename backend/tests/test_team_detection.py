@@ -1,5 +1,5 @@
 # backend/tests/test_team_detection.py
-"""Tests for team detection and orchestrator routing in EventProcessor."""
+"""Tests for team detection in EventProcessor."""
 
 import asyncio
 from typing import Any
@@ -70,33 +70,3 @@ class TestTeamDetection:
         assert sm.team_name == "squad"
         assert sm.teammate_name == "implementer"
         assert sm.is_lead is False
-
-    @pytest.mark.asyncio
-    async def test_orchestrator_created_for_room(self) -> None:
-        ep = EventProcessor()
-        # Solo session gets an orchestrator for its room
-        event = _make_event(
-            EventType.SESSION_START,
-            session_id="solo-sess",
-            project_name="panoptica",
-        )
-        await ep.process_event(event)
-        sm = ep.sessions.get("solo-sess")
-        if sm and sm.room_id:
-            assert sm.room_id in ep.orchestrators  # pyright: ignore[reportAttributeAccessIssue]
-
-
-class TestOrchestratorUpdated:
-    @pytest.mark.asyncio
-    async def test_orchestrator_updated_on_event(self) -> None:
-        ep = EventProcessor()
-        event = _make_event(
-            EventType.SESSION_START,
-            session_id="s1",
-            project_name="myapp",
-        )
-        await ep.process_event(event)
-        sm = ep.sessions.get("s1")
-        if sm and sm.room_id:
-            orch = ep.orchestrators.get(sm.room_id)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
-            assert orch is not None

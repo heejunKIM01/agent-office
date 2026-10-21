@@ -23,11 +23,12 @@ async def migrate_schema(conn: AsyncConnection) -> None:
     if dialect != "sqlite":
         return
 
+    # Databases made before the floor/room mapping was removed still carry
+    # nullable ``floor_id`` / ``room_id`` columns. Nothing reads or writes
+    # them any more and inserts leave them NULL, so they are left in place.
     new_columns: dict[str, str] = {
         "label": "TEXT DEFAULT NULL",
         "display_name": "TEXT DEFAULT NULL",
-        "floor_id": "TEXT DEFAULT NULL",
-        "room_id": "TEXT DEFAULT NULL",
         "team_name": "TEXT DEFAULT NULL",
         "teammate_name": "TEXT DEFAULT NULL",
         "is_lead": "BOOLEAN DEFAULT 0",

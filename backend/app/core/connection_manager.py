@@ -1,7 +1,7 @@
 """WebSocket connection registry (domain layer).
 
 ``ConnectionManager`` owns the live ``WebSocket`` connections grouped by
-session, room, and the cross-session overview feed. It lives in ``app/core``
+session, plus the cross-session overview feed. It lives in ``app/core``
 (rather than ``app/api``) so that domain modules (``event_processor``,
 ``broadcast_service``) can depend on it without importing the transport
 layer -- this preserves the layering invariant established in ARC-011.
@@ -25,7 +25,6 @@ class ConnectionManager:
 
     def __init__(self) -> None:
         self.active_connections: dict[str, list[WebSocket]] = {}
-        self.room_connections: dict[str, list[WebSocket]] = {}
         self.overview_connections: list[WebSocket] = []
         self._lock = asyncio.Lock()
 
@@ -52,7 +51,7 @@ class ConnectionManager:
             The connections whose ``send_json`` call failed. The caller is
             responsible for pruning them from its own data structures so the
             helper stays agnostic of whether connections are grouped by
-            session, room, or stored in a flat list (QA-015).
+            session or stored in a flat list (QA-015).
         """
         failed: list[WebSocket] = []
         for connection in connections:
@@ -137,47 +136,7 @@ class ConnectionManager:
                         del self.active_connections[session_id]
 
     # ------------------------------------------------------------------
-    # Room-level WebSocket support
-    # ------------------------------------------------------------------
-
-    async def connect_room(self, websocket: WebSocket, room_id: str) -> None:
-        """Accept a WebSocket connection and register it for a room."""
-        await websocket.accept()
-        async with self._lock:
-            if room_id not in self.room_connections:
-                self.room_connections[room_id] = []
-            self.room_connections[room_id].append(websocket)
-
-    async def disconnect_room(self, websocket: WebSocket, room_id: str) -> None:
-        """Remove a WebSocket connection from a room."""
-        async with self._lock:
-            if room_id in self.room_connections:
-                if websocket in self.room_connections[room_id]:
-                    self.room_connections[room_id].remove(websocket)
-                if not self.room_connections[room_id]:
-                    del self.room_connections[room_id]
-
-    async def broadcast_room(self, message: dict[str, Any], room_id: str) -> None:
-        """Send a message to all WebSocket connections for a room."""
-        async with self._lock:
-            connections = self.room_connections.get(room_id, []).copy()
-
-        if not connections:
-            return
-
-        failed = await self._broadcast_to_connections(message, connections, label=room_id)
-        if failed:
-            async with self._lock:
-                group = self.room_connections.get(room_id)
-                if group:
-                    for conn in failed:
-                        if conn in group:
-                            group.remove(conn)
-                    if not group:
-                        del self.room_connections[room_id]
-
-    # ------------------------------------------------------------------
-    # Overview-level WebSocket support (Command Center — cross-session)
+    # Overview-level WebSocket support (cross-session, /ws/overview)
     # ------------------------------------------------------------------
 
     async def connect_overview(self, websocket: WebSocket, *, max_connections: int) -> bool:

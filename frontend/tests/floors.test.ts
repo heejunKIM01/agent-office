@@ -28,8 +28,6 @@ function session(
     updatedAt: updated,
     status,
     eventCount: 1,
-    floorId: null,
-    roomId: null,
     codingAgent: null,
   };
 }
