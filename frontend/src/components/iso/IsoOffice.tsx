@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Minus, Plus, RotateCcw } from "lucide-react";
+import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useGameStore } from "@/stores/gameStore";
+import { officePeople, type PeopleWords } from "@/systems/officePeople";
 import { createIsoView, type IsoView } from "./isoView";
 
 const ZOOM_STEP = 1.25;
@@ -11,13 +14,22 @@ const CONTROLS_BOTTOM =
   process.env.NODE_ENV === "development" ? "bottom-16" : "bottom-4";
 
 /**
- * The isometric office scene with its zoom buttons and control hint
+ * The isometric office scene with its people, zoom buttons and control hint
  * (drag to pan, scroll to zoom, double-click to reset).
  */
 export function IsoOffice(): React.ReactNode {
   const { t } = useTranslation();
+  const agentName = useCodingAgentName();
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<IsoView | null>(null);
+  const words = useMemo<PeopleWords>(
+    () => ({
+      agentName,
+      me: t("iso.me"),
+      generalType: t("iso.agentType.general"),
+    }),
+    [agentName, t],
+  );
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -29,6 +41,14 @@ export function IsoOffice(): React.ReactNode {
       viewRef.current = null;
     };
   }, []);
+
+  // Keep the people on the floor in step with the session.
+  useEffect(() => {
+    const show = (): void =>
+      viewRef.current?.setPeople(officePeople(useGameStore.getState(), words));
+    show();
+    return useGameStore.subscribe(show);
+  }, [words]);
 
   const buttonClass =
     "flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400";

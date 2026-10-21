@@ -70,6 +70,7 @@ export interface AgentAnimationState {
   activity: Activity | null; // Backend tool activity (archive / server room)
   stuck: StuckReason | null; // Failed tool / permission wait: ponder at the desk
   characterType: string | null;
+  agentType: string | null; // Subagent type it was started as, e.g. "general-purpose"
   parentSessionId: string | null;
   parentId: string | null;
 

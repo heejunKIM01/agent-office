@@ -121,6 +121,27 @@ class TestBossActivity:
         assert payload["boss"]["activity"] == "reading"
 
 
+class TestSubagentType:
+    def test_subagent_keeps_the_type_it_was_started_as(self) -> None:
+        sm = StateMachine()
+        sm.transition(
+            _event(
+                EventType.SUBAGENT_START,
+                agent_id="subagent_tu1",
+                agent_type="general-purpose",
+                task_description="Write the T-013 parts",
+            )
+        )
+        assert sm.agents["subagent_tu1"].agent_type == "general-purpose"
+        payload = sm.to_game_state("s1").model_dump(mode="json", by_alias=True)
+        assert payload["agents"][0]["agentType"] == "general-purpose"
+
+    def test_type_is_empty_when_the_producer_does_not_say(self) -> None:
+        sm = StateMachine()
+        sm.transition(_event(EventType.SUBAGENT_START, agent_id="subagent_tu2"))
+        assert sm.agents["subagent_tu2"].agent_type is None
+
+
 class TestSubagentAttribution:
     def _sm_with_linked_agent(self) -> StateMachine:
         sm = StateMachine()

@@ -196,6 +196,8 @@ const ptBR: Record<TranslationKey, string> = {
   "iso.offline": "OFFLINE",
   "iso.controlsHint":
     "Arraste para mover · Role para ampliar · Clique duplo para redefinir",
+  "iso.me": "Eu",
+  "iso.agentType.general": "Geral",
 
   // Zoom Controls
   "zoom.in": "Aumentar zoom",

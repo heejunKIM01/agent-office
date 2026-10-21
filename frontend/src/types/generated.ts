@@ -60,6 +60,7 @@ export type Currenttask = string | null;
  */
 export type StuckReason = "tool_failed" | "waiting_permission";
 export type Charactertype = string | null;
+export type Agenttype = string | null;
 export type Parentsessionid = string | null;
 export type Parentid = string | null;
 export type ProjectName = string | null;
@@ -525,6 +526,7 @@ export interface Agent {
   activity?: Activity | null;
   stuck?: StuckReason | null;
   characterType?: Charactertype;
+  agentType?: Agenttype;
   parentSessionId?: Parentsessionid;
   parentId?: Parentid;
   [k: string]: unknown;
