@@ -18,7 +18,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 from app.models.agents import (  # noqa: E402  # type: ignore[import]
     Agent,
     Boss,
-    OfficeState,
 )
 from app.models.common import (  # noqa: E402  # type: ignore[import]
     BubbleContent,
@@ -38,25 +37,16 @@ from app.models.events import (  # noqa: E402  # type: ignore[import]
     ToolEventData,
 )
 from app.models.overview import OverviewEntry, OverviewState  # noqa: E402  # type: ignore[import]
-from app.models.sessions import (  # noqa: E402  # type: ignore[import]
-    AgentLifespan,
-    BackgroundTask,
-    FileEdit,
-    GameState,
-    NewsItem,
-    Session,
-    WhiteboardData,
-)
+from app.models.sessions import GameState  # noqa: E402  # type: ignore[import]
 from pydantic.json_schema import models_json_schema  # noqa: E402
 
 # All Pydantic BaseModel subclasses to generate types for
-# (TypedDict classes like ConversationEntry and HistoryEntry are not BaseModel
+# (TypedDict classes like HistoryEntry are not BaseModel
 # subclasses so they cannot be used with models_json_schema; they are handled
 # manually in index.ts)
 MODELS = [
     Agent,
     Boss,
-    OfficeState,
     BubbleContent,
     SpeechContent,
     TodoItem,
@@ -78,12 +68,6 @@ MODELS = [
     LifecycleEventData,
     TaskEventData,
     BackgroundTaskEventData,
-    AgentLifespan,
-    BackgroundTask,
-    FileEdit,
-    NewsItem,
-    WhiteboardData,
-    Session,
     GameState,
     OverviewEntry,
     OverviewState,

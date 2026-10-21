@@ -11,6 +11,7 @@ from sqlalchemy import delete, select
 from app.core.event_processor import EventProcessor
 from app.db.database import AsyncSessionLocal
 from app.db.models import EventRecord, SessionRecord
+from app.models.agents import BossState
 from app.models.events import (
     EventDataBase,
     EventType,
@@ -138,19 +139,21 @@ async def test_db_wipe_triggers_recheck() -> None:
 
 @pytest.mark.asyncio
 async def test_recovered_start_preserves_live_state() -> None:
-    """A recovered session_start must not reset a live session's whiteboard."""
+    """A recovered session_start must not reset a live session's boss."""
     ep = EventProcessor()
     sid = "rec-test-6"
     await _wipe(sid)
     try:
         await ep.process_event(_real_start(sid))
         sm = ep.sessions[sid]
-        news_before = list(sm.whiteboard.news_items)
-        assert news_before  # the real session_start added its news item
+        # Mid-turn: a real session_start would put the boss back to idle.
+        sm.boss_state = BossState.WORKING
+        sm.turn_active = True
 
         prompt = _prompt(sid)
         await ep.process_event(ep._build_recovered_start(prompt))  # pyright: ignore[reportPrivateUsage]
-        assert sm.whiteboard.news_items == news_before  # untouched by the replay
+        assert sm.boss_state == BossState.WORKING  # untouched by the replay
+        assert sm.turn_active is True
     finally:
         await _wipe(sid)
 

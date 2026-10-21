@@ -175,7 +175,8 @@ async def test_subagent_tool_from_hook_and_transcript_is_applied_once() -> None:
     await ep._handle_polled_event(polled_pre)  # pyright: ignore[reportPrivateUsage]
     await ep._handle_polled_event(polled_post)  # pyright: ignore[reportPrivateUsage]
 
-    assert sm.tool_uses_since_compaction == 1
+    tool_history = [e["type"] for e in sm.history if e["type"].endswith("_tool_use")]
+    assert tool_history == ["pre_tool_use", "post_tool_use"]
     async with database.AsyncSessionLocal() as db:
         tool_events = (
             await db.execute(

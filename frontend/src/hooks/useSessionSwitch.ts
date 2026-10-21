@@ -47,8 +47,8 @@ export function useSessionSwitch({
     if (id === sessionId) return;
 
     // Reset state machines and store for session switch.
-    // Use resetForSessionSwitch (not resetForReplay) to keep isReplaying=false
-    // so WebSocket will reconnect to the new session.
+    // resetForSessionSwitch keeps isReplaying=false so the WebSocket will
+    // reconnect to the new session.
     agentMachineService.reset();
     useGameStore.getState().resetForSessionSwitch();
 

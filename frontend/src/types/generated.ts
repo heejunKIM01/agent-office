@@ -94,16 +94,6 @@ export type Success = boolean | null;
 export type Boss = string | null;
 export type Agent1 = string | null;
 export type BossPhone = string | null;
-export type Agentid = string;
-export type Agentname = string;
-export type Color1 = string;
-export type Starttime = string;
-export type Endtime = string | null;
-export type Taskid = string;
-export type Status = string;
-export type Summary1 = string | null;
-export type Startedat = string | null;
-export type Completedat = string | null;
 export type ProjectName1 = string | null;
 export type ProjectDir1 = string | null;
 export type WorkingDir1 = string | null;
@@ -113,7 +103,7 @@ export type AgentId1 = string | null;
 export type NativeAgentId1 = string | null;
 export type TranscriptPath1 = string | null;
 export type AgentTranscriptPath1 = string | null;
-export type Summary2 = string | null;
+export type Summary1 = string | null;
 export type Message1 = string | null;
 export type TeamName1 = string | null;
 export type TeammateName1 = string | null;
@@ -144,19 +134,6 @@ export type BossState =
   | "completing";
 export type Currenttask1 = string | null;
 export type Turnactive = boolean;
-export type Id1 = string;
-export type Role = string;
-export type Agentid1 = string;
-export type Text1 = string;
-export type Timestamp = string;
-export type Toolname = string;
-/**
- * Visual states for the elevator.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "ElevatorState".
- */
-export type ElevatorState = "closed" | "arriving" | "open" | "departing";
 /**
  * Types of events sent from Claude Code hooks.
  *
@@ -188,7 +165,7 @@ export type EventType =
   | "task_completed"
   | "teammate_idle";
 export type SessionId = string;
-export type Timestamp1 = string;
+export type Timestamp = string;
 export type ProjectName2 = string | null;
 export type ProjectDir2 = string | null;
 export type WorkingDir2 = string | null;
@@ -210,7 +187,7 @@ export type NotificationType = string | null;
 export type Message2 = string | null;
 export type ErrorType = string | null;
 export type Reason = string | null;
-export type Summary3 = string | null;
+export type Summary2 = string | null;
 export type Prompt = string | null;
 export type TranscriptPath2 = string | null;
 export type AgentTranscriptPath2 = string | null;
@@ -237,7 +214,7 @@ export type AgentId3 = string | null;
 export type NativeAgentId3 = string | null;
 export type TranscriptPath3 = string | null;
 export type AgentTranscriptPath3 = string | null;
-export type Summary4 = string | null;
+export type Summary3 = string | null;
 export type Message3 = string | null;
 export type TeamName3 = string | null;
 export type TeammateName3 = string | null;
@@ -246,28 +223,14 @@ export type InputTokens3 = number | null;
 export type OutputTokens3 = number | null;
 export type CacheReadTokens3 = number | null;
 export type CacheCreationTokens3 = number | null;
-export type Filepath = string;
-export type Editcount = number;
 export type Sessionid = string;
 export type Agents = Agent[];
-export type Deskcount = number;
-/**
- * Visual states for the elevator.
- */
-export type ElevatorState1 = "closed" | "arriving" | "open" | "departing";
-/**
- * Visual states for the boss's phone.
- */
-export type PhoneState = "idle" | "ringing" | "in_use";
-export type Contextutilization = number;
-export type Toolusessincecompaction = number;
-export type Printreport = boolean;
 export type Lastupdated = string;
-export type Id2 = string;
+export type Id1 = string;
 export type Type = string;
-export type Agentid2 = string;
-export type Summary5 = string;
-export type Timestamp2 = string;
+export type Agentid = string;
+export type Summary4 = string;
+export type Timestamp1 = string;
 export type History = HistoryEntry[];
 export type TaskId1 = string;
 export type Content = string;
@@ -289,29 +252,6 @@ export type Metadata = {
 export type Todos = TodoItem[];
 export type Arrivalqueue = string[];
 export type Departurequeue = string[];
-export type Taskid1 = string;
-export type Subject = string;
-export type Status1 = string;
-export type Assignee = string | null;
-export type Linearid = string | null;
-export type Kanbantasks = KanbanTask[];
-export type Taskcompletedcount = number;
-export type Bugfixedcount = number;
-export type Coffeebreakcount = number;
-export type Codewrittencount = number;
-export type Recenterrorcount = number;
-export type Recentsuccesscount = number;
-export type Activitylevel = number;
-export type Consecutivesuccesses = number;
-export type Lastincidenttime = string | null;
-export type Agentlifespans = AgentLifespan[];
-export type Category = string;
-export type Headline = string;
-export type Timestamp3 = string;
-export type Newsitems = NewsItem[];
-export type Coffeecups = number;
-export type Backgroundtasks = BackgroundTask[];
-export type Conversation = ConversationEntry[];
 export type Codingagent = string | null;
 export type ProjectName4 = string | null;
 export type ProjectDir4 = string | null;
@@ -322,7 +262,7 @@ export type AgentId4 = string | null;
 export type NativeAgentId4 = string | null;
 export type TranscriptPath4 = string | null;
 export type AgentTranscriptPath4 = string | null;
-export type Summary6 = string | null;
+export type Summary5 = string | null;
 export type Message4 = string | null;
 export type TeamName4 = string | null;
 export type TeammateName4 = string | null;
@@ -343,13 +283,6 @@ export type Subagentcount = number;
 export type Turnactive1 = boolean;
 export type Entries = OverviewEntry[];
 export type Lastupdated1 = string;
-/**
- * Visual states for the boss's phone.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "PhoneState".
- */
-export type PhoneState1 = "idle" | "ringing" | "in_use";
 export type ProjectName5 = string | null;
 export type ProjectDir5 = string | null;
 export type WorkingDir5 = string | null;
@@ -359,7 +292,7 @@ export type AgentId5 = string | null;
 export type NativeAgentId5 = string | null;
 export type TranscriptPath5 = string | null;
 export type AgentTranscriptPath5 = string | null;
-export type Summary7 = string | null;
+export type Summary6 = string | null;
 export type Message5 = string | null;
 export type TeamName5 = string | null;
 export type TeammateName5 = string | null;
@@ -369,12 +302,6 @@ export type OutputTokens5 = number | null;
 export type CacheReadTokens5 = number | null;
 export type CacheCreationTokens5 = number | null;
 export type Prompt1 = string | null;
-export type Id3 = string;
-export type CreatedAt = string;
-export type UpdatedAt = string;
-export type Status2 = string;
-export type EventCount = number;
-export type AgentCount = number;
 export type ProjectName6 = string | null;
 export type ProjectDir6 = string | null;
 export type WorkingDir6 = string | null;
@@ -384,7 +311,7 @@ export type AgentId6 = string | null;
 export type NativeAgentId6 = string | null;
 export type TranscriptPath6 = string | null;
 export type AgentTranscriptPath6 = string | null;
-export type Summary8 = string | null;
+export type Summary7 = string | null;
 export type Message6 = string | null;
 export type TeamName6 = string | null;
 export type TeammateName6 = string | null;
@@ -403,7 +330,7 @@ export type AgentId7 = string | null;
 export type NativeAgentId7 = string | null;
 export type TranscriptPath7 = string | null;
 export type AgentTranscriptPath7 = string | null;
-export type Summary9 = string | null;
+export type Summary8 = string | null;
 export type Message7 = string | null;
 export type TeamName7 = string | null;
 export type TeammateName7 = string | null;
@@ -423,7 +350,7 @@ export type AgentId8 = string | null;
 export type NativeAgentId8 = string | null;
 export type TranscriptPath8 = string | null;
 export type AgentTranscriptPath8 = string | null;
-export type Summary10 = string | null;
+export type Summary9 = string | null;
 export type Message8 = string | null;
 export type TeamName8 = string | null;
 export type TeammateName8 = string | null;
@@ -489,8 +416,8 @@ export interface Position {
 /**
  * Payload for SUBAGENT_START, SUBAGENT_INFO, SUBAGENT_STOP, AGENT_UPDATE, CLEANUP.
  *
- * Note: `agent_transcript_path` is inherited from EventDataBase because
- * token_tracker.update_from_event reads it on any event type. `success`
+ * Note: `agent_transcript_path` is inherited from EventDataBase, where any
+ * event type may carry it. `success`
  * appears here (and on ToolEventData) because the SUBAGENT_STOP formatter
  * reads it for the native-hook success/failure marker.
  *
@@ -540,34 +467,6 @@ export interface SpeechContent {
   [k: string]: unknown;
 }
 /**
- * Timeline entry for agent lifespan tracking.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "AgentLifespan".
- */
-export interface AgentLifespan {
-  agentId: Agentid;
-  agentName: Agentname;
-  color: Color1;
-  startTime: Starttime;
-  endTime?: Endtime;
-  [k: string]: unknown;
-}
-/**
- * Background task tracking for remote workers display.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "BackgroundTask".
- */
-export interface BackgroundTask {
-  taskId: Taskid;
-  status: Status;
-  summary?: Summary1;
-  startedAt?: Startedat;
-  completedAt?: Completedat;
-  [k: string]: unknown;
-}
-/**
  * Payload for BACKGROUND_TASK_NOTIFICATION.
  *
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
@@ -583,7 +482,7 @@ export interface BackgroundTaskEventData {
   native_agent_id?: NativeAgentId1;
   transcript_path?: TranscriptPath1;
   agent_transcript_path?: AgentTranscriptPath1;
-  summary?: Summary2;
+  summary?: Summary1;
   message?: Message1;
   team_name?: TeamName1;
   teammate_name?: TeammateName1;
@@ -618,21 +517,6 @@ export interface Position1 {
   [k: string]: number;
 }
 /**
- * A single turn in the conversation history.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "ConversationEntry".
- */
-export interface ConversationEntry {
-  id: Id1;
-  role: Role;
-  agentId: Agentid1;
-  text: Text1;
-  timestamp: Timestamp;
-  toolName?: Toolname;
-  [k: string]: unknown;
-}
-/**
  * An event from Claude Code hooks.
  *
  * Deprecated (ARC-014): the backend's ingestion route, replay, dispatch
@@ -648,7 +532,7 @@ export interface ConversationEntry {
 export interface Event {
   event_type: EventType;
   session_id: SessionId;
-  timestamp?: Timestamp1;
+  timestamp?: Timestamp;
   data: EventData;
   [k: string]: unknown;
 }
@@ -684,7 +568,7 @@ export interface EventData {
   message?: Message2;
   error_type?: ErrorType;
   reason?: Reason;
-  summary?: Summary3;
+  summary?: Summary2;
   prompt?: Prompt;
   bubble_content?: BubbleContent | null;
   speech_content?: SpeechContent | null;
@@ -709,8 +593,8 @@ export interface EventData {
 /**
  * Fields every event may carry.
  *
- * Covers routing/project context, token accounting, and team context — all
- * read by code paths that run regardless of event_type.
+ * Covers routing/project context, transcript paths, team context and token
+ * counts — producers may send any of them with any event_type.
  *
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
  * via the `definition` "EventDataBase".
@@ -725,7 +609,7 @@ export interface EventDataBase {
   native_agent_id?: NativeAgentId3;
   transcript_path?: TranscriptPath3;
   agent_transcript_path?: AgentTranscriptPath3;
-  summary?: Summary4;
+  summary?: Summary3;
   message?: Message3;
   team_name?: TeamName3;
   teammate_name?: TeammateName3;
@@ -734,17 +618,6 @@ export interface EventDataBase {
   output_tokens?: OutputTokens3;
   cache_read_tokens?: CacheReadTokens3;
   cache_creation_tokens?: CacheCreationTokens3;
-  [k: string]: unknown;
-}
-/**
- * File edit tracking for heat map display.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "FileEdit".
- */
-export interface FileEdit {
-  filePath: Filepath;
-  editCount: Editcount;
   [k: string]: unknown;
 }
 /**
@@ -757,30 +630,12 @@ export interface GameState {
   sessionId: Sessionid;
   boss: Boss1;
   agents: Agents;
-  office: OfficeState;
   lastUpdated: Lastupdated;
   history?: History;
   todos?: Todos;
   arrivalQueue?: Arrivalqueue;
   departureQueue?: Departurequeue;
-  whiteboardData?: WhiteboardData;
-  conversation?: Conversation;
   codingAgent?: Codingagent;
-  [k: string]: unknown;
-}
-/**
- * Represents the overall state of the office environment.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "OfficeState".
- */
-export interface OfficeState {
-  deskCount?: Deskcount;
-  elevatorState?: ElevatorState1;
-  phoneState?: PhoneState;
-  contextUtilization?: Contextutilization;
-  toolUsesSinceCompaction?: Toolusessincecompaction;
-  printReport?: Printreport;
   [k: string]: unknown;
 }
 /**
@@ -790,11 +645,11 @@ export interface OfficeState {
  * via the `definition` "HistoryEntry".
  */
 export interface HistoryEntry {
-  id: Id2;
+  id: Id1;
   type: Type;
-  agentId: Agentid2;
-  summary: Summary5;
-  timestamp: Timestamp2;
+  agentId: Agentid;
+  summary: Summary4;
+  timestamp: Timestamp1;
   detail: Detail;
   [k: string]: unknown;
 }
@@ -820,63 +675,6 @@ export interface TodoItem {
   [k: string]: unknown;
 }
 /**
- * Data for whiteboard display modes.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "WhiteboardData".
- */
-export interface WhiteboardData {
-  toolUsage?: Toolusage;
-  kanbanTasks?: Kanbantasks;
-  taskCompletedCount?: Taskcompletedcount;
-  bugFixedCount?: Bugfixedcount;
-  coffeeBreakCount?: Coffeebreakcount;
-  codeWrittenCount?: Codewrittencount;
-  recentErrorCount?: Recenterrorcount;
-  recentSuccessCount?: Recentsuccesscount;
-  activityLevel?: Activitylevel;
-  consecutiveSuccesses?: Consecutivesuccesses;
-  lastIncidentTime?: Lastincidenttime;
-  agentLifespans?: Agentlifespans;
-  newsItems?: Newsitems;
-  coffeeCups?: Coffeecups;
-  fileEdits?: Fileedits;
-  backgroundTasks?: Backgroundtasks;
-  [k: string]: unknown;
-}
-export interface Toolusage {
-  [k: string]: number;
-}
-/**
- * A single kanban board task.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "KanbanTask".
- */
-export interface KanbanTask {
-  taskId: Taskid1;
-  subject: Subject;
-  status: Status1;
-  assignee?: Assignee;
-  linearId?: Linearid;
-  [k: string]: unknown;
-}
-/**
- * News ticker item for the whiteboard.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "NewsItem".
- */
-export interface NewsItem {
-  category: Category;
-  headline: Headline;
-  timestamp: Timestamp3;
-  [k: string]: unknown;
-}
-export interface Fileedits {
-  [k: string]: number;
-}
-/**
  * Payload for STOP, NOTIFICATION, CONTEXT_COMPACTION, REPORTING,
  * WALKING_TO_DESK, WAITING, LEAVING, ERROR, TEAMMATE_IDLE.
  *
@@ -893,7 +691,7 @@ export interface LifecycleEventData {
   native_agent_id?: NativeAgentId4;
   transcript_path?: TranscriptPath4;
   agent_transcript_path?: AgentTranscriptPath4;
-  summary?: Summary6;
+  summary?: Summary5;
   message?: Message4;
   team_name?: TeamName4;
   teammate_name?: TeammateName4;
@@ -956,7 +754,7 @@ export interface PromptEventData {
   native_agent_id?: NativeAgentId5;
   transcript_path?: TranscriptPath5;
   agent_transcript_path?: AgentTranscriptPath5;
-  summary?: Summary7;
+  summary?: Summary6;
   message?: Message5;
   team_name?: TeamName5;
   teammate_name?: TeammateName5;
@@ -966,21 +764,6 @@ export interface PromptEventData {
   cache_read_tokens?: CacheReadTokens5;
   cache_creation_tokens?: CacheCreationTokens5;
   prompt?: Prompt1;
-  [k: string]: unknown;
-}
-/**
- * A Claude Code session summary.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "Session".
- */
-export interface Session {
-  id: Id3;
-  created_at: CreatedAt;
-  updated_at: UpdatedAt;
-  status: Status2;
-  event_count: EventCount;
-  agent_count: AgentCount;
   [k: string]: unknown;
 }
 /**
@@ -999,7 +782,7 @@ export interface SessionEventData {
   native_agent_id?: NativeAgentId6;
   transcript_path?: TranscriptPath6;
   agent_transcript_path?: AgentTranscriptPath6;
-  summary?: Summary8;
+  summary?: Summary7;
   message?: Message6;
   team_name?: TeamName6;
   teammate_name?: TeammateName6;
@@ -1027,7 +810,7 @@ export interface TaskEventData {
   native_agent_id?: NativeAgentId7;
   transcript_path?: TranscriptPath7;
   agent_transcript_path?: AgentTranscriptPath7;
-  summary?: Summary9;
+  summary?: Summary8;
   message?: Message7;
   team_name?: TeamName7;
   teammate_name?: TeammateName7;
@@ -1056,7 +839,7 @@ export interface ToolEventData {
   native_agent_id?: NativeAgentId8;
   transcript_path?: TranscriptPath8;
   agent_transcript_path?: AgentTranscriptPath8;
-  summary?: Summary10;
+  summary?: Summary9;
   message?: Message8;
   team_name?: TeamName8;
   teammate_name?: TeammateName8;

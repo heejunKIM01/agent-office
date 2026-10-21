@@ -118,22 +118,18 @@ graph LR
 | `core/state_machine.py` | Transforms CLI events into game state; manages agent lifecycle, desk assignments, animations |
 | `core/event_processor.py` | Routes incoming events to state machine, persists to DB |
 | `core/handlers/agent_handler.py` | Agent-specific event handling logic |
-| `core/handlers/conversation_handler.py` | Conversation history management |
+| `core/handlers/conversation_handler.py` | Prompt summary and the boss's reply on stop |
 | `core/handlers/session_handler.py` | Session lifecycle event handling |
-| `core/handlers/tool_handler.py` | Tool use event handling |
 | `core/summary_service.py` | AI-powered summarization for agent tasks and prompts |
-| `core/transcript_poller.py` | Polls Claude Code JSONL transcript files for token usage |
+| `core/transcript_poller.py` | Polls subagent JSONL transcript files for their tool calls |
 | `core/jsonl_parser.py` | Parses Claude Code JSONL transcript format |
 | `core/quotes.py` | Quote generation for boss completion messages |
-| `core/office_layout.py` | Desk and position constants |
 | `core/path_utils.py` | Path utilities for transcript file handling |
 | `core/task_persistence.py` | Task list persistence from TodoWrite tool |
 | `core/task_file_poller.py` | Polls external task files for todo list updates |
 | `core/beads_poller.py` | Polls beads issue tracker for task list integration |
 | `core/broadcast_service.py` | Service for broadcasting state updates to WebSocket clients |
-| `core/whiteboard_tracker.py` | Tracks whiteboard data (tool usage, agent lifespans, etc.) |
 | `core/overview.py` | Builds the cross-session overview sent on `/ws/overview` |
-| `core/token_tracker.py` | Token usage tracking from JSONL transcripts, tool-use counting, thinking-block extraction |
 | `core/handlers/team_handler.py` | Event handlers for Agent Teams (task_created, task_completed, teammate_idle) |
 | `core/constants.py` | Shared constants |
 | `core/logging.py` | Logging configuration |
@@ -143,9 +139,9 @@ graph LR
 | `api/routes/preferences.py` | User preferences API endpoints |
 | `db/database.py` | SQLite database connection and initialization |
 | `db/models.py` | SQLAlchemy database models |
-| `models/agents.py` | Agent, Boss, Office state models |
+| `models/agents.py` | Agent and Boss models |
 | `models/events.py` | Event and EventData models |
-| `models/sessions.py` | GameState and session models |
+| `models/sessions.py` | GameState and history entry models |
 | `models/common.py` | Shared models (BubbleContent, SpeechContent, TodoItem) |
 | `models/overview.py` | `OverviewEntry` / `OverviewState` for `/ws/overview` |
 | `models/ui.py` | UI-specific model re-exports |
@@ -208,7 +204,7 @@ graph LR
 - Perform minimal transformations (e.g., field renaming, timestamp formatting)
 - Never read files, parse transcripts, or do heavy processing
 
-If data needs to be extracted from JSONL transcript files (e.g., token usage, thinking blocks), that extraction belongs in the **backend**, not the hooks.
+If data needs to be extracted from JSONL transcript files (e.g., the last assistant reply, a subagent's tool calls), that extraction belongs in the **backend**, not the hooks.
 
 ## Event System
 
@@ -357,8 +353,8 @@ All game state is managed in a single Zustand store (`gameStore.ts`). Use indivi
 const isConnected = useGameStore((state) => state.isConnected);
 
 // Good - use exported selectors for consistency
-const agents = useGameStore(selectAgents);
 const boss = useGameStore(selectBoss);
+const codingAgent = useGameStore(selectCodingAgent);
 
 // Bad - returns new object reference every render
 const { boss, agents } = useGameStore((state) => ({ boss: state.boss, agents: state.agents }));
@@ -367,7 +363,7 @@ const { boss, agents } = useGameStore((state) => ({ boss: state.boss, agents: st
 **Key State Areas:**
 - Agent state (phase, bubbles)
 - Boss state (backend state, typing, task)
-- Office state (todos, context utilization)
+- Office state (event log, coding agent)
 - Queues (arrival and departure queues)
 - UI state (connection, replay)
 
@@ -404,7 +400,7 @@ stateDiagram-v2
     completing --> idle: session_end
 ```
 
-**Note:** The compaction animation (boss walking to trash can and jumping) is handled separately in the frontend via `CompactionAnimationPhase` in `gameStore.ts`, not as a boss state. See [Context Compaction Animation](#context-compaction-animation) for details.
+**Note:** Context compaction is not a boss state: `context_compaction` events only reach the event history, and the office draws no compaction animation.
 
 ## Work Acceptance Quotes
 
@@ -530,11 +526,11 @@ When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is enabled, Claude Code can run mu
 
 | Event Type | Description | State Machine Effect |
 |------------|-------------|---------------------|
-| `task_created` | A new task is assigned to the team | Creates a `KanbanTask` entry on the whiteboard |
-| `task_completed` | A team task is completed | Updates the `KanbanTask` status to `completed` |
+| `task_created` | A new task is assigned to the team | None (event history only) |
+| `task_completed` | A team task is completed | None (event history only) |
 | `teammate_idle` | A teammate session goes idle | Sets the teammate's boss state to `IDLE` |
 
-`EventProcessor` copies `team_name` and `teammate_name` from the event data onto the session's `StateMachine` and its `sessions` row; a session with a `team_name` and no `teammate_name` is the lead. A teammate's `teammate_name` becomes the assignee of the kanban tasks it creates. `backend/app/core/handlers/team_handler.py` logs the three events. `scripts/simulate_events.py teams` runs a lead and two teammates.
+`EventProcessor` copies `team_name` and `teammate_name` from the event data onto the session's `sessions` row; a session with a `team_name` and no `teammate_name` is the lead. `backend/app/core/handlers/team_handler.py` logs the three events. `scripts/simulate_events.py teams` runs a lead and two teammates.
 
 ## Configuration Reference
 

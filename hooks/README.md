@@ -163,7 +163,7 @@ Or edit the config file and restart Claude Code.
 | `PermissionRequest` | `permission_request` | Show waiting state |
 | `Notification` | `notification` | Display notification |
 | `Stop` | `stop` | Boss completing |
-| `PreCompact` | `context_compaction` | Trigger compaction animation |
+| `PreCompact` | `context_compaction` | Logged in the event history |
 | `SubagentStart` | `subagent_info` | Update agent with native ID |
 
 ### Event Data Mapping

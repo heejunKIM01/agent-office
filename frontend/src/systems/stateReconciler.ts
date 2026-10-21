@@ -21,7 +21,6 @@ import {
   getQueuePosition,
 } from "@/systems/queuePositions";
 import type { Agent, GameState, Position } from "@/types";
-import { MIN_DESK_COUNT } from "@/constants/positions";
 import { isQuietTurn } from "@/systems/officePeople";
 
 // ============================================================================
@@ -276,10 +275,6 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
 
   // ---- Update office state ----
   store.setSessionId(state.sessionId);
-  store.setDeskCount(state.office.deskCount ?? MIN_DESK_COUNT);
-  // NOTE: elevatorState is NOT synced from backend — it's controlled by the
-  // frontend's agent state machine for smooth animations.
-  store.setPhoneState(state.office.phoneState ?? "idle");
 
   // Sync queue state from backend (only on initial connection for mid-session joins).
   // After initial sync, frontend manages queue state based on agent state machine events.
@@ -289,32 +284,6 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
   ) {
     store.syncQueues(state.arrivalQueue ?? [], state.departureQueue ?? []);
     ctx.initialQueueSyncDone.current = state.sessionId;
-  }
-  // Only update context utilization if explicitly provided (not null/undefined).
-  // This prevents flip-flopping between actual values and 0.
-  if (
-    state.office.contextUtilization !== null &&
-    state.office.contextUtilization !== undefined
-  ) {
-    store.setContextUtilization(state.office.contextUtilization);
-  }
-  // Update safety sign counter.
-  if (
-    state.office.toolUsesSinceCompaction !== null &&
-    state.office.toolUsesSinceCompaction !== undefined
-  ) {
-    store.setToolUsesSinceCompaction(state.office.toolUsesSinceCompaction);
-  }
-  store.setTodos(state.todos ?? []);
-  // Sync print report flag (triggers printer animation).
-  store.setPrintReport(state.office.printReport ?? false);
-  // Sync whiteboard data for multi-mode display.
-  if (state.whiteboardData) {
-    store.setWhiteboardData(state.whiteboardData);
-  }
-  // Sync conversation history (user prompts + Claude responses).
-  if (state.conversation) {
-    store.setConversation(state.conversation);
   }
   store.setCodingAgent(state.codingAgent ?? null);
   // Fill the event log from recent history: live `event` messages only cover

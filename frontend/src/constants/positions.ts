@@ -16,10 +16,9 @@ export const PLANT_POSITION = { x: 30, y: 990 };
 // ============================================================================
 
 /**
- * Desk grid shape — keep in sync with backend `state_machine.py`
- * `StateMachine.DESKS_PER_ROW` / `StateMachine.MIN_DESK_COUNT`.
+ * Desk grid row width — keep in sync with backend `state_machine.py`
+ * `StateMachine.DESKS_PER_ROW`.
  * A shared cross-component source is intentionally out of scope; update both
  * sides together when changing the desk grid.
  */
 export const DESKS_PER_ROW = 4;
-export const MIN_DESK_COUNT = 8;

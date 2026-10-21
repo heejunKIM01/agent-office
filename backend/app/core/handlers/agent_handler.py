@@ -81,13 +81,6 @@ async def handle_subagent_start(
     if agent_id in sm.agents:
         existing = {a.name for aid, a in sm.agents.items() if aid != agent_id and a.name}
         await enrich_agent_with_summaries(sm.agents[agent_id], event.data, existing)
-        # Propagate enriched short name to the lifespan record.
-        enriched_name = sm.agents[agent_id].name
-        if enriched_name:
-            for lifespan in sm.whiteboard.agent_lifespans:
-                if lifespan.agent_id == agent_id:
-                    lifespan.agent_name = enriched_name
-                    break
 
     await broadcast_state(event.session_id, sm)
 
@@ -220,22 +213,6 @@ async def handle_subagent_stop(
         return
 
     resolved_agent_id = resolved.agent_id
-
-    # Credit subagent tool uses to the safety-sign counter. Offloaded via
-    # asyncio.to_thread because count_tool_uses_from_jsonl may read up to
-    # _MAX_TRANSCRIPT_BYTES (50 MB) synchronously — doing this inline would
-    # stall the event loop under busy-session load. Replay (sessions.py
-    # get_session_replay, which only calls sm.transition) does not run this
-    # path and so no longer credits the counter; cosmetic only, the counter
-    # is not persisted. (ARC-003)
-    if event.data.agent_transcript_path:
-        tool_count = await asyncio.to_thread(
-            sm.token_tracker.count_tool_uses_from_jsonl,
-            event.data.agent_transcript_path,
-        )
-        if tool_count > 0:
-            sm.tool_uses_since_compaction += tool_count
-            logger.debug(f"Credited {tool_count} subagent tool uses to safety counter")
 
     poller = get_transcript_poller()
     if poller:

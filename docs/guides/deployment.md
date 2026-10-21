@@ -304,7 +304,7 @@ Common causes:
 
 ### Transcript Files Not Found
 
-**Symptom:** Context utilization shows 0% despite active sessions.
+**Symptom:** The boss's speech bubble never sums up Claude's reply (only stock completion lines) despite active sessions.
 
 **Solution:** Verify path translation is configured correctly:
 

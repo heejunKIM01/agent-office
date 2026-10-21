@@ -55,9 +55,11 @@ async def test_event_after_eviction_is_applied_once() -> None:
         "user_prompt_submit",
     ]
     prompts = [
-        e["text"] for e in ep.sessions["restore-evicted"].conversation if e["role"] == "user"
+        e["summary"]
+        for e in ep.sessions["restore-evicted"].history
+        if e["type"] == "user_prompt_submit"
     ]
-    assert prompts == ["one", "two"]
+    assert prompts == ["User: one", "User: two"]
 
 
 @pytest.mark.asyncio

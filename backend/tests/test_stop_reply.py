@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from app.core.event_processor import EventProcessor
+from app.core.quotes import JOB_COMPLETION_QUOTES
 from app.models.events import AnyEvent, EventAdapter, EventType
 
 
@@ -19,7 +20,7 @@ def _event(event_type: EventType, session_id: str, **data: Any) -> AnyEvent:
 
 
 @pytest.mark.asyncio
-async def test_reply_with_stop_reaches_the_conversation_and_the_boss() -> None:
+async def test_reply_with_stop_reaches_the_boss_and_the_log() -> None:
     sid = "reply-gemini"
     ep = EventProcessor()
     await ep.process_event(_event(EventType.SESSION_START, sid, coding_agent="gemini-cli"))
@@ -29,8 +30,6 @@ async def test_reply_with_stop_reaches_the_conversation_and_the_boss() -> None:
     )
 
     sm = ep.sessions[sid]
-    replies = [entry["text"] for entry in sm.conversation if entry["role"] == "assistant"]
-    assert replies == ["Fixed the boundary. Tests pass."]
     assert sm.boss_bubble is not None
     assert sm.boss_bubble.text.startswith("Fixed the boundary")
     assert sm.history[-1]["detail"]["message"] == "Fixed the boundary. Tests pass."
@@ -43,7 +42,11 @@ async def test_stop_without_reply_or_transcript_adds_nothing() -> None:
     await ep.process_event(_event(EventType.SESSION_START, sid))
     await ep.process_event(_event(EventType.STOP, sid))
 
-    assert [e for e in ep.sessions[sid].conversation if e["role"] == "assistant"] == []
+    sm = ep.sessions[sid]
+    # No reply to sum up: the boss keeps its stock completion line.
+    assert sm.boss_bubble is not None
+    assert sm.boss_bubble.text in JOB_COMPLETION_QUOTES
+    assert "message" not in sm.history[-1]["detail"]
 
 
 @pytest.mark.asyncio

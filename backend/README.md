@@ -67,8 +67,8 @@ graph TD
 
 1. Claude Code hooks send events to `/api/v1/events`
 2. Event processor validates and routes to appropriate handlers
-3. Handlers enrich events (AI summaries, token usage) and update state machine
-4. State machine updates office state (boss, agents, context)
+3. Handlers enrich events (AI summaries, transcript replies) and update state machine
+4. State machine updates office state (boss, agents, queues, todos)
 5. Broadcast service orchestrates state changes to WebSocket manager
 6. WebSocket manager broadcasts changes to connected clients
 7. Events are persisted to SQLite for replay
@@ -250,7 +250,7 @@ The backend processes the following event types from Claude Code hooks:
 | `session_start` | New Claude Code session begins | Initialize office, boss arrives |
 | `session_end` | Session terminates | Cleanup, boss leaves |
 | `pre_tool_use` | Tool execution starting | Boss/agent shows working state |
-| `post_tool_use` | Tool execution completed | Update tool usage stats, file edits |
+| `post_tool_use` | Tool execution completed | Boss/agent finishes the tool (stuck on failure) |
 | `user_prompt_submit` | User sends a prompt | Phone rings, boss receives task |
 | `permission_request` | Tool needs user approval | Show waiting state |
 | `notification` | System notification | Display notification |
@@ -258,8 +258,8 @@ The backend processes the following event types from Claude Code hooks:
 | `subagent_start` | Task tool spawns agent | Create employee agent |
 | `subagent_info` | Native agent ID available | Link agent to Claude's ID |
 | `subagent_stop` | Task agent completes | Agent returns work, departs |
-| `context_compaction` | Context window compacted | Coffee break animation |
-| `background_task_notification` | Background task completed | Update remote workers display |
+| `context_compaction` | Context window compacted | Logged in the event history |
+| `background_task_notification` | Background task completed | Logged in the event history |
 | `agent_update` | Token-usage update emitted by transcript poller | Refresh agent token/thinking display (synthetic, not from hooks) |
 | `reporting` | Agent reporting to boss | Show reporting animation (synthetic, persisted for replay) |
 | `walking_to_desk` | Agent walking to desk | Animate agent walking to desk (synthetic, persisted for replay) |
@@ -267,8 +267,8 @@ The backend processes the following event types from Claude Code hooks:
 | `leaving` | Agent leaving office | Trigger departure animation (synthetic, persisted for replay) |
 | `cleanup` | Logical removal of agent after departure | Remove agent from office; persisted so replay removes it correctly (synthetic) |
 | `error` | Error event | Logged and persisted for replay (synthetic) |
-| `task_created` | Agent Teams: new task assigned to the team | Create `KanbanTask` entry on the whiteboard |
-| `task_completed` | Agent Teams: team task completed | Update `KanbanTask` status to `completed` |
+| `task_created` | Agent Teams: new task assigned to the team | Logged in the event history |
+| `task_completed` | Agent Teams: team task completed | Logged in the event history |
 | `teammate_idle` | Agent Teams: teammate session went idle | Set the teammate's boss state to `IDLE` |
 
 ## Project Structure
@@ -285,17 +285,15 @@ backend/
 │   ├── core/
 │   │   ├── handlers/          # Event type handlers
 │   │   │   ├── agent_handler.py       # Subagent lifecycle events
-│   │   │   ├── conversation_handler.py # User conversation events
+│   │   │   ├── conversation_handler.py # Prompt summary and the boss's reply on stop
 │   │   │   ├── session_handler.py     # Session start/end events
-│   │   │   ├── team_handler.py        # Agent Teams events (task_created/completed, teammate_idle)
-│   │   │   └── tool_handler.py        # Tool use events
+│   │   │   └── team_handler.py        # Agent Teams events (task_created/completed, teammate_idle)
 │   │   ├── beads_poller.py     # Beads issue tracker polling
 │   │   ├── broadcast_service.py   # State broadcast orchestration
 │   │   ├── constants.py       # Shared constants
 │   │   ├── event_processor.py # Event validation and processing
 │   │   ├── jsonl_parser.py    # Claude transcript parsing
 │   │   ├── logging.py         # Logging configuration
-│   │   ├── office_layout.py   # Office layout constants and zones
 │   │   ├── overview.py        # Cross-session overview for /ws/overview
 │   │   ├── path_utils.py      # File path utilities
 │   │   ├── quotes.py          # Loading screen quotes
@@ -303,9 +301,7 @@ backend/
 │   │   ├── summary_service.py # AI-powered summaries
 │   │   ├── task_file_poller.py # Claude task file monitoring
 │   │   ├── task_persistence.py # Task database persistence
-│   │   ├── token_tracker.py   # Token usage and tool-use tracking
-│   │   ├── transcript_poller.py # Token usage extraction
-│   │   └── whiteboard_tracker.py # Whiteboard state tracking
+│   │   └── transcript_poller.py # Subagent transcript tool-use polling
 │   ├── db/
 │   │   ├── database.py        # SQLAlchemy async setup
 │   │   └── models.py          # Database models
@@ -314,7 +310,7 @@ backend/
 │   │   ├── common.py          # Shared Pydantic models
 │   │   ├── events.py          # Event type models
 │   │   ├── overview.py        # Cross-session overview models
-│   │   ├── sessions.py        # Session state models
+│   │   ├── sessions.py        # GameState and history entry models
 │   │   └── ui.py              # UI-specific models
 │   ├── config.py              # Settings management
 │   └── main.py                # FastAPI application entry point

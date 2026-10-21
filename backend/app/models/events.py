@@ -162,11 +162,10 @@ class Event(BaseModel):
 # correct family class via the `event_type` discriminator on the event model.
 #
 # Field placement rules used below:
-#   - `EventDataBase` carries every field read by code paths that run for ALL
-#     event types (token_tracker.update_from_event, event_processor routing).
-#     Notably `agent_transcript_path` lives here, not in AgentEventData,
-#     because token_tracker reads it on the slow path for any event whose
-#     `transcript_path` is empty.
+#   - `EventDataBase` carries the context any event type may bring: routing
+#     fields read by event_processor for every event, transcript paths, team
+#     context and token counts. `agent_transcript_path` lives here, not in
+#     AgentEventData, so producers may send it with any event type.
 #   - Family payload classes add only fields accessed solely by that family's
 #     event types. Fields needed by two families (e.g. `thinking`, `result_*`,
 #     `tool_use_id`) appear in each family class explicitly.
@@ -178,8 +177,8 @@ class Event(BaseModel):
 class EventDataBase(BaseModel):
     """Fields every event may carry.
 
-    Covers routing/project context, token accounting, and team context — all
-    read by code paths that run regardless of event_type.
+    Covers routing/project context, transcript paths, team context and token
+    counts — producers may send any of them with any event_type.
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -199,8 +198,8 @@ class EventDataBase(BaseModel):
     # Agent identity (read across many event types).
     agent_id: str | None = None
     native_agent_id: str | None = None
-    # Transcript paths (token_tracker.update_from_event reads both for any
-    # event type on its slow path).
+    # Transcript paths (STOP reads transcript_path for the boss's reply, the
+    # subagent handlers read agent_transcript_path).
     transcript_path: str | None = None
     agent_transcript_path: str | None = None
     # Free-form text fields used across multiple families.
@@ -211,7 +210,8 @@ class EventDataBase(BaseModel):
     teammate_name: str | None = None
     # Task list override (session_handler reads for SESSION_*).
     task_list_id: str | None = None
-    # Token accounting (token_tracker.update_from_event fast path).
+    # Token counts. Accepted from producers (hooks, opencode-plugin) but not
+    # read: only the 2D office's context meter showed them.
     input_tokens: int | None = None
     output_tokens: int | None = None
     cache_read_tokens: int | None = None
@@ -245,8 +245,8 @@ class PromptEventData(EventDataBase):
 class AgentEventData(EventDataBase):
     """Payload for SUBAGENT_START, SUBAGENT_INFO, SUBAGENT_STOP, AGENT_UPDATE, CLEANUP.
 
-    Note: `agent_transcript_path` is inherited from EventDataBase because
-    token_tracker.update_from_event reads it on any event type. `success`
+    Note: `agent_transcript_path` is inherited from EventDataBase, where any
+    event type may carry it. `success`
     appears here (and on ToolEventData) because the SUBAGENT_STOP formatter
     reads it for the native-hook success/failure marker.
     """

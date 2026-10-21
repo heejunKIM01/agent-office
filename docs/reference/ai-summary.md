@@ -156,26 +156,6 @@ In 15 words or less, summarize this response:
 
 ---
 
-### 5. `detect_report_request(prompt)`
-
-Detects if the user's prompt requests a report or document to be created.
-
-**Prompt:**
-```
-Does this request ask for a report, document, or documentation to be created? Reply with ONLY 'yes' or 'no':
-{prompt}
-```
-
-**Input Truncation:** 1000 characters max
-
-**Fallback Logic:**
-- Keyword search for: report, document, documentation, readme, write up, writeup, summary report, create a doc, generate a doc, write a doc, pdf, markdown file, md file, .md, architecture, changelog, contributing, license, guide
-- Pattern matching for: "create/write/generate/update/add ... .md"
-
-**Called From:** `detect_and_set_print_report()` in `conversation_handler.py` on `STOP` events
-
----
-
 ## API Call Details
 
 ### Model Configuration

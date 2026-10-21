@@ -10,7 +10,7 @@
  * Differences from the boss:
  * - Each agent reserves a standing spot in the room (AGENT_*_SPOTS). With no
  *   free spot it keeps working at its desk.
- * - No desk duty and no compaction. Once an agent leaves its desk phase
+ * - No desk duty. Once an agent leaves its desk phase
  *   (departure), its state machine owns it again and the errand is dropped
  *   where it stands, so it walks out from the room instead of teleporting.
  * - Only stuck pondering (failed tool, permission prompt): agents have no

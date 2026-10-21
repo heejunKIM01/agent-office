@@ -1,7 +1,7 @@
 """Quick simulation scenario.
 
 A fast (~30 s) scenario that exercises the full event lifecycle:
-session start, user prompt, kanban tasks, boss tool use, permission
+session start, user prompt, team tasks, boss tool use, permission
 request, two subagents, background task notification, and session end.
 
 Designed for rapid iteration and CI smoke tests.
@@ -34,7 +34,7 @@ def run(ctx: SimulationContext) -> None:
     )
     time.sleep(0.3)
 
-    # Kanban tasks
+    # Team tasks
     tasks = [
         ("qt-01", "[PROJ-1] Fix login timeout for inactive sessions"),
         ("qt-02", "[PROJ-2] Add rate limiting to /api/v1/auth"),
@@ -85,7 +85,7 @@ def run(ctx: SimulationContext) -> None:
         {"tool_name": "Bash", "tool_input": {"command": "iptables -L"}, "agent_id": "main"},
     )
 
-    # First kanban completion
+    # First team task completion
     ctx.send_event(
         "task_completed",
         {"id": "qt-01", "content": "[PROJ-1] Fix login timeout for inactive sessions"},
@@ -135,7 +135,7 @@ def run(ctx: SimulationContext) -> None:
             },
         )
 
-    # Remaining kanban completions
+    # Remaining team task completions
     ctx.send_event(
         "task_completed",
         {"id": "qt-02", "content": "[PROJ-2] Add rate limiting to /api/v1/auth"},

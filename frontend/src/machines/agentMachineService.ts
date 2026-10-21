@@ -235,13 +235,12 @@ class AgentMachineService implements AnimationListener {
 
   /**
    * Notify that the boss is available for the next agent in queue.
-   * Blocked if boss is doing compaction animation, is away from the desk on
-   * an errand, or if ready position is occupied.
+   * Blocked if the boss is away from the desk on an errand, or if ready
+   * position is occupied.
    */
   notifyBossAvailable(): void {
     const store = useGameStore.getState();
 
-    if (store.compactionPhase !== "idle") return;
     if (store.bossErrand.phase !== "seated") return;
 
     if (store.arrivalQueue.length > 0) {
@@ -576,14 +575,7 @@ class AgentMachineService implements AnimationListener {
     const hasPersistentBubble = store.boss.bubble.content?.persistent === true;
 
     if (isCompleting || hasPersistentBubble) {
-      // QA-011: gate the diagnostic log behind debug mode so production paths
-      // stay quiet. Message text unchanged. Matches the `debugMode` gating
-      // pattern used in CommandBar and elsewhere.
-      if (useGameStore.getState().debugMode) {
-        console.log(
-          `[AgentMachineService] Skipping boss bubble "${text.slice(0, 30)}..." - isCompleting=${isCompleting}, hasPersistentBubble=${hasPersistentBubble}`,
-        );
-      }
+      // The boss keeps its completion / reply bubble; skip this one.
       // Unblock any agent waiting for BUBBLE_DISPLAYED in the conversing
       // sub-state. Without this, the agent gets stuck at A0 forever (and
       // every other agent behind it in the queue stays standing too).
@@ -596,11 +588,7 @@ class AgentMachineService implements AnimationListener {
       return;
     }
 
-    store.enqueueBubble(
-      "boss",
-      { type: "speech", text, icon },
-      { immediate: true },
-    );
+    store.enqueueBubble("boss", { type: "speech", text, icon });
   }
 
   private handleShowAgentBubble(
@@ -630,13 +618,11 @@ class AgentMachineService implements AnimationListener {
 
   private handleOpenElevator(): void {
     this.elevatorUsageCount++;
-    useGameStore.getState().setElevatorState("open");
   }
 
   private handleCloseElevator(): void {
     this.elevatorUsageCount = Math.max(0, this.elevatorUsageCount - 1);
     if (this.elevatorUsageCount === 0) {
-      useGameStore.getState().setElevatorState("closed");
       this.notifyElevatorDoorClosing();
     }
   }

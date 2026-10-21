@@ -1,9 +1,8 @@
-"""Tests for Phase 4 model additions: team fields, kanban, character types."""
+"""Tests for Phase 4 model additions: team fields and character types."""
 
 from app.db.models import SessionRecord
 from app.models.agents import Agent, AgentState
 from app.models.events import EventData, EventType
-from app.models.sessions import KanbanTask, WhiteboardData
 
 
 class TestNewEventTypes:
@@ -69,42 +68,6 @@ class TestAgentCharacterTypeFields:
         assert a.character_type is None
         assert a.parent_session_id is None
         assert a.parent_id is None
-
-
-class TestKanbanTask:
-    def test_kanban_task_required_fields(self) -> None:
-        t = KanbanTask(task_id="t1", subject="Fix bug", status="pending")
-        assert t.task_id == "t1"
-        assert t.subject == "Fix bug"
-        assert t.status == "pending"
-
-    def test_kanban_task_optional_fields(self) -> None:
-        t = KanbanTask(
-            task_id="t2",
-            subject="[REC-42] Add auth",
-            status="in_progress",
-            assignee="implementer",
-            linear_id="REC-42",
-        )
-        assert t.assignee == "implementer"
-        assert t.linear_id == "REC-42"
-
-    def test_kanban_task_defaults(self) -> None:
-        t = KanbanTask(task_id="t3", subject="Do stuff", status="completed")
-        assert t.assignee is None
-        assert t.linear_id is None
-
-
-class TestWhiteboardDataKanban:
-    def test_kanban_tasks_field_defaults_empty(self) -> None:
-        w = WhiteboardData()
-        assert w.kanban_tasks == []
-
-    def test_kanban_tasks_accepts_list(self) -> None:
-        tasks = [KanbanTask(task_id="t1", subject="Work", status="pending")]
-        w = WhiteboardData(kanban_tasks=tasks)
-        assert len(w.kanban_tasks) == 1
-        assert w.kanban_tasks[0].task_id == "t1"
 
 
 class TestSessionRecordTeamColumns:

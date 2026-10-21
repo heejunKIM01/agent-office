@@ -15,7 +15,6 @@ import type {
   AgentState as BackendAgentState,
   WebSocketMessage,
   EventDetail,
-  GameState as BackendGameState,
 } from "@/types";
 
 /**
@@ -94,15 +93,6 @@ export interface AgentAnimationState {
 }
 
 /**
- * Compaction animation phases for the boss walking to and jumping on trash can.
- */
-export type CompactionAnimationPhase =
-  | "idle" // No animation
-  | "walking_to_trash" // Boss walking to trash can
-  | "jumping" // Boss jumping on trash can
-  | "walking_back"; // Boss returning to desk
-
-/**
  * Boss animation state.
  */
 export interface BossAnimationState {
@@ -170,14 +160,6 @@ export type EventLogEntry = Omit<
   NonNullable<WebSocketMessage["event"]>,
   "timestamp"
 > & { timestamp: Date; detail?: EventDetail };
-
-/**
- * Replay frame for event replay.
- */
-export interface ReplayFrame {
-  event: NonNullable<WebSocketMessage["event"]>;
-  state: BackendGameState;
-}
 
 /**
  * One agent's position/path delta for a single animation tick (ARC-006).

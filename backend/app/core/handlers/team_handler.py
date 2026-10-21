@@ -2,8 +2,8 @@
 
 These events are fired by Claude Code Agent Teams when
 ``CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`` is enabled.  The state machine
-transitions (kanban updates, boss idle) are handled in ``state_machine.py``;
-this module only logs them.
+handles ``teammate_idle`` (boss idle) in ``state_machine.py``; the task events
+only reach the event log. This module only logs them.
 """
 
 import logging
@@ -17,8 +17,7 @@ logger = logging.getLogger(__name__)
 async def handle_task_created(sm: StateMachine, event: TaskEvent) -> None:
     """Handle a ``task_created`` team event.
 
-    The state machine has already created a ``KanbanTask`` entry via
-    ``StateMachine.transition()``.  This handler logs the creation.
+    The event is recorded in the session history. This handler logs it.
 
     Args:
         sm: The session's state machine (already transitioned).
@@ -32,8 +31,7 @@ async def handle_task_created(sm: StateMachine, event: TaskEvent) -> None:
 async def handle_task_completed(sm: StateMachine, event: TaskEvent) -> None:
     """Handle a ``task_completed`` team event.
 
-    The state machine has already updated the kanban task status via
-    ``StateMachine.transition()``.  This handler logs the completion.
+    The event is recorded in the session history. This handler logs it.
 
     Args:
         sm: The session's state machine (already transitioned).

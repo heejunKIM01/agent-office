@@ -22,7 +22,6 @@ from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-from app.config import get_settings
 from app.core.activity import tool_subject
 from app.core.beads_poller import get_beads_poller, has_beads, init_beads_poller
 from app.core.broadcast_service import (
@@ -37,7 +36,6 @@ from app.core.handlers import (
     enrich_agent_from_transcript,
     ensure_task_poller_running,
     handle_agent_update,
-    handle_pre_tool_use,
     handle_session_end,
     handle_session_start,
     handle_stop,
@@ -49,7 +47,6 @@ from app.core.handlers import (
     handle_teammate_idle,
     handle_user_prompt_submit,
 )
-from app.core.jsonl_parser import get_last_assistant_response
 from app.core.state_machine import StateMachine
 from app.core.task_file_poller import init_task_file_poller
 from app.core.task_persistence import load_tasks, save_tasks
@@ -73,7 +70,7 @@ from app.models.events import (
     ToolEvent,
 )
 from app.models.overview import OverviewState
-from app.models.sessions import ConversationEntry, GameState, HistoryEntry
+from app.models.sessions import GameState, HistoryEntry
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +78,7 @@ logger = logging.getLogger(__name__)
 _DISPLAY_NAME_STRIP_PREFIXES = ("repos", "projects", "src", "work", "code", "github")
 
 # Maximum number of history entries retained on a StateMachine. Keep in sync
-# with backend StateMachine.MAX_CONVERSATION_ENTRIES (the conversation-entry
-# cap) and frontend gameStore MAX_EVENT_LOG (the event-log cap) — those are
-# already named; this names the third `sm.history` cap site.
+# with the frontend event-log cap (MAX_EVENT_LOG in stores/slices/officeSlice.ts).
 MAX_HISTORY_ENTRIES = 500
 # Tool events remembered per session for duplicate detection; far more than
 # can overlap between the hook copy and the transcript-poller copy.
@@ -240,7 +235,6 @@ class EventProcessor:
             EventType.SUBAGENT_STOP: self._enrich_subagent_stop,
             EventType.STOP: self._enrich_stop,
             EventType.USER_PROMPT_SUBMIT: self._enrich_user_prompt_submit,
-            EventType.PRE_TOOL_USE: self._enrich_pre_tool_use,
             EventType.TASK_CREATED: self._enrich_task_created,
             EventType.TASK_COMPLETED: self._enrich_task_completed,
             EventType.TEAMMATE_IDLE: self._enrich_teammate_idle,
@@ -493,17 +487,13 @@ class EventProcessor:
 
     async def _enrich_stop(self, sm: StateMachine, event: AnyEvent, agent_id: str) -> None:
         assert isinstance(event, LifecycleEvent), "dispatch routes STOP only"
-        await handle_stop(sm, event, agent_id)
+        await handle_stop(sm, event)
 
     async def _enrich_user_prompt_submit(
         self, sm: StateMachine, event: AnyEvent, agent_id: str
     ) -> None:
         assert isinstance(event, PromptEvent), "dispatch routes USER_PROMPT_SUBMIT only"
-        await handle_user_prompt_submit(sm, event, agent_id)
-
-    async def _enrich_pre_tool_use(self, sm: StateMachine, event: AnyEvent, agent_id: str) -> None:
-        assert isinstance(event, ToolEvent), "dispatch routes PRE_TOOL_USE only"
-        await handle_pre_tool_use(sm, event, agent_id, self._get_event_summary(event))
+        await handle_user_prompt_submit(sm, event)
 
     async def _enrich_task_created(self, sm: StateMachine, event: AnyEvent, agent_id: str) -> None:
         assert isinstance(event, TaskEvent), "dispatch routes TASK_CREATED only"
@@ -591,13 +581,6 @@ class EventProcessor:
         # event row was missing). Fresh/unknown sessions transition normally.
         if not (event.data.source == "recovered" and sm_preexisting):
             sm.transition(event)
-
-        # Sync team fields from event data.
-        if event.data.team_name is not None:
-            sm.team_name = event.data.team_name
-        if event.data.teammate_name is not None:
-            sm.teammate_name = event.data.teammate_name
-            sm.is_lead = False
 
         agent_id = (
             sm.tool_character_id(event)
@@ -790,7 +773,7 @@ class EventProcessor:
         """Reconstruct a StateMachine from persisted DB events.
 
         Replays all events for the session through a fresh StateMachine,
-        rebuilding agent state, conversation history, and task lists. Performs
+        rebuilding agent state, the event history, and task lists. Performs
         only async DB I/O against a locally-built machine, so it is safe to call
         without holding ``_sessions_lock``; the caller inserts the result under
         the lock. Returns ``None`` when the session has no persisted events.
@@ -849,59 +832,9 @@ class EventProcessor:
                     }
                     sm.history.append(history_entry)
 
-                    # Rebuild conversation from stored events. Each branch
-                    # narrows evt to its family variant so family-specific
-                    # fields (prompt, thinking, tool_name, ...) typecheck.
-                    if evt.event_type == EventType.USER_PROMPT_SUBMIT:
-                        assert isinstance(evt, PromptEvent)
-                        if evt.data.prompt and "<task-notification>" not in evt.data.prompt:
-                            conv_entry: ConversationEntry = {
-                                "id": str(evt.timestamp.timestamp()),
-                                "role": "user",
-                                "agentId": agent_id,
-                                "text": evt.data.prompt,
-                                "timestamp": evt.timestamp.isoformat(),
-                            }
-                            sm.append_capped(conv_entry)
-                    elif evt.event_type == EventType.PRE_TOOL_USE:
-                        assert isinstance(evt, ToolEvent)
-                        if evt.data.thinking:
-                            thinking_entry: ConversationEntry = {
-                                "id": f"{evt.timestamp.timestamp()}_thinking",
-                                "role": "thinking",
-                                "agentId": agent_id,
-                                "text": evt.data.thinking,
-                                "timestamp": evt.timestamp.isoformat(),
-                            }
-                            sm.append_capped(thinking_entry)
-                        if evt.data.tool_name:
-                            tool_entry: ConversationEntry = {
-                                "id": f"{evt.timestamp.timestamp()}_tool",
-                                "role": "tool",
-                                "agentId": agent_id,
-                                "text": self._get_event_summary(evt),
-                                "timestamp": evt.timestamp.isoformat(),
-                                "toolName": evt.data.tool_name,
-                            }
-                            sm.append_capped(tool_entry)
-                    elif evt.event_type == EventType.STOP:
-                        assert isinstance(evt, LifecycleEvent)
-                        if evt.data.transcript_path:
-                            settings = get_settings()
-                            translated_path = settings.translate_path(evt.data.transcript_path)
-                            response = await asyncio.to_thread(
-                                get_last_assistant_response, translated_path
-                            )
-                            if response:
-                                assistant_entry: ConversationEntry = {
-                                    "id": str(evt.timestamp.timestamp()),
-                                    "role": "assistant",
-                                    "agentId": agent_id,
-                                    "text": response,
-                                    "timestamp": evt.timestamp.isoformat(),
-                                }
-                                sm.append_capped(assistant_entry)
-                    elif evt.event_type == EventType.SUBAGENT_INFO:
+                    # Link and enrich agents whose SUBAGENT_INFO arrived
+                    # after their start (or with no start at all).
+                    if evt.event_type == EventType.SUBAGENT_INFO:
                         assert isinstance(evt, AgentEvent)
                         if evt.data.agent_transcript_path:
                             native_agent_id = evt.data.native_agent_id

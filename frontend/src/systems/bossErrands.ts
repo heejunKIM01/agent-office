@@ -12,9 +12,7 @@
  * 4. With nothing to do the boss walks back to the desk and sits down.
  * 5. Desk duty wins: agents queued for the boss (or a handoff in progress)
  *    call the boss back to the desk.
- * 6. Compaction owns the boss: an errand in progress is dropped and the
- *    compaction animation starts from the desk.
- * 7. A stuck boss (failed tool, permission prompt) or one thinking long
+ * 6. A stuck boss (failed tool, permission prompt) or one thinking long
  *    mid-turn ponders where it is (spec R3) and does not leave until it
  *    moves on. The one walk it still takes is to the room of the tool it is
  *    waiting on: a permission prompt arrives the moment the tool starts, and
@@ -58,8 +56,6 @@ export interface BossErrandInput {
   activity: Activity | null;
   /** Agents are queued for the boss or a handoff is in progress */
   deskDuty: boolean;
-  /** The compaction animation owns the boss */
-  isCompacting: boolean;
   /** Backend marks the boss stuck (failed tool, permission prompt) */
   isStuck: boolean;
   /** Start of the current quiet spell mid-turn (same clock as `now`) */
@@ -137,13 +133,6 @@ export function stepBossErrand(
   deskPosition: Position,
   findPath: ErrandPathFinder,
 ): BossErrandStep {
-  if (input.isCompacting) {
-    return {
-      state: state.phase === "seated" ? state : initialBossErrandState,
-      sat: false,
-    };
-  }
-
   const isPondering =
     !input.deskDuty &&
     (input.isStuck ||

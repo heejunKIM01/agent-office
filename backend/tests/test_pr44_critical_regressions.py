@@ -3,7 +3,6 @@
 Each test pins down a specific bug that was fixed during the full-system QA
 sweep so it cannot silently regress:
 
-* ``context_utilization`` division-by-zero when the context window is 0.
 * ``TranscriptPoller.stop_polling`` deadlock (lock held while awaiting the
   cancelled poll task).
 * ``EventProcessor`` session-creation race (concurrent events for a brand-new
@@ -23,7 +22,6 @@ import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.event_processor import EventProcessor
-from app.core.token_tracker import TokenTracker
 from app.core.transcript_poller import TranscriptPoller
 from app.db.database import AsyncSessionLocal, Base, override_engine
 from app.db.models import EventRecord, SessionRecord
@@ -47,33 +45,6 @@ def ensure_test_db() -> None:
 
     asyncio.run(_setup())
     override_engine(engine)
-
-
-# ---------------------------------------------------------------------------
-# context_utilization division-by-zero
-# ---------------------------------------------------------------------------
-
-
-def test_context_utilization_handles_zero_max_context() -> None:
-    """A 0-token context window must yield 0.0, not raise ZeroDivisionError."""
-    tracker = TokenTracker(
-        total_input_tokens=100,
-        total_output_tokens=50,
-        max_context_tokens=0,
-    )
-    # Regression: previously ``total_tokens / max_context_tokens`` raised.
-    assert tracker.context_utilization == 0.0
-
-
-def test_context_utilization_normal_window() -> None:
-    """Sanity check that the guard did not break the happy path."""
-    tracker = TokenTracker(
-        total_input_tokens=50_000,
-        total_output_tokens=50_000,
-        max_context_tokens=200_000,
-    )
-    # 100_000 / 200_000 is exactly representable in float.
-    assert tracker.context_utilization == 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -118,7 +89,7 @@ async def test_concurrent_events_share_one_state_machine() -> None:
 
     Before the ``_sessions_lock`` guard, two events racing on a brand-new
     session could each create a fresh StateMachine, the second clobbering the
-    first and discarding the first event's conversation entry.
+    first and discarding the first event's history entry.
 
     Persistence is stubbed so the restore path stays empty — this isolates the
     in-memory create-under-lock logic from DB replay, which is what the lock
@@ -146,7 +117,8 @@ async def test_concurrent_events_share_one_state_machine() -> None:
     assert sm is not None
     # Every prompt must be recorded on the single shared StateMachine — none
     # lost to a clobbered/recreated instance.
-    assert len(sm.conversation) == count
+    prompts = [e for e in sm.history if e["type"] == "user_prompt_submit"]
+    assert len(prompts) == count
 
 
 # ---------------------------------------------------------------------------

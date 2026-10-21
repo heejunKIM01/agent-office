@@ -191,8 +191,8 @@ class TestSimulationEventTypes:
         )
         post_event(sid, "session_end")
 
-    def test_kanban_task_events(self) -> None:
-        sid = f"evt-kanban-{uuid4()}"
+    def test_team_task_events(self) -> None:
+        sid = f"evt-team-task-{uuid4()}"
         post_event(sid, "session_start")
         post_event(sid, "task_created", {"id": "task-01", "content": "[PROJ-1] Fix login timeout"})
         post_event(sid, "task_created", {"id": "task-02", "content": "[PROJ-2] Add rate limiting"})
@@ -265,7 +265,7 @@ class TestSimulationQuickScenario:
             {"prompt": "Fix login timeout bug and generate a report."},
         )
 
-        # Kanban tasks
+        # Team tasks
         for task_id, subject in [
             ("qt-01", "[PROJ-1] Fix login timeout for inactive sessions"),
             ("qt-02", "[PROJ-2] Add rate limiting to /api/v1/auth"),
@@ -324,7 +324,7 @@ class TestSimulationQuickScenario:
             {"tool_name": "Bash", "tool_input": {"command": "iptables -L"}, "agent_id": "main"},
         )
 
-        # Kanban completion
+        # Team task completion
         post_event(
             sid,
             "task_completed",
@@ -378,7 +378,7 @@ class TestSimulationQuickScenario:
                 },
             )
 
-        # Remaining kanban completions
+        # Remaining team task completions
         post_event(
             sid,
             "task_completed",
@@ -608,77 +608,6 @@ class TestSimulationStateVerification:
         contents = {t["content"] for t in todos}
         assert "Review PRD.md" in contents
 
-    def test_context_utilization_reflects_token_counts(self) -> None:
-        sid = f"state-ctx-{uuid4()}"
-        post_event(sid, "session_start")
-        post_event(
-            sid,
-            "pre_tool_use",
-            {
-                "tool_name": "Read",
-                "tool_input": {"file_path": "src/main.py"},
-                "agent_id": "main",
-                "input_tokens": 100_000,
-                "output_tokens": 50_000,
-            },
-        )
-        state = get_replay_state(sid)
-        # contextUtilization lives inside the nested "office" object
-        utilization = state.get("office", {}).get("contextUtilization", 0.0)
-        assert utilization > 0.0, f"Expected contextUtilization > 0, got {utilization}"
-
-    def test_compaction_followed_by_reduced_tokens(self) -> None:
-        """After compaction, subsequent events with reduced token counts are accepted.
-
-        The context_compaction event records the pre-compaction token snapshot.
-        The simulation then resumes posting events with ~30% of prior token counts,
-        which naturally lowers the utilization in subsequent states.
-        """
-        sid = f"state-compact-{uuid4()}"
-        post_event(sid, "session_start")
-
-        # High usage before compaction
-        post_event(
-            sid,
-            "pre_tool_use",
-            {
-                "tool_name": "Read",
-                "tool_input": {"file_path": "src/main.py"},
-                "agent_id": "main",
-                "input_tokens": 170_000,
-                "output_tokens": 0,
-            },
-        )
-        pre_compaction = get_replay_state(sid).get("office", {}).get("contextUtilization", 0.0)
-        assert pre_compaction > 0.8, (
-            f"Expected high utilization before compaction, got {pre_compaction}"
-        )
-
-        # Compaction event
-        post_event(
-            sid,
-            "context_compaction",
-            {"input_tokens": 170_000, "output_tokens": 0},
-        )
-
-        # Post-compaction: simulation resumes with reduced tokens (~30% retained)
-        post_event(
-            sid,
-            "pre_tool_use",
-            {
-                "tool_name": "Read",
-                "tool_input": {"file_path": "src/main.py"},
-                "agent_id": "main",
-                "input_tokens": 51_000,  # 30% of 170_000
-                "output_tokens": 0,
-            },
-        )
-        post_compaction = get_replay_state(sid).get("office", {}).get("contextUtilization", 1.0)
-        assert post_compaction < pre_compaction, (
-            f"Expected utilization to drop after compaction + reduced tokens "
-            f"({pre_compaction:.2f} → {post_compaction:.2f})"
-        )
-
     def test_multiple_subagents_all_appear(self) -> None:
         sid = f"state-multi-{uuid4()}"
         post_event(sid, "session_start")
@@ -732,33 +661,32 @@ class TestReplayPagination:
     the StateMachine's prefix — the state snapshot at entry N must reflect
     every prior event, not just the windowed slice.
 
-    The full GameState dump carries volatile timestamps (``lastUpdated``,
-    ``newsItems[].timestamp`` stamped by ``datetime.now()`` during
-    reconstruction), so cross-request state equality is not stable. Instead we
-    assert event identity (windowing) and conversation/history length (proof
-    the SM transitioned through the full prefix — a broken SQL-level offset
-    would leave the conversation shorter at the first paginated entry).
+    The full GameState dump carries a volatile ``lastUpdated`` stamped by
+    ``datetime.now()`` during reconstruction, so cross-request state equality
+    is not stable. Instead we assert event identity (windowing) and the
+    subagents in the office (proof the SM transitioned through the full
+    prefix — a broken SQL-level offset would leave fewer subagents at the
+    first paginated entry).
     """
 
-    def _seed(self, prompt_count: int) -> str:
+    def _seed(self, agent_count: int) -> str:
         sid = f"replay-page-{uuid4()}"
         post_event(sid, "session_start", {"project_name": "ReplayTest"})
-        for i in range(prompt_count):
-            post_event(sid, "user_prompt_submit", {"prompt": f"prompt {i}"})
+        for i in range(agent_count):
+            post_event(sid, "subagent_start", {"agent_id": f"agent_{i}"})
         return sid
 
     @staticmethod
-    def _prefix_proof(entry: dict[str, Any]) -> tuple[int, int]:
-        """Return (conversation length, history length) — deterministic
-        indicators of how many events the StateMachine has transitioned through."""
-        state = entry["state"]
-        return (len(state.get("conversation", [])), len(state.get("history", [])))
+    def _prefix_proof(entry: dict[str, Any]) -> list[str]:
+        """Return the subagent ids in the office — a deterministic indicator of
+        how many events the StateMachine has transitioned through."""
+        return [agent["id"] for agent in entry["state"].get("agents", [])]
 
     def test_replay_without_pagination_returns_all(self) -> None:
         sid = self._seed(8)
         resp = client.get(f"/api/v1/sessions/{sid}/replay")
         assert resp.status_code == 200
-        # session_start + 8 prompts = 9 entries.
+        # session_start + 8 subagents = 9 entries.
         assert len(resp.json()) == 9
 
     def test_replay_offset_skips_first_n(self) -> None:
@@ -769,8 +697,8 @@ class TestReplayPagination:
         for i, entry in enumerate(paged):
             # Event identity matches the corresponding full entry (windowing).
             assert entry["event"] == full[5 + i]["event"]
-            # Conversation/history length matches — proving the SM replayed
-            # the full prefix rather than starting from the offset.
+            # The subagents match — proving the SM replayed the full prefix
+            # rather than starting from the offset.
             assert self._prefix_proof(entry) == self._prefix_proof(full[5 + i])
 
     def test_replay_limit_caps_response(self) -> None:

@@ -12,11 +12,7 @@ import type { BubbleContent } from "@/types";
 import { createEmptyBubbleState } from "./shared";
 
 export type BubbleSlice = {
-  enqueueBubble: (
-    entityId: string,
-    content: BubbleContent,
-    options?: { immediate?: boolean },
-  ) => void;
+  enqueueBubble: (entityId: string, content: BubbleContent) => void;
   advanceBubble: (entityId: string) => void;
   clearBubbles: (entityId: string) => void;
   getCurrentBubble: (entityId: string) => BubbleContent | null;
@@ -28,24 +24,15 @@ export const createBubbleSlice: StateCreator<GameStore, [], [], BubbleSlice> = (
   set,
   get,
 ) => ({
-  enqueueBubble: (entityId, content, options) =>
+  enqueueBubble: (entityId, content) =>
     set((state) => {
       const now = Date.now();
 
       if (entityId === "boss") {
         const bossBubble = state.boss.bubble;
-        // Queue bubbles instead of displaying immediately in these cases:
-        // 1. During compaction (boss is jumping on trash) - unless immediate flag
-        // 2. There's already a bubble displaying
-        // The immediate flag is used for conversation bubbles that need to
-        // proceed normally to avoid blocking the agent state machine.
-        const isCompacting = state.compactionPhase !== "idle";
-        const shouldQueueForCompaction = isCompacting && !options?.immediate;
-        const shouldQueue = shouldQueueForCompaction || bossBubble.content;
-
-        if (!shouldQueue) {
-          // No current bubble and not compacting, display immediately
-          // IMPORTANT: Preserve any existing queued bubbles (e.g., from compaction)
+        if (!bossBubble.content) {
+          // No current bubble, display immediately
+          // IMPORTANT: Preserve any existing queued bubbles
           return {
             boss: {
               ...state.boss,
@@ -57,7 +44,7 @@ export const createBubbleSlice: StateCreator<GameStore, [], [], BubbleSlice> = (
             },
           };
         }
-        // Queue it (compacting or already has a bubble displaying)
+        // Queue it (a bubble is already displaying)
         return {
           boss: {
             ...state.boss,

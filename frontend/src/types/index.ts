@@ -26,20 +26,8 @@ export type {
   SpeechContent,
   TodoStatus,
   TodoItem,
-  // Office state
-  OfficeState,
-  ElevatorState,
-  PhoneState,
-  // Sessions / whiteboard
-  AgentLifespan,
-  BackgroundTask,
-  FileEdit,
-  KanbanTask,
-  NewsItem,
-  WhiteboardData,
+  // Sessions
   GameState,
-  Session,
-  ConversationEntry,
   HistoryEntry,
   // Events (backend models)
   EventType,
@@ -68,24 +56,6 @@ export interface Position {
   y: number;
   [k: string]: number;
 }
-
-/**
- * Whiteboard display mode index (0–11).
- * Pure frontend concept — the backend has no equivalent.
- */
-export type WhiteboardMode =
-  | 0 // Todo List — hotkey T
-  | 1 // Remote Workers (background tasks) — hotkey B
-  | 2 // Tool Pizza
-  | 3 // Org Chart
-  | 4 // Stonks
-  | 5 // Weather
-  | 6 // Safety Board
-  | 7 // Timeline
-  | 8 // News Ticker
-  | 9 // Coffee
-  | 10 // Heat Map
-  | 11; // Kanban Board — hotkey K
 
 /**
  * Shape of the optional event detail payload carried in WebSocket events.

@@ -68,23 +68,6 @@ describe("addAgent", () => {
     // currentTask follows the backend `?? null` coercion.
     expect(agent?.currentTask).toBeNull();
   });
-
-  it("grows deskCount to the next multiple of 4 that fits all agents", () => {
-    addAgent("A");
-    // deskCount starts at 8; one agent stays within the first row of 4, but
-    // the formula is ceil((size + 1) / 4) * 4, so 1 agent → 8.
-    expect(useGameStore.getState().deskCount).toBe(8);
-
-    addAgent("B");
-    addAgent("C");
-    addAgent("D");
-    addAgent("E");
-    addAgent("F");
-    addAgent("G");
-    addAgent("H");
-    // 8 agents → ceil((8+1)/4)*4 = ceil(2.25)*4 = 12.
-    expect(useGameStore.getState().deskCount).toBe(12);
-  });
 });
 
 describe("removeAgent", () => {
@@ -252,7 +235,7 @@ describe("syncQueues", () => {
  * branch. Each test below exercises both.
  */
 describe("enqueueBubble — boss branch", () => {
-  it("displays immediately when no bubble is current and not compacting", () => {
+  it("displays immediately when no bubble is current", () => {
     useGameStore.getState().enqueueBubble("boss", BUBBLE);
 
     const boss = useGameStore.getState().boss;
@@ -272,39 +255,26 @@ describe("enqueueBubble — boss branch", () => {
     expect(boss.bubble.queue).toEqual([BUBBLE_B]);
   });
 
-  it("queues (does not display) during compactionPhase !== 'idle'", () => {
-    useGameStore.getState().setCompactionPhase("jumping");
-    useGameStore.getState().enqueueBubble("boss", BUBBLE);
-
-    const boss = useGameStore.getState().boss;
-    expect(boss.bubble.content).toBeNull();
-    expect(boss.bubble.queue).toEqual([BUBBLE]);
-  });
-
-  it("displays during compaction when given { immediate: true }", () => {
-    useGameStore.getState().setCompactionPhase("jumping");
-    useGameStore.getState().enqueueBubble("boss", BUBBLE, { immediate: true });
-
-    expect(useGameStore.getState().boss.bubble.content).toEqual(BUBBLE);
-  });
-
   it("preserves already-queued bubbles when displaying a new one", () => {
-    // Queue two bubbles during compaction so the queue fills.
-    useGameStore.getState().setCompactionPhase("jumping");
-    useGameStore.getState().enqueueBubble("boss", BUBBLE);
-    useGameStore.getState().enqueueBubble("boss", BUBBLE_B);
-
-    // Compaction ends; the next bubble (with immediate) displays while the
-    // previously-queued pair must survive in the queue.
-    useGameStore.getState().setCompactionPhase("idle");
-    const immediateC: BubbleContent = { type: "speech", text: "now" };
-    useGameStore.getState().enqueueBubble("boss", immediateC, {
-      immediate: true,
+    // Nothing on display, but two bubbles still wait in the queue.
+    const { boss } = useGameStore.getState();
+    useGameStore.setState({
+      boss: {
+        ...boss,
+        bubble: {
+          content: null,
+          displayStartTime: null,
+          queue: [BUBBLE, BUBBLE_B],
+        },
+      },
     });
 
-    const boss = useGameStore.getState().boss;
-    expect(boss.bubble.content).toEqual(immediateC);
-    expect(boss.bubble.queue).toEqual([BUBBLE, BUBBLE_B]);
+    const bubbleC: BubbleContent = { type: "speech", text: "now" };
+    useGameStore.getState().enqueueBubble("boss", bubbleC);
+
+    const bubble = useGameStore.getState().boss.bubble;
+    expect(bubble.content).toEqual(bubbleC);
+    expect(bubble.queue).toEqual([BUBBLE, BUBBLE_B]);
   });
 });
 
@@ -426,9 +396,6 @@ describe("reset variants", () => {
     addAgent("A");
     useGameStore.getState().enqueueArrival("A");
     useGameStore.getState().setSessionId("sess-123");
-    useGameStore.getState().setDeskCount(16);
-    useGameStore.getState().setDebugMode(true);
-    useGameStore.getState().setWhiteboardMode(5);
     useGameStore.getState().setReplaying(true);
     useGameStore.getState().setCodingAgent("opencode");
   }
@@ -442,19 +409,11 @@ describe("reset variants", () => {
       expect(s.agents.size).toBe(0);
       expect(s.arrivalQueue).toEqual([]);
       expect(s.sessionId).toBe("None");
-      expect(s.deskCount).toBe(8);
     });
 
     it("forgets the coding agent", () => {
       useGameStore.getState().reset();
       expect(useGameStore.getState().codingAgent).toBeNull();
-    });
-
-    it("clears debugMode and whiteboardMode back to defaults", () => {
-      useGameStore.getState().reset();
-      const s = useGameStore.getState();
-      expect(s.debugMode).toBe(false);
-      expect(s.whiteboardMode).toBe(0);
     });
 
     it("leaves isReplaying false", () => {
@@ -463,47 +422,21 @@ describe("reset variants", () => {
     });
   });
 
-  describe("resetForReplay()", () => {
-    beforeEach(seedNonDefaults);
-
-    it("resets game state like reset() but also sets isReplaying=true", () => {
-      useGameStore.getState().resetForReplay();
-      const s = useGameStore.getState();
-      expect(s.agents.size).toBe(0);
-      expect(s.arrivalQueue).toEqual([]);
-      expect(s.sessionId).toBe("None");
-      expect(s.deskCount).toBe(8);
-      expect(s.isReplaying).toBe(true);
-    });
-  });
-
   describe("resetForSessionSwitch()", () => {
     beforeEach(seedNonDefaults);
 
-    it("clears game state (agents, queues, sessionId, deskCount)", () => {
+    it("clears game state (agents, queues, sessionId)", () => {
       useGameStore.getState().resetForSessionSwitch();
       const s = useGameStore.getState();
       expect(s.agents.size).toBe(0);
       expect(s.arrivalQueue).toEqual([]);
       expect(s.departureQueue).toEqual([]);
       expect(s.sessionId).toBe("None");
-      expect(s.deskCount).toBe(8);
     });
 
     it("forgets the previous session's coding agent", () => {
       useGameStore.getState().resetForSessionSwitch();
       expect(useGameStore.getState().codingAgent).toBeNull();
-    });
-
-    it("PRESERVES debugMode and debug overlay toggles (user preference)", () => {
-      useGameStore.getState().resetForSessionSwitch();
-      const s = useGameStore.getState();
-      expect(s.debugMode).toBe(true);
-    });
-
-    it("PRESERVES whiteboardMode (user preference)", () => {
-      useGameStore.getState().resetForSessionSwitch();
-      expect(useGameStore.getState().whiteboardMode).toBe(5);
     });
 
     it("sets isReplaying=false so the WebSocket may reconnect", () => {
