@@ -22,7 +22,6 @@ from app.core.event_processor import EventProcessor, get_event_processor
 from app.db.database import Base, get_engine
 from app.db.migrate import migrate_schema
 from app.db.models import EventRecord, SessionRecord
-from app.services.git_service import git_service
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 
@@ -78,13 +77,11 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
             "the same Docker network can reach this API unauthenticated."
         )
 
-    git_service.start()
-
     # Periodic idle-session eviction (ARC-015). Drops in-memory StateMachine
     # instances that have not seen activity for ``SESSION_IDLE_EVICT_SECONDS``
-    # (default 6h); state is replayable from the DB on next access. Mirrors
-    # the git_service.start()/stop() pattern: started before yield, cancelled
-    # and awaited on shutdown so the loop never outlives the app.
+    # (default 6h); state is replayable from the DB on next access. Started
+    # before yield, cancelled and awaited on shutdown so the loop never
+    # outlives the app.
     idle_evictor = asyncio.create_task(
         _idle_eviction_loop(
             get_event_processor(),
@@ -100,7 +97,6 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     idle_evictor.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await idle_evictor
-    await git_service.stop()
     await get_engine().dispose()
 
 

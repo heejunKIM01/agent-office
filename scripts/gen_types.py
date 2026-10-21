@@ -37,11 +37,6 @@ from app.models.events import (  # noqa: E402  # type: ignore[import]
     TaskEventData,
     ToolEventData,
 )
-from app.models.git import (  # noqa: E402  # type: ignore[import]
-    ChangedFile,
-    Commit,
-    GitStatus,
-)
 from app.models.overview import OverviewEntry, OverviewState  # noqa: E402  # type: ignore[import]
 from app.models.sessions import (  # noqa: E402  # type: ignore[import]
     AgentLifespan,
@@ -90,9 +85,6 @@ MODELS = [
     WhiteboardData,
     Session,
     GameState,
-    ChangedFile,
-    Commit,
-    GitStatus,
     OverviewEntry,
     OverviewState,
 ]

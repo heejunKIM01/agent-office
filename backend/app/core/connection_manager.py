@@ -3,9 +3,8 @@
 ``ConnectionManager`` owns the live ``WebSocket`` connections grouped by
 session, room, and the cross-session overview feed. It lives in ``app/core``
 (rather than ``app/api``) so that domain modules (``event_processor``,
-``broadcast_service``, ``git_service``) can depend on it without importing
-the transport layer -- this preserves the layering invariant established in
-ARC-011.
+``broadcast_service``) can depend on it without importing the transport
+layer -- this preserves the layering invariant established in ARC-011.
 
 Transport-specific concerns (origin allowlist, session-id format check,
 handshake validators) stay in ``app/api/websocket.py``.

@@ -25,7 +25,6 @@ The backend serves as the central hub for the Claude Office Visualizer:
 - **Real-time Updates**: Broadcasts state changes to frontend clients via WebSocket
 - **Persistence**: Stores sessions and events in SQLite for replay functionality
 - **AI Summaries**: Generates human-readable descriptions using Claude Haiku API
-- **Git Integration**: Polls git status for connected sessions
 
 ## Architecture
 
@@ -40,7 +39,6 @@ graph TD
     WS[WebSocket Manager]
     DB[SQLite Database]
     AI[Summary Service]
-    Git[Git Service]
     FE[Frontend Clients]
 
     Hooks -->|HTTP POST| API
@@ -50,7 +48,6 @@ graph TD
     EP --> DB
     EP --> AI
     SM --> BS
-    Git --> BS
     BS --> WS
     WS -->|WebSocket| FE
 
@@ -63,7 +60,6 @@ graph TD
     style WS fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
     style DB fill:#1a237e,stroke:#3f51b5,stroke-width:2px,color:#ffffff
     style AI fill:#ff6f00,stroke:#ffa726,stroke-width:2px,color:#ffffff
-    style Git fill:#37474f,stroke:#78909c,stroke-width:2px,color:#ffffff
     style FE fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
 ```
 
@@ -151,7 +147,6 @@ Configuration is managed via environment variables or a `.env` file in the backe
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite+aiosqlite:///<backend dir>/visualizer.db` | Database connection string (absolute path; `docker-compose` overrides to `/app/data/visualizer.db`) |
-| `GIT_POLL_INTERVAL` | `5` | Git status polling interval (seconds) |
 | `CLAUDE_CODE_OAUTH_TOKEN` | (empty) | OAuth token for AI summaries |
 | `SUMMARY_ENABLED` | `True` | Enable/disable AI summaries |
 | `SUMMARY_MODEL` | `claude-haiku-4-5-20251001` | Model for summaries |
@@ -328,12 +323,9 @@ backend/
 │   │   ├── agents.py          # Agent state models
 │   │   ├── common.py          # Shared Pydantic models
 │   │   ├── events.py          # Event type models
-│   │   ├── git.py             # Git status models
 │   │   ├── overview.py        # Command Center overview models
 │   │   ├── sessions.py        # Session state models
 │   │   └── ui.py              # UI-specific models
-│   ├── services/
-│   │   └── git_service.py     # Git status polling service
 │   ├── config.py              # Settings management
 │   └── main.py                # FastAPI application entry point
 ├── tests/                     # 21 test files + conftest.py (state machine, pollers, security, regression suites)

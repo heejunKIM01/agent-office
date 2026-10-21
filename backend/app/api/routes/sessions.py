@@ -15,7 +15,6 @@ from app.core.event_processor import get_event_processor
 from app.core.transcript_title import transcript_titles
 from app.db.database import get_db
 from app.db.models import EventRecord, SessionRecord, TaskRecord, UserPreference
-from app.services.git_service import git_service
 
 logger = logging.getLogger(__name__)
 
@@ -509,7 +508,6 @@ async def clear_database(db: Annotated[AsyncSession, Depends(get_db)]) -> dict[s
     invalidate_building_config()
 
     await get_event_processor().clear_all_sessions()
-    git_service.clear()
 
     await get_manager().broadcast_all({"type": "reload", "timestamp": ""})
 

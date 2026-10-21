@@ -78,7 +78,6 @@ from app.models.events import (
 )
 from app.models.overview import OverviewState
 from app.models.sessions import ConversationEntry, GameState, HistoryEntry
-from app.services.git_service import git_service
 
 logger = logging.getLogger(__name__)
 
@@ -688,15 +687,6 @@ class EventProcessor:
         if event.event_type == EventType.SESSION_START:
             await handle_session_start(sm, event, self._ensure_task_file_poller)
             await self._start_beads_if_available(event.session_id)
-            # Configure git service immediately so polling starts without waiting
-            # for a WebSocket reconnect (avoids race condition where WS connects
-            # before the session_start event is persisted to the DB).
-            project_root = await self.get_project_root(event.session_id)
-            if project_root:
-                git_service.configure(
-                    session_id=event.session_id,
-                    project_root=project_root,
-                )
 
         # ------------------------------------------------------------------
         # Auto-start task polling for missed SESSION_START (backend restart)

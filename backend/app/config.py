@@ -37,7 +37,6 @@ class Settings(BaseSettings):
     ]
 
     DATABASE_URL: str = f"sqlite+aiosqlite:///{_DEFAULT_DB_PATH}"
-    GIT_POLL_INTERVAL: int = 5
 
     # Beads issue-tracker poll interval (ARC-013). Reads from the same
     # BEADS_POLL_INTERVAL env var the previous os.environ-based helper did,

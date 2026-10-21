@@ -143,14 +143,12 @@ graph LR
 | `api/routes/sessions.py` | Session management API endpoints |
 | `api/routes/preferences.py` | User preferences API endpoints |
 | `api/routes/floors.py` | Building/floor configuration API endpoint |
-| `services/git_service.py` | Git repository status service |
 | `db/database.py` | SQLite database connection and initialization |
 | `db/models.py` | SQLAlchemy database models |
 | `models/agents.py` | Agent, Boss, Office state models |
 | `models/events.py` | Event and EventData models |
 | `models/sessions.py` | GameState and session models |
 | `models/common.py` | Shared models (BubbleContent, SpeechContent, TodoItem) |
-| `models/git.py` | Git status models |
 | `models/ui.py` | UI-specific model re-exports |
 | `main.py` | FastAPI application entry point |
 | `config.py` | Application configuration |
@@ -628,7 +626,6 @@ All configuration is managed via environment variables or a `.env` file in the `
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite+aiosqlite:///<backend dir>/visualizer.db` | Database connection string (absolute path; `docker-compose` overrides to `/app/data/visualizer.db`) |
-| `GIT_POLL_INTERVAL` | `5` | Git status polling interval in seconds |
 | `CLAUDE_CODE_OAUTH_TOKEN` | (empty) | OAuth token for AI summaries via Claude API |
 | `SUMMARY_ENABLED` | `True` | Enable or disable AI-powered summaries |
 | `SUMMARY_MODEL` | `claude-haiku-4-5-20251001` | Claude model used for summary generation |

@@ -123,7 +123,7 @@ For production or shared-host deployments, set an explicit `CLAUDE_OFFICE_API_KE
 | `LOCALHOST_ONLY` | No | `1` (code default; compose sets `0`) | Set to `0` to skip the in-app client-IP check. Required in Docker, where every request arrives from the bridge gateway; the host port binding (`127.0.0.1:8050`) is the loopback boundary there. Note: other containers on the same Docker network can then reach the API unauthenticated — keep the compose network private. |
 | `CLAUDE_OFFICE_API_KEY` | No | (auto-generated per launch) | Explicit API key; when set, all state-changing endpoints require the `X-API-Key` header |
 
-> **Note:** Additional backend settings like `SUMMARY_MODEL`, `SUMMARY_MAX_TOKENS`, and `GIT_POLL_INTERVAL` can be configured in the backend's `config.py` defaults or by extending the docker-compose environment section. See `backend/app/config.py` for all available settings.
+> **Note:** Additional backend settings like `SUMMARY_MODEL` and `SUMMARY_MAX_TOKENS` can be configured in the backend's `config.py` defaults or by extending the docker-compose environment section. See `backend/app/config.py` for all available settings.
 
 ### Example `.env` File
 
@@ -140,9 +140,6 @@ CLAUDE_PATH_HOST=/Users/yourusername/.claude
 
 # Optional: Model for AI summaries (default: claude-haiku-4-5-20251001)
 # SUMMARY_MODEL=claude-haiku-4-5-20251001
-
-# Optional: How often to poll git status (seconds, default: 5)
-# GIT_POLL_INTERVAL=5
 ```
 
 ### Path Translation

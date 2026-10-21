@@ -2,7 +2,7 @@
  * Office slice (ARC-005).
  *
  * Session/scalar office state: desks, elevator, phone, compaction animation
- * phase, todos, git status, event log, conversation. Self-contained apart
+ * phase, todos, event log, conversation. Self-contained apart
  * from the @/types shapes it carries.
  */
 import type { StateCreator } from "zustand";
@@ -13,7 +13,6 @@ import type {
   EventType,
   PhoneState,
   TodoItem,
-  GitStatus,
   HistoryEntry,
   WebSocketMessage,
   ConversationEntry,
@@ -48,7 +47,6 @@ export type OfficeSlice = {
   compactionPhase: CompactionAnimationPhase;
   printReport: boolean;
   todos: TodoItem[];
-  gitStatus: GitStatus | null;
   eventLog: EventLogEntry[];
   codingAgent: string | null;
   conversation: ConversationEntry[];
@@ -64,7 +62,6 @@ export type OfficeSlice = {
   setIsCompacting: (isCompacting: boolean) => void;
   setTodos: (todos: TodoItem[]) => void;
   setPrintReport: (printReport: boolean) => void;
-  setGitStatus: (status: GitStatus | null) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
@@ -82,7 +79,6 @@ export const initialOfficeState = {
   compactionPhase: "idle" as CompactionAnimationPhase,
   printReport: false,
   todos: [] as TodoItem[],
-  gitStatus: null as GitStatus | null,
   eventLog: [] as EventLogEntry[],
   codingAgent: null as string | null,
   conversation: [] as ConversationEntry[],
@@ -115,7 +111,6 @@ export const createOfficeSlice: StateCreator<GameStore, [], [], OfficeSlice> = (
   setIsCompacting: (isCompacting) => set({ isCompacting }),
   setTodos: (todos) => set({ todos }),
   setPrintReport: (printReport) => set({ printReport }),
-  setGitStatus: (gitStatus) => set({ gitStatus }),
 
   addEventLog: (event) =>
     set((state) => {

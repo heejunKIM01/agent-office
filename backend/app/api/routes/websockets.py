@@ -15,7 +15,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.api.websocket import get_manager
 from app.core.event_processor import get_event_processor
-from app.services.git_service import git_service
 
 logger = logging.getLogger(__name__)
 
@@ -100,27 +99,11 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
             websocket,
         )
 
-    project_root = await get_event_processor().get_project_root(session_id)
-    if project_root:
-        git_service.configure(session_id=session_id, project_root=project_root)
-
-    git_status = git_service.get_status(session_id=session_id)
-    if git_status:
-        await get_manager().send_personal_message(
-            {
-                "type": "git_status",
-                "timestamp": git_status.last_updated.isoformat(),
-                "gitStatus": git_status.model_dump(mode="json"),
-            },
-            websocket,
-        )
-
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         await get_manager().disconnect(websocket, session_id)
-        git_service.remove_session(session_id)
 
 
 @router.websocket("/ws/room/{room_id}")

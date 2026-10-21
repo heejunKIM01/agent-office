@@ -41,10 +41,6 @@ export type {
   Session,
   ConversationEntry,
   HistoryEntry,
-  // Git
-  FileStatus,
-  ChangedFile,
-  GitStatus,
   // Events (backend models)
   EventType,
   EventData,
@@ -53,9 +49,6 @@ export type {
   OverviewEntry,
   OverviewState,
 } from "./generated";
-
-// Re-export Commit with the legacy GitCommit alias for backward compatibility
-export type { Commit, Commit as GitCommit } from "./generated";
 
 // Re-export the overview status bucket under a descriptive name
 export type { Bucket as OverviewBucket } from "./generated";
@@ -114,13 +107,7 @@ export interface EventDetail {
  * WebSocket message types sent from the backend over the /ws endpoint.
  */
 export interface WebSocketMessage {
-  type:
-    | "state_update"
-    | "event"
-    | "reload"
-    | "git_status"
-    | "session_deleted"
-    | "error";
+  type: "state_update" | "event" | "reload" | "session_deleted" | "error";
   timestamp: string;
   state?: import("./generated").GameState;
   event?: {
@@ -131,7 +118,6 @@ export interface WebSocketMessage {
     timestamp: string;
     detail?: EventDetail;
   };
-  gitStatus?: import("./generated").GitStatus;
   session_id?: string;
   message?: string;
 }
