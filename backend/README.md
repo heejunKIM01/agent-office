@@ -181,7 +181,7 @@ Keys are compared in constant time (`hmac.compare_digest`).
 
 | Mode | How the key is set | What requires the key |
 |------|--------------------|-----------------------|
-| Auto-generated (default) | A random token is generated on every launch | State-changing operations: `DELETE /api/v1/sessions`, `POST /api/v1/sessions/simulate`, and `POST /api/v1/sessions/{id}/focus` (terminal activation + clipboard write) |
+| Auto-generated (default) | A random token is generated on every launch | State-changing operations: `DELETE /api/v1/sessions` and `POST /api/v1/sessions/simulate` |
 | Explicit | `CLAUDE_OFFICE_API_KEY` env var or `backend/.env` | All endpoints except `/health`, `/docs`, `/redoc`, the OpenAPI schema, and CORS preflight |
 
 Example:
@@ -227,7 +227,6 @@ curl -X DELETE http://localhost:8000/api/v1/sessions \
 | `PATCH` | `/api/v1/sessions/{id}` | Update session display name |
 | `DELETE` | `/api/v1/sessions/{id}` | Delete a single session |
 | `GET` | `/api/v1/sessions/{id}/replay` | Get replay data for a session |
-| `POST` | `/api/v1/sessions/{id}/focus` | Bring session terminal to foreground (macOS) and optionally copy message to clipboard |
 | `PATCH` | `/api/v1/sessions/{id}/label` | Update session label |
 | `POST` | `/api/v1/sessions/simulate` | Start background simulation |
 

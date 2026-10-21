@@ -553,45 +553,6 @@ class TestStatusEndpointKeyDisclosure:
 
 
 # ---------------------------------------------------------------------------
-# SEC-002 — focus/clipboard endpoint must require the effective API key
-# ---------------------------------------------------------------------------
-
-
-class TestFocusEndpointAuth:
-    """POST /sessions/{id}/focus must require the effective API key (SEC-002)."""
-
-    def test_focus_requires_key(self) -> None:
-        from app.main import app
-
-        settings = get_settings()
-        original = settings.CLAUDE_OFFICE_API_KEY
-        settings.CLAUDE_OFFICE_API_KEY = ""
-        try:
-            client = TestClient(app)
-            resp = client.post(f"{settings.API_V1_STR}/sessions/some-session/focus")
-            assert resp.status_code == 401
-        finally:
-            settings.CLAUDE_OFFICE_API_KEY = original
-
-    def test_focus_with_effective_key_passes_auth(self) -> None:
-        from app.main import app
-
-        settings = get_settings()
-        original = settings.CLAUDE_OFFICE_API_KEY
-        settings.CLAUDE_OFFICE_API_KEY = ""
-        try:
-            client = TestClient(app)
-            resp = client.post(
-                f"{settings.API_V1_STR}/sessions/does-not-exist/focus",
-                headers={"X-API-Key": settings.effective_api_key},
-            )
-            # Past auth; session lookup fails → 404 (or 500 if DB unavailable).
-            assert resp.status_code in (404, 500)
-        finally:
-            settings.CLAUDE_OFFICE_API_KEY = original
-
-
-# ---------------------------------------------------------------------------
 # SEC-005 — /events auth behavior regression (backend: no code change;
 # plugin key support deferred, blocked by QA-002)
 # ---------------------------------------------------------------------------

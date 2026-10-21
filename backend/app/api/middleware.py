@@ -48,8 +48,8 @@ class LocalhostOnlyMiddleware(BaseHTTPMiddleware):
     """Reject HTTP requests from non-localhost origins.
 
     This is a local-only development tool, not deployed to the public internet.
-    All API endpoints (including subprocess execution and clipboard writes)
-    are protected by restricting access to the loopback interface.
+    All API endpoints (including the ones that run subprocesses) are
+    protected by restricting access to the loopback interface.
 
     ``"testclient"`` is the sentinel host used by Starlette's test transport
     and cannot appear on a real TCP connection, so it is safe to allow.
@@ -80,18 +80,16 @@ def _is_state_changing(path: str, method: str) -> bool:
     """Return True if the request targets a destructive or side-effecting endpoint.
 
     Covers global destructive operations (clearing all sessions, running a
-    simulation), per-session OS side effects (terminal activation + clipboard
-    write via ``/focus``) and connecting a coding agent (``/hooks/...``, which
-    runs an install command and rewrites the agent's settings file). Other
-    per-session mutations remain open in the default configuration and are
-    fully gated when an explicit key is set (handled by
-    ``settings.has_explicit_key`` in the middleware).
+    simulation) and connecting a coding agent (``/hooks/...``, which runs an
+    install command and rewrites the agent's settings file). Per-session
+    mutations remain open in the default configuration and are fully gated
+    when an explicit key is set (handled by ``settings.has_explicit_key`` in
+    the middleware).
     """
     prefix = settings.API_V1_STR + "/sessions"
     return (
         (path == prefix and method == "DELETE")
         or (path == f"{prefix}/simulate" and method == "POST")
-        or (path.startswith(f"{prefix}/") and path.endswith("/focus") and method == "POST")
         or _is_agent_connect(path, method)
     )
 
