@@ -1,6 +1,6 @@
 /**
  * The right-hand panels of the isometric office (docs/plan/spec.md
- * 「화면 재설계」, wording after the video): 「사무실 사람들」 rows and the
+ * 「화면 재설계」, wording after the video): 「사무실」 rows and the
  * 「활동 로그」 lines, built from the people on the floor and the event log.
  */
 
@@ -19,7 +19,7 @@ export interface RosterWords {
 
 export type RosterStatus = "thinking" | "working" | null;
 
-/** One person in 「사무실 사람들」. */
+/** One person in 「사무실」. */
 export interface RosterRow {
   id: string;
   kind: IsoPerson["kind"];
