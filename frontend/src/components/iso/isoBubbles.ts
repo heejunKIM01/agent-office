@@ -16,6 +16,8 @@ export interface BubbleWords {
   looking: string;
   /** 「👋 퇴근합니다!」 as a finished subagent heads home. */
   bye: string;
+  /** 「☕ 대화 정리 중」 over coffee while the conversation is compacted. */
+  compacting: string;
 }
 
 /** Room left under a bubble for the name chip (px). */

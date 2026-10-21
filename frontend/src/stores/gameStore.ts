@@ -165,11 +165,13 @@ export interface GameStore {
 
   // ========== Office State ==========
   sessionId: string;
+  snapshotSessionId: string | null; // Session whose state snapshot is applied
   eventLog: EventLogEntry[];
   codingAgent: string | null; // Coding agent running the session (name tag)
 
   // Office actions
   setSessionId: (id: string) => void;
+  markSnapshot: (sessionId: string) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
@@ -243,6 +245,7 @@ export const useGameStore = create<GameStore>()(
         bossErrand: initialBossErrandState,
         agentErrands: new Map(),
         sessionId: "None",
+        snapshotSessionId: null,
         eventLog: [], // Clear event log for new session
         codingAgent: null,
         // Keep connection-related state

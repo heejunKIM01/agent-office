@@ -4,7 +4,8 @@
  * errand rules in `update`. Claude sits at the front dev desk nearest my
  * desk, subagents and colleagues (other sessions' lead agents on this
  * floor) take the next free dev chairs, and I sit behind the reception
- * desk. Claude rests on the lounge sofa between turns. `update` also reports what the rooms should show: racks
+ * desk. Claude rests on the lounge sofa between turns and has a coffee in
+ * the cafe while its conversation is compacted. `update` also reports what the rooms should show: racks
  * busy while a command runs, code on the screens of people editing,
  * someone writing at the whiteboard, and the elevator doors open while
  * someone steps in or out.
@@ -145,6 +146,7 @@ export class IsoPeople {
     thinkingFor: () => "",
     looking: "",
     bye: "",
+    compacting: "",
   };
 
   /** ``onLeft`` hears of each subagent that rode the elevator away. */
@@ -239,7 +241,7 @@ export class IsoPeople {
         now,
         dt,
         leaving,
-        resting: placed.person.resting,
+        breakRoom: placed.person.breakRoom,
         reportSpot: () => this.reportSpot(id),
         elevator: ELEVATOR,
       });
@@ -324,10 +326,16 @@ export class IsoPeople {
     if (person.thinking) placed.thinkingSince ??= now;
     else placed.thinkingSince = null;
     const onTrip = quiet ? null : this.tripBubble(placed);
+    // Over coffee while compacting, it says so instead of thinking aloud.
+    const onBreak: IsoBubble | undefined =
+      person.breakRoom === "cafe"
+        ? { kind: "speech", text: this.words.compacting }
+        : undefined;
     const bubble =
       onTrip !== undefined
         ? onTrip
-        : pickBubble({
+        : (onBreak ??
+          pickBubble({
             bubble: person.bubble,
             bubbleAgeMs:
               person.bubbleAt === null ? null : Date.now() - person.bubbleAt,
@@ -337,20 +345,28 @@ export class IsoPeople {
               placed.thinkingSince === null
                 ? null
                 : Math.floor((now - placed.thinkingSince) / 1000),
-          });
+          }));
     const key = bubbleKey(bubble);
     if (key === placed.bubbleKey) return;
     placed.bubbleKey = key;
     drawBubble(placed.bubbleHolder, bubble, this.words);
   }
 
-  dispose(): void {
+  /** Take everyone off the floor; the next `sync` places them afresh. */
+  clear(): void {
     for (const [id, placed] of this.placed) this.remove(id, placed);
+    this.departed.clear();
+    this.callPending = false;
+    this.callUntil = 0;
+  }
+
+  dispose(): void {
+    this.clear();
   }
 
   /**
-   * Where a newcomer first appears: stepping out of the elevator, resting on
-   * the lounge sofa when its turn is already over, or in its seat.
+   * Where a newcomer first appears: stepping out of the elevator, already on
+   * its break (the lounge sofa, the cafe) when it is on one, or in its seat.
    */
   private firstWalker(
     person: IsoPerson,
@@ -358,8 +374,9 @@ export class IsoPeople {
     seat: IsoSpot,
   ): IsoWalker {
     if (arriving) return arrivingWalker(ELEVATOR);
-    if (person.resting && !person.activity) {
-      return seatedWalker(this.spotIn(person.id, "lounge"), "lounge");
+    const { breakRoom } = person;
+    if (breakRoom && !person.activity) {
+      return seatedWalker(this.spotIn(person.id, breakRoom), breakRoom);
     }
     return seatedWalker(seat);
   }

@@ -291,4 +291,6 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
   if (state.history) {
     store.mergeEventHistory(state.history);
   }
+  // Last, so the people are placed once everything above is in.
+  store.markSnapshot(state.sessionId);
 }

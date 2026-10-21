@@ -32,10 +32,13 @@ function eventLogKey(event: {
 
 export type OfficeSlice = {
   sessionId: string;
+  /** The session whose state snapshot has been applied, once it has. */
+  snapshotSessionId: string | null;
   eventLog: EventLogEntry[];
   codingAgent: string | null;
 
   setSessionId: (id: string) => void;
+  markSnapshot: (sessionId: string) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
@@ -43,6 +46,7 @@ export type OfficeSlice = {
 
 export const initialOfficeState = {
   sessionId: "None",
+  snapshotSessionId: null as string | null,
   eventLog: [] as EventLogEntry[],
   codingAgent: null as string | null,
 };
@@ -53,6 +57,13 @@ export const createOfficeSlice: StateCreator<GameStore, [], [], OfficeSlice> = (
   ...initialOfficeState,
 
   setSessionId: (id) => set({ sessionId: id }),
+
+  markSnapshot: (sessionId) =>
+    set((state) =>
+      state.snapshotSessionId === sessionId
+        ? state
+        : { snapshotSessionId: sessionId },
+    ),
 
   addEventLog: (event) =>
     set((state) => {

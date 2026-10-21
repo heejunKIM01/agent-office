@@ -16,11 +16,13 @@
  * session works in.
  */
 
+import type { BreakRoomId } from "@/constants/isoFloorPlan";
 import type { Activity, BubbleContent, StuckReason } from "@/types";
 import type {
   AgentAnimationState,
   AgentPhase,
   BubbleState,
+  EventLogEntry,
 } from "@/stores/slices/types";
 
 export type PersonKind = "claude" | "me" | "subagent" | "colleague";
@@ -48,8 +50,11 @@ export interface IsoPerson {
   arriving: boolean;
   /** A subagent whose work is done: it reports to Claude and goes home. */
   leaving: boolean;
-  /** Claude with its turn over: it rests in the lounge (spec 「라운지 · 카페」). */
-  resting: boolean;
+  /**
+   * Claude on a break (spec 「라운지 · 카페」): in the cafe while its
+   * conversation is compacted, in the lounge with its turn over.
+   */
+  breakRoom: BreakRoomId | null;
   outfit: Outfit;
 }
 
@@ -83,6 +88,15 @@ export function isQuietTurn(boss: {
     !boss.stuck &&
     (boss.state === "idle" || boss.state === "receiving")
   );
+}
+
+/**
+ * The conversation is being compacted: the newest event (the log is newest
+ * first) is the compaction. The hooks send no end of it, so the next event,
+ * whatever it is, ends it.
+ */
+export function isCompacting(eventLog: readonly EventLogEntry[]): boolean {
+  return eventLog[0]?.type === "context_compaction";
 }
 
 /** Words the chips need, already translated. */
@@ -161,6 +175,15 @@ const said = (bubble: BubbleState): Pick<IsoPerson, "bubble" | "bubbleAt"> => ({
   bubbleAt: bubble.displayStartTime,
 });
 
+/** Where Claude takes a break: the cafe while compacting, the lounge between turns. */
+function breakRoomOf(
+  compacting: boolean,
+  turnActive: boolean,
+): BreakRoomId | null {
+  if (compacting) return "cafe";
+  return turnActive ? null : "lounge";
+}
+
 /** Everyone to show: Claude and me first, then subagents, then colleagues. */
 export function officePeople(
   state: {
@@ -174,10 +197,13 @@ export function officePeople(
       turnActive: boolean;
     };
     agents: Map<string, AgentAnimationState>;
+    /** Newest first; it tells whether the conversation is being compacted. */
+    eventLog: readonly EventLogEntry[];
   },
   words: PeopleWords,
   colleagues: Colleague[] = [],
 ): IsoPerson[] {
+  const compacting = isCompacting(state.eventLog);
   const people: IsoPerson[] = [
     {
       id: "claude",
@@ -187,10 +213,11 @@ export function officePeople(
       typeLabel: words.agentName,
       ...doing(state.boss.activity, state.boss.stuck),
       ...said(state.boss.bubble),
-      thinking: state.boss.quietSince !== null,
+      // Over coffee it is not thinking: its bubble says it is compacting.
+      thinking: state.boss.quietSince !== null && !compacting,
       arriving: false,
       leaving: false,
-      resting: !state.boss.turnActive,
+      breakRoom: breakRoomOf(compacting, state.boss.turnActive),
       outfit: "general",
     },
     {
@@ -206,7 +233,7 @@ export function officePeople(
       thinking: false,
       arriving: false,
       leaving: false,
-      resting: false,
+      breakRoom: null,
       outfit: "general",
     },
   ];
@@ -226,7 +253,7 @@ export function officePeople(
         !agent.stuck,
       arriving: ARRIVING_STATES.has(agent.backendState),
       leaving,
-      resting: false,
+      breakRoom: null,
       outfit: outfitOf(agent.agentType),
     });
   }
@@ -243,7 +270,7 @@ export function officePeople(
       thinking: colleague.thinking,
       arriving: false,
       leaving: false,
-      resting: false,
+      breakRoom: null,
       outfit: "general",
     });
   }

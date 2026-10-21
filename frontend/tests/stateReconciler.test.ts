@@ -395,3 +395,32 @@ describe("reconcileState — returning agents", () => {
     expect(useGameStore.getState().agents.has("sa1")).toBe(false);
   });
 });
+
+describe("reconcileState — snapshot", () => {
+  beforeEach(() => {
+    useGameStore.getState().resetForSessionSwitch();
+  });
+
+  it("marks the session's snapshot as applied, and a switch clears it", () => {
+    expect(useGameStore.getState().snapshotSessionId).toBeNull();
+    reconcileState(makeState(), {
+      currentSessionId: "session-1",
+      processedAgents: new Set<string>(),
+      lastSeenBubbleText: new Map<string, string>(),
+      initialQueueSyncDone: { current: "session-1" },
+    });
+    expect(useGameStore.getState().snapshotSessionId).toBe("session-1");
+    useGameStore.getState().resetForSessionSwitch();
+    expect(useGameStore.getState().snapshotSessionId).toBeNull();
+  });
+
+  it("ignores another session's snapshot", () => {
+    reconcileState(makeState({ sessionId: "old" }), {
+      currentSessionId: "session-1",
+      processedAgents: new Set<string>(),
+      lastSeenBubbleText: new Map<string, string>(),
+      initialQueueSyncDone: { current: "session-1" },
+    });
+    expect(useGameStore.getState().snapshotSessionId).toBeNull();
+  });
+});

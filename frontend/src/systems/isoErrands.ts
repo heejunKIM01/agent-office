@@ -4,9 +4,10 @@
  * stays ERRAND_LINGER_MS after the tool ends, finishing the walk first
  * (rule 2), turns at once when another tool starts, even mid-walk (rule 3),
  * and otherwise walks back to its seat and sits down (rule 4). Editing is
- * done at its own desk. With its turn over and nothing to run it rests on
- * the lounge sofa instead, and a new turn sends it straight back to its
- * seat (docs/plan/spec.md 「라운지 · 카페」). A stuck person (a failed tool) stops where it is,
+ * done at its own desk. On a break it goes to the break room instead: the
+ * lounge sofa with its turn over, the cafe while its conversation is being
+ * compacted. When the break ends it leaves at once, even on the way there
+ * (docs/plan/spec.md 「라운지 · 카페」). A stuck person (a failed tool) stops where it is,
  * even mid-walk, and does not move until it moves on (rule 7).
  *
  * Subagents come and go by elevator (작성자 댓글): a newcomer steps out of
@@ -100,17 +101,17 @@ export interface IsoWalkerInput {
   dt: number;
   /** Its work is done: it reports to Claude and goes home. */
   leaving: boolean;
-  /** Its turn is over: with nothing to run it rests in the lounge. */
-  resting: boolean;
+  /** With nothing to run it takes a break there: the lounge or the cafe. */
+  breakRoom: BreakRoomId | null;
   /** Where it stands to report beside Claude (asked only while it leaves). */
   reportSpot: () => IsoSpot;
   elevator: IsoElevator;
 }
 
-/** A walker sitting in its seat, or at ``goal`` (the lounge sofa) when given. */
+/** A walker settled in its seat, or in a break room when ``goal`` is one. */
 export function seatedWalker(
   seat: IsoSpot,
-  goal: "seat" | "lounge" = "seat",
+  goal: "seat" | BreakRoomId = "seat",
 ): IsoWalker {
   return {
     x: seat.x,
@@ -200,6 +201,9 @@ function headTo(
     points.length > 1 ? points : [{ x: walker.x, z: walker.z }, spot];
   return { ...turned, pose: "walk", path: pathThrough(route) };
 }
+
+const isBreakRoom = (goal: IsoGoal): goal is BreakRoomId =>
+  goal === "lounge" || goal === "cafe";
 
 /** Where its work sends it: the room of its tool, or its seat. */
 const workGoal = (input: IsoWalkerInput): IsoGoal =>
@@ -316,16 +320,16 @@ export function stepIsoWalker(
       : walker;
   }
   const wanted = input.activity ? ROOM_FOR_ACTIVITY[input.activity] : null;
-  const home: IsoGoal = input.resting ? "lounge" : "seat";
+  const home: IsoGoal = input.breakRoom ?? "seat";
   let next = walker;
   if (wanted) {
     next =
       next.goal === wanted
         ? { ...next, lingerUntil: null }
         : headTo(next, wanted, input);
-  } else if (next.goal === "lounge" && !input.resting) {
-    // A new turn: back to its seat at once, even on the way to the sofa.
-    next = headTo(next, "seat", input);
+  } else if (isBreakRoom(next.goal) && next.goal !== home) {
+    // The break is over (or another began): off at once, even mid-walk.
+    next = headTo(next, home, input);
   } else if (next.goal !== home && !next.path) {
     if (next.lingerUntil === null) {
       next = { ...next, lingerUntil: input.now + ERRAND_LINGER_MS };

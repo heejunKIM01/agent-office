@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { AgentAnimationState, BubbleState } from "@/stores/slices/types";
+import type {
+  AgentAnimationState,
+  BubbleState,
+  EventLogEntry,
+} from "@/stores/slices/types";
 import {
+  isCompacting,
   isQuietTurn,
   officePeople,
   type PeopleWords,
@@ -51,7 +56,7 @@ function agent(
 describe("officePeople", () => {
   it("puts Claude and me first, Claude with the boss's activity", () => {
     const people = officePeople(
-      { boss: boss({ activity: "reading" }), agents: new Map() },
+      { boss: boss({ activity: "reading" }), agents: new Map(), eventLog: [] },
       WORDS,
     );
     expect(people).toMatchObject([
@@ -92,7 +97,7 @@ describe("officePeople", () => {
       ],
       ["a3", agent("a3", { name: "Scout" })],
     ]);
-    const people = officePeople({ boss: boss(), agents }, WORDS);
+    const people = officePeople({ boss: boss(), agents, eventLog: [] }, WORDS);
     expect(people.slice(2).map((p) => [p.id, p.label, p.activity])).toEqual([
       ["a1", "범용 · T-013 부속 작성", "running"],
       ["a2", "Explore · Find the login code", null],
@@ -108,7 +113,7 @@ describe("officePeople", () => {
       // SUBAGENT_STOP: the backend marks it waiting before it removes it.
       ["a4", agent("a4", { currentTask: "done", backendState: "waiting" })],
     ]);
-    const people = officePeople({ boss: boss(), agents }, WORDS);
+    const people = officePeople({ boss: boss(), agents, eventLog: [] }, WORDS);
     expect(people.slice(2).map((p) => [p.id, p.leaving, p.thinking])).toEqual([
       ["a1", false, true],
       ["a2", true, false],
@@ -124,7 +129,7 @@ describe("officePeople", () => {
       ["a2", agent("a2", { backendState: "walking_to_desk" })],
       ["a3", agent("a3", { backendState: "working" })],
     ]);
-    const people = officePeople({ boss: boss(), agents }, WORDS);
+    const people = officePeople({ boss: boss(), agents, eventLog: [] }, WORDS);
     expect(people.map((p) => p.arriving)).toEqual([
       false,
       false,
@@ -141,7 +146,7 @@ describe("officePeople", () => {
         agent(`a${i}`, { agentType: type }),
       ]),
     );
-    const people = officePeople({ boss: boss(), agents }, WORDS);
+    const people = officePeople({ boss: boss(), agents, eventLog: [] }, WORDS);
     expect(people.slice(2).map((p) => p.outfit)).toEqual([
       "explore",
       "plan",
@@ -158,6 +163,7 @@ describe("officePeople", () => {
       {
         boss: boss({ activity: "running", stuck: "waiting_permission" }),
         agents,
+        eventLog: [],
       },
       WORDS,
     );
@@ -178,7 +184,7 @@ describe("officePeople", () => {
       ["a4", agent("a4", { backendState: "arriving" })],
     ]);
     const people = officePeople(
-      { boss: boss({ bubble, quietSince: 99 }), agents },
+      { boss: boss({ bubble, quietSince: 99 }), agents, eventLog: [] },
       WORDS,
     );
     expect(people[0]).toMatchObject({
@@ -195,48 +201,87 @@ describe("officePeople", () => {
   });
 });
 
-describe("officePeople — resting", () => {
-  it("rests Claude between turns and no one else", () => {
+describe("officePeople — breaks", () => {
+  const compaction = (type: string) =>
+    ({
+      id: type,
+      type,
+      agentId: "main",
+      summary: "",
+      timestamp: new Date(0),
+    }) as unknown as EventLogEntry;
+
+  it("rests Claude in the lounge between turns and no one else", () => {
     const agents = new Map([["a", agent("a", {})]]);
     const idle = officePeople(
-      { boss: boss({ turnActive: false }), agents },
+      { boss: boss({ turnActive: false }), agents, eventLog: [] },
       WORDS,
       [],
     );
-    expect(idle.map((p) => [p.id, p.resting])).toEqual([
-      ["claude", true],
-      ["me", false],
-      ["a", false],
+    expect(idle.map((p) => [p.id, p.breakRoom])).toEqual([
+      ["claude", "lounge"],
+      ["me", null],
+      ["a", null],
     ]);
-    const busy = officePeople({ boss: boss(), agents }, WORDS);
-    expect(busy[0].resting).toBe(false);
+    const busy = officePeople({ boss: boss(), agents, eventLog: [] }, WORDS);
+    expect(busy[0].breakRoom).toBeNull();
+  });
+
+  it("sends Claude to the cafe while compacting, not thinking aloud", () => {
+    const eventLog = [compaction("context_compaction"), compaction("stop")];
+    const [claude] = officePeople(
+      { boss: boss({ quietSince: 5 }), agents: new Map(), eventLog },
+      WORDS,
+    );
+    expect(claude).toMatchObject({ breakRoom: "cafe", thinking: false });
+    // Even with the turn over, compacting wins over the lounge.
+    const [idle] = officePeople(
+      { boss: boss({ turnActive: false }), agents: new Map(), eventLog },
+      WORDS,
+    );
+    expect(idle.breakRoom).toBe("cafe");
+  });
+
+  it("ends the coffee with the next event", () => {
+    expect(isCompacting([])).toBe(false);
+    expect(isCompacting([compaction("context_compaction")])).toBe(true);
+    expect(
+      isCompacting([
+        compaction("pre_tool_use"),
+        compaction("context_compaction"),
+      ]),
+    ).toBe(false);
   });
 });
 
 describe("officePeople — colleagues", () => {
   it("brings other sessions' lead agents in last, named by their session", () => {
-    const people = officePeople({ boss: boss(), agents: new Map() }, WORDS, [
-      {
-        sessionId: "s2",
-        agentName: "Claude",
-        title: "로그인 고치기",
-        activity: "reading",
-        stuck: null,
-        bubble: { type: "thought", text: "src/auth.py", icon: "📖" },
-        bubbleAt: 5,
-        thinking: false,
-      },
-      {
-        sessionId: "s3",
-        agentName: "Codex",
-        title: "문서 정리",
-        activity: null,
-        stuck: "waiting_permission",
-        bubble: null,
-        bubbleAt: null,
-        thinking: false,
-      },
-    ]);
+    const people = officePeople(
+      { boss: boss(), agents: new Map(), eventLog: [] },
+      WORDS,
+      [
+        {
+          sessionId: "s2",
+          agentName: "Claude",
+          title: "로그인 고치기",
+          activity: "reading",
+          stuck: null,
+          bubble: { type: "thought", text: "src/auth.py", icon: "📖" },
+          bubbleAt: 5,
+          thinking: false,
+        },
+        {
+          sessionId: "s3",
+          agentName: "Codex",
+          title: "문서 정리",
+          activity: null,
+          stuck: "waiting_permission",
+          bubble: null,
+          bubbleAt: null,
+          thinking: false,
+        },
+      ],
+    );
     expect(people.map((p) => [p.id, p.kind, p.label])).toEqual([
       ["claude", "claude", "Claude"],
       ["me", "me", "나"],

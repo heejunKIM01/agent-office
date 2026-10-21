@@ -135,7 +135,7 @@ export function IsoSidePanel({
   const people = useMemo(
     () =>
       officePeople(
-        { boss, agents },
+        { boss, agents, eventLog },
         {
           agentName,
           me: t("iso.me"),
@@ -143,7 +143,7 @@ export function IsoSidePanel({
         },
         colleagues,
       ),
-    [boss, agents, agentName, t, colleagues],
+    [boss, agents, eventLog, agentName, t, colleagues],
   );
   const rows = useMemo(
     () => rosterRows(people, toolCounts(eventLog), words),
