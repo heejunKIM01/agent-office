@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   GLOBE_SPIN_SPEED,
+  MAX_PILE,
+  NO_PILE,
+  bookPile,
   MAX_NOTES,
   WATCH_AFTER_MS,
   globeSpeed,
@@ -61,5 +64,25 @@ describe("globeSpeed", () => {
     expect(easing).toBeLessThan(GLOBE_SPIN_SPEED);
     for (let i = 0; i < 30; i++) speed = globeSpeed(speed, false, 0.1);
     expect(speed).toBe(0);
+  });
+});
+
+describe("bookPile", () => {
+  it("adds a book for each new reading tool while in the library", () => {
+    let pile = bookPile(NO_PILE, true, true, 100);
+    expect(pile.count).toBe(1);
+    pile = bookPile(pile, true, true, 100);
+    expect(pile.count).toBe(1);
+    pile = bookPile(pile, true, true, 200);
+    expect(pile.count).toBe(2);
+    pile = bookPile(pile, true, false, 300);
+    expect(pile.count).toBe(2);
+  });
+
+  it("stops at MAX_PILE and is cleared on leaving the library", () => {
+    let pile = NO_PILE;
+    for (let at = 1; at <= 10; at++) pile = bookPile(pile, true, true, at);
+    expect(pile.count).toBe(MAX_PILE);
+    expect(bookPile(pile, false, true, 11)).toEqual(NO_PILE);
   });
 });

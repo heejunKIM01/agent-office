@@ -8,6 +8,7 @@
 import * as THREE from "three";
 import type { IsoPose, IsoRoomId } from "@/systems/isoErrands";
 import type { LoungeAct } from "@/systems/loungeActs";
+import { MAX_PILE } from "@/systems/roomGimmicks";
 
 /** Something a person is up to besides its pose: a lounge pastime, or waiting on a command. */
 export type PoseAct = LoungeAct | "watch";
@@ -62,6 +63,8 @@ export interface CharacterRig {
   handset: THREE.Object3D;
   /** A wristwatch on the left wrist, checked while waiting on a command. */
   watch: THREE.Object3D;
+  /** Books piled on the floor beside it in the library, shown up to how many it read. */
+  pile: THREE.Group;
   /** A handset at the ear while Claude calls a subagent in. */
   phone: THREE.Object3D;
   /** Cold sweat beside the head while a failed tool keeps it stuck. */
@@ -202,6 +205,27 @@ export function buildCharacter(
   cup.visible = false;
   arms[1].add(cup);
 
+  // On the floor a step behind it, to its left: facing a shelf, that is
+  // toward the camera and clear of its legs and the walls. Each book a bit
+  // askew.
+  const pile = new THREE.Group();
+  pile.position.set(0.85, 0, -0.5);
+  for (let i = 0; i < MAX_PILE; i++) {
+    const book = box(
+      0.5,
+      0.12,
+      0.36,
+      C.books[(i * 3 + 1) % C.books.length],
+      0,
+      i * 0.12,
+      0,
+    );
+    book.rotation.y = ((i * 37) % 9) * 0.06 - 0.24;
+    book.visible = false;
+    pile.add(book);
+  }
+  root.add(pile);
+
   // On the left wrist, the face turned out.
   const watch = new THREE.Group();
   watch.add(box(0.2, 0.06, 0.2, C.watchBand, 0, -0.5, 0));
@@ -252,6 +276,7 @@ export function buildCharacter(
     cup,
     handset,
     watch,
+    pile,
     phone,
     sweat,
     chipAnchor,
