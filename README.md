@@ -25,7 +25,7 @@
 | 서브에이전트 (`Task`) | Claude 가 전화를 걸면 🛗 엘리베이터로 출근한다. 끝나면 Claude 옆에서 보고하고 「👋 퇴근합니다!」 하고 돌아간다. Explore 는 초록 옷에 모자, Plan 은 보라 옷에 안경 |
 | 생각 · 실패 | 「💭 고민 중」 구름 말풍선. 도구가 실패하면 그 자리에서 식은땀을 흘리며 빨간 말풍선을 띄운다 |
 
-왼쪽 「층별 안내」는 프로젝트를 층으로, 세션을 매장으로 보여 준다. 다른 층을 누르면 「▲ 3F」 표시등이 뜨고 그 층 사무실로 간다. 오른쪽에는 사무실 사람들 · 활동 로그 · 방 범례가 있다. 원본의 2D 픽셀 사무실(화이트보드 · 지휘 센터 · 빌딩 뷰)은 `/classic` 에 그대로 있고, 오른쪽 위 🎮 버튼으로 간다.
+왼쪽 「층별 안내」는 프로젝트를 층으로, 세션을 매장으로 보여 준다. 다른 층을 누르면 「▲ 3F」 표시등이 뜨고 그 층 사무실로 간다. 오른쪽에는 사무실 사람들 · 활동 로그 · 방 범례가 있다. 원본의 2D 픽셀 사무실(화이트보드 · 지휘 센터 · 빌딩 뷰)은 이 포크에서 지웠다.
 
 ```bash
 git clone https://github.com/heejunKIM01/agent-office.git
@@ -45,7 +45,6 @@ make dev         # 백엔드 :8000 + 프런트 :4747
 
 ## Table of Contents
 
-* [Screenshots](#screenshots)
 * [About](#about)
 * [What's New](#whats-new)
 * [Features](#features)
@@ -58,25 +57,11 @@ make dev         # 백엔드 :8000 + 프런트 :4747
 * [Contributing](#contributing)
 * [Related Documentation](#related-documentation)
 
-## Screenshots
-
-> 아래는 원본의 2D 픽셀 사무실이다. 이 포크에서는 `/classic` 에 있다.
-
-The **Command Center** gathers the boss of every live terminal into one cross-session office — at a glance you can see which terminals need you, which are working, and which are done:
-
-![Command Center](https://raw.githubusercontent.com/paulrobello/claude-office/main/screenshots/sc_command_center.png)
-
-| | |
-|---|---|
-| ![Office View](https://raw.githubusercontent.com/paulrobello/claude-office/main/screenshot.png) | ![Multi-Floor Building](https://raw.githubusercontent.com/paulrobello/claude-office/main/screenshots/sc_floor_office.png) |
-| ![Floor View](https://raw.githubusercontent.com/paulrobello/claude-office/main/screenshots/sc_floor_view.png) | ![Building Settings](https://raw.githubusercontent.com/paulrobello/claude-office/main/screenshots/sc_building_settings.png) |
-
-
 ## About
 
-Claude Office Visualizer is a real-time pixel art office simulation that visualizes Claude Code operations. Watch as a "boss" character (main Claude agent) manages work, spawns "employee" agents (subagents), and orchestrates tasks in an animated office environment.
+Claude Office Visualizer is a real-time office simulation that visualizes Claude Code operations. Watch as a "boss" character (main Claude agent) manages work, spawns "employee" agents (subagents), and orchestrates tasks in an animated office environment.
 
-The application was built with [Next.js](https://nextjs.org/), [PixiJS](https://pixijs.com/), [FastAPI](https://fastapi.tiangolo.com/), and [Zustand](https://github.com/pmndrs/zustand).
+The application was built with [Next.js](https://nextjs.org/), [three.js](https://threejs.org/), [FastAPI](https://fastapi.tiangolo.com/), and [Zustand](https://github.com/pmndrs/zustand).
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/probello3)
 
@@ -139,28 +124,12 @@ For the full release history, see [CHANGELOG.md](CHANGELOG.md).
 ### Core Capabilities
 - **Real-time Visualization**: Watch Claude Code operations as they happen in an animated office
 - **Boss & Employee Agents**: Main Claude agent as boss, subagents as employees
-- **Multi-Floor Building**: Navigate a multi-story building with independent offices per floor, breadcrumb navigation, and automatic session switching
-
-![Multi-Floor Building](https://raw.githubusercontent.com/paulrobello/claude-office/main/screenshots/sc_floor_office.png)
-
 - **Visual State Indicators**: Working, delegating, waiting states clearly displayed
 - **Thought/Speech Bubbles**: See agent activities and communications
 
 ### Advanced Features
-- **Command Center**: Cross-terminal overview that gathers every live session's boss into one pixel office, with status columns (Needs-you, Working, Done, Ended) and A* pathfinding to free seats
-- **Multi-Mode Whiteboard**: 12 display modes with keyboard shortcuts (0-9, T, B, K) - todo list, remote workers, tool usage pie chart, org chart, stonks, weather, safety board, timeline, news ticker, coffee tracker, heat map, kanban
-- **Background Task Tracking**: Remote Workers display shows background task status in video-call-style tiles
-- **Context Window Tracking**: Animated trashcan fills with paper as context increases
-- **Compaction Animation**: Boss stomps on trashcan to compact context
-- **City Skyline Window**: Real-time day/night cycle based on local time with animated drifting clouds
-- **Wall Clock**: Click to cycle between analog and digital (12h/24h) display modes
 - **User Preferences**: Settings persist across sessions via backend database
-
-![Settings](https://raw.githubusercontent.com/paulrobello/claude-office/main/screenshots/sc_general_settings.png)
-- **Git Status Panel**: See repository status in real-time
-- **Printer Station**: Printer animates when Claude completes work that produces a report or document
 - **Random Quotes**: Agents display random acceptance/completion quotes when receiving or turning in work
-- **Safety Sign**: Tool counter tracks uses since last context compaction
 
 ### Technical Excellence
 - **WebSocket Architecture**: Real-time state updates from backend to frontend
@@ -352,9 +321,9 @@ claude-office/
 │   │   ├── core/         # State machine, event processor
 │   │   └── models/       # Pydantic models
 │   └── pyproject.toml
-├── frontend/             # Next.js + PixiJS frontend
+├── frontend/             # Next.js + three.js frontend
 │   ├── src/
-│   │   ├── components/   # React/PixiJS components
+│   │   ├── components/   # React components (iso/ = three.js office)
 │   │   ├── hooks/        # Custom React hooks
 │   │   ├── stores/       # Zustand state stores
 │   │   └── systems/      # Animation, pathfinding
@@ -413,7 +382,6 @@ Contributions are welcome! Please ensure that all pull requests:
 
 - [Quick Start Guide](docs/guides/quickstart.md) - Get running in under 5 minutes
 - [Architecture](docs/architecture/ARCHITECTURE.md) - System design, data flow, component details
-- [Whiteboard Modes](docs/reference/whiteboard-modes.md) - 12 display modes with keyboard shortcuts
 - [Docker Guide](docs/guides/deployment.md) - Docker deployment and configuration
 - [AI Summary](docs/reference/ai-summary.md) - AI-powered summary service documentation
 - [Backend README](backend/README.md) - Backend-specific setup

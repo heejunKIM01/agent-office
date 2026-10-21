@@ -141,7 +141,7 @@ Uses TypeScript strict mode. Frontend types are auto-generated from backend Pyda
 ```
 claude-office/
 ├── backend/          # FastAPI backend (Python)
-├── frontend/         # Next.js + PixiJS frontend (TypeScript)
+├── frontend/         # Next.js + three.js frontend (TypeScript)
 ├── hooks/            # Claude Code hook integration (Python)
 ├── opencode-plugin/  # OpenCode integration plugin (TypeScript)
 ├── scripts/          # Utility scripts

@@ -142,8 +142,6 @@ The complex scenario sends 4 background task notifications:
 | `bg_task_i9j0k1l2` | failed | Deploy to production failed |
 | `bg_task_m3n4o5p6` | completed | Generated API documentation |
 
-View these in the whiteboard by pressing `1` or `B` to switch to Remote Workers mode.
-
 ## Single Agent Test
 
 A minimal script for debugging pathfinding and agent lifecycle.

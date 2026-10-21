@@ -20,7 +20,6 @@ Guides, references, and architecture notes for Claude Office Visualizer.
 | Document | Description |
 |----------|-------------|
 | [AI Summary Service](reference/ai-summary.md) | AI-powered summary service documentation |
-| [Whiteboard Modes](reference/whiteboard-modes.md) | 12 display modes with keyboard shortcuts |
 
 ## Research
 
