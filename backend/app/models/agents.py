@@ -87,6 +87,7 @@ class Agent(BaseModel):
     activity: Activity | None = None  # set from in-flight tools, see core/activity.py
     stuck: StuckReason | None = None  # failed tool / permission wait until it moves on
     character_type: str | None = None  # "lead" | "teammate" | "subagent"
+    agent_type: str | None = None  # subagent type it was started as, e.g. "general-purpose"
     parent_session_id: str | None = None  # session that owns this character
     parent_id: str | None = None  # for subagents: parent lead/teammate id
 
