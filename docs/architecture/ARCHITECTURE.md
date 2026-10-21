@@ -354,8 +354,8 @@ All game state is managed in a single Zustand store (`gameStore.ts`). Use indivi
 const isConnected = useGameStore((state) => state.isConnected);
 
 // Good - use exported selectors for consistency
-const agents = useGameStore(selectAgents);
 const boss = useGameStore(selectBoss);
+const codingAgent = useGameStore(selectCodingAgent);
 
 // Bad - returns new object reference every render
 const { boss, agents } = useGameStore((state) => ({ boss: state.boss, agents: state.agents }));
@@ -364,7 +364,7 @@ const { boss, agents } = useGameStore((state) => ({ boss: state.boss, agents: st
 **Key State Areas:**
 - Agent state (phase, bubbles)
 - Boss state (backend state, typing, task)
-- Office state (todos, event log)
+- Office state (event log, coding agent)
 - Queues (arrival and departure queues)
 - UI state (connection, replay)
 

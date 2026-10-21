@@ -15,7 +15,6 @@ import type {
   AgentState as BackendAgentState,
   WebSocketMessage,
   EventDetail,
-  GameState as BackendGameState,
 } from "@/types";
 
 /**
@@ -161,14 +160,6 @@ export type EventLogEntry = Omit<
   NonNullable<WebSocketMessage["event"]>,
   "timestamp"
 > & { timestamp: Date; detail?: EventDetail };
-
-/**
- * Replay frame for event replay.
- */
-export interface ReplayFrame {
-  event: NonNullable<WebSocketMessage["event"]>;
-  state: BackendGameState;
-}
 
 /**
  * One agent's position/path delta for a single animation tick (ARC-006).

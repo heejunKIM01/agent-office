@@ -422,19 +422,6 @@ describe("reset variants", () => {
     });
   });
 
-  describe("resetForReplay()", () => {
-    beforeEach(seedNonDefaults);
-
-    it("resets game state like reset() but also sets isReplaying=true", () => {
-      useGameStore.getState().resetForReplay();
-      const s = useGameStore.getState();
-      expect(s.agents.size).toBe(0);
-      expect(s.arrivalQueue).toEqual([]);
-      expect(s.sessionId).toBe("None");
-      expect(s.isReplaying).toBe(true);
-    });
-  });
-
   describe("resetForSessionSwitch()", () => {
     beforeEach(seedNonDefaults);
 

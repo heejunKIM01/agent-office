@@ -9,7 +9,6 @@ import type {
   BubbleContent,
   BossState,
   AgentState as BackendAgentState,
-  TodoItem,
   HistoryEntry,
   WebSocketMessage,
   Agent as BackendAgent,
@@ -31,7 +30,6 @@ export type {
   AgentErrandState,
   ErrandRoom,
   EventLogEntry,
-  ReplayFrame,
   AgentMovement,
 } from "./slices/types";
 import type {
@@ -42,7 +40,6 @@ import type {
   BossErrandState,
   AgentErrandState,
   EventLogEntry,
-  ReplayFrame,
   AgentMovement,
 } from "./slices/types";
 
@@ -168,13 +165,11 @@ export interface GameStore {
 
   // ========== Office State ==========
   sessionId: string;
-  todos: TodoItem[];
   eventLog: EventLogEntry[];
   codingAgent: string | null; // Coding agent running the session (name tag)
 
   // Office actions
   setSessionId: (id: string) => void;
-  setTodos: (todos: TodoItem[]) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
@@ -182,20 +177,13 @@ export interface GameStore {
   // ========== UI State ==========
   isConnected: boolean;
   isReplaying: boolean;
-  replaySpeed: number;
-  replayEvents: ReplayFrame[];
-  currentReplayIndex: number;
 
   // UI actions
   setConnected: (connected: boolean) => void;
   setReplaying: (replaying: boolean) => void;
-  setReplaySpeed: (speed: number) => void;
-  setReplayEvents: (events: ReplayFrame[]) => void;
-  setReplayIndex: (index: number) => void;
 
   // ========== Top-level Actions ==========
   reset: () => void;
-  resetForReplay: () => void;
   resetForSessionSwitch: () => void;
 }
 
@@ -240,14 +228,6 @@ export const useGameStore = create<GameStore>()(
         boss: { ...initialBossState, bubble: createEmptyBubbleState() },
       }),
 
-    resetForReplay: () =>
-      set({
-        ...initialState,
-        agents: new Map(),
-        boss: { ...initialBossState, bubble: createEmptyBubbleState() },
-        isReplaying: true,
-      }),
-
     resetForSessionSwitch: () =>
       set({
         // Reset all agent/game state but preserve UI settings
@@ -263,14 +243,11 @@ export const useGameStore = create<GameStore>()(
         bossErrand: initialBossErrandState,
         agentErrands: new Map(),
         sessionId: "None",
-        todos: [],
         eventLog: [], // Clear event log for new session
         codingAgent: null,
         // Keep connection-related state
         isConnected: false,
         isReplaying: false, // Important: allow WebSocket to reconnect
-        replayEvents: [],
-        currentReplayIndex: -1,
       }),
   })),
 );
@@ -279,15 +256,6 @@ export const useGameStore = create<GameStore>()(
 // SELECTORS (for efficient subscriptions)
 // ============================================================================
 
-export const selectAgents = (state: GameStore) => state.agents;
 export const selectBoss = (state: GameStore) => state.boss;
-export const selectBossErrand = (state: GameStore) => state.bossErrand;
-export const selectAgentErrands = (state: GameStore) => state.agentErrands;
-export const selectArrivalQueue = (state: GameStore) => state.arrivalQueue;
-export const selectDepartureQueue = (state: GameStore) => state.departureQueue;
 export const selectIsConnected = (state: GameStore) => state.isConnected;
-export const selectIsReplaying = (state: GameStore) => state.isReplaying;
-export const selectSessionId = (state: GameStore) => state.sessionId;
-export const selectTodos = (state: GameStore) => state.todos;
-export const selectEventLog = (state: GameStore) => state.eventLog;
 export const selectCodingAgent = (state: GameStore) => state.codingAgent;

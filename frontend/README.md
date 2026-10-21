@@ -174,12 +174,12 @@ The machine is split across:
 
 The unified store (`stores/gameStore.ts`) contains:
 
-| Category | State                                           |
-| -------- | ----------------------------------------------- |
-| Agents   | `agents`, `arrivalQueue`, `departureQueue`      |
-| Boss     | `boss`, `bossErrand`                            |
-| Office   | `sessionId`, `todos`, `eventLog`, `codingAgent` |
-| UI       | `isConnected`, `isReplaying`                    |
+| Category | State                                      |
+| -------- | ------------------------------------------ |
+| Agents   | `agents`, `arrivalQueue`, `departureQueue` |
+| Boss     | `boss`, `bossErrand`                       |
+| Office   | `sessionId`, `eventLog`, `codingAgent`     |
+| UI       | `isConnected`, `isReplaying`               |
 
 ### Selectors
 

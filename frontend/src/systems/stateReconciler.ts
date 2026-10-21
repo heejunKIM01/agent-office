@@ -285,7 +285,6 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
     store.syncQueues(state.arrivalQueue ?? [], state.departureQueue ?? []);
     ctx.initialQueueSyncDone.current = state.sessionId;
   }
-  store.setTodos(state.todos ?? []);
   store.setCodingAgent(state.codingAgent ?? null);
   // Fill the event log from recent history: live `event` messages only cover
   // events that happen while this page is connected.

@@ -1,7 +1,7 @@
 /**
  * Office slice (ARC-005).
  *
- * Session/scalar office state: session id, todos, event log, coding agent.
+ * Session/scalar office state: session id, event log, coding agent.
  * Self-contained apart from the @/types shapes it carries.
  */
 import type { StateCreator } from "zustand";
@@ -9,7 +9,6 @@ import type { GameStore } from "../gameStore";
 import type {
   EventDetail,
   EventType,
-  TodoItem,
   HistoryEntry,
   WebSocketMessage,
 } from "@/types";
@@ -33,12 +32,10 @@ function eventLogKey(event: {
 
 export type OfficeSlice = {
   sessionId: string;
-  todos: TodoItem[];
   eventLog: EventLogEntry[];
   codingAgent: string | null;
 
   setSessionId: (id: string) => void;
-  setTodos: (todos: TodoItem[]) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
@@ -46,7 +43,6 @@ export type OfficeSlice = {
 
 export const initialOfficeState = {
   sessionId: "None",
-  todos: [] as TodoItem[],
   eventLog: [] as EventLogEntry[],
   codingAgent: null as string | null,
 };
@@ -57,7 +53,6 @@ export const createOfficeSlice: StateCreator<GameStore, [], [], OfficeSlice> = (
   ...initialOfficeState,
 
   setSessionId: (id) => set({ sessionId: id }),
-  setTodos: (todos) => set({ todos }),
 
   addEventLog: (event) =>
     set((state) => {
