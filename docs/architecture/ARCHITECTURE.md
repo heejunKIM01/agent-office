@@ -401,7 +401,7 @@ stateDiagram-v2
     completing --> idle: session_end
 ```
 
-**Note:** The compaction animation (boss walking to trash can and jumping) is handled separately in the frontend via `CompactionAnimationPhase` in `gameStore.ts`, not as a boss state. See [Context Compaction Animation](#context-compaction-animation) for details.
+**Note:** Context compaction is not a boss state: `context_compaction` events only reach the event history, and the office draws no compaction animation.
 
 ## Work Acceptance Quotes
 

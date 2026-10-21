@@ -49,7 +49,6 @@ function run(
       {
         activity: null,
         deskDuty: false,
-        isCompacting: false,
         isStuck: false,
         quietSince: null,
         ...inputs,
@@ -151,12 +150,6 @@ describe("stepBossErrand", () => {
     });
     expect(s.state.phase).toBe("seated");
     expect(s.satCount).toBe(1);
-  });
-
-  it("drops the errand when compaction starts", () => {
-    const s = run(sim(), 0.5, reading);
-    run(s, TICK, { ...reading, isCompacting: true });
-    expect(s.state).toEqual(initialBossErrandState);
   });
 
   it("does not move toward an unreachable room", () => {

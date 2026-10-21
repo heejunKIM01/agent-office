@@ -258,7 +258,7 @@ The backend processes the following event types from Claude Code hooks:
 | `subagent_start` | Task tool spawns agent | Create employee agent |
 | `subagent_info` | Native agent ID available | Link agent to Claude's ID |
 | `subagent_stop` | Task agent completes | Agent returns work, departs |
-| `context_compaction` | Context window compacted | Coffee break animation |
+| `context_compaction` | Context window compacted | Logged in the event history |
 | `background_task_notification` | Background task completed | Logged in the event history |
 | `agent_update` | Token-usage update emitted by transcript poller | Refresh agent token/thinking display (synthetic, not from hooks) |
 | `reporting` | Agent reporting to boss | Show reporting animation (synthetic, persisted for replay) |

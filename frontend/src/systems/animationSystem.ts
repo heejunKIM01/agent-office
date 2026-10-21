@@ -296,7 +296,6 @@ class AnimationSystem {
           store.boss.inUseBy !== null ||
           store.arrivalQueue.length > 0 ||
           store.departureQueue.length > 0,
-        isCompacting: store.compactionPhase !== "idle",
         isStuck: store.boss.stuck !== null,
         quietSince: store.boss.quietSince,
         now: performance.now(),
@@ -401,14 +400,8 @@ class AnimationSystem {
         }
       }
     } else if (!bossBubble.content && bossBubble.queue.length > 0) {
-      // No current bubble but items in queue - display next if boss isn't compacting
-      // We don't need to wait for queues to be empty here because:
-      // - The queueing logic in enqueueBubble already handles when to queue vs display
-      // - By the time we're here, the bubble was already queued for a reason
-      // - We just need to wait for compaction to finish
-      if (store.compactionPhase === "idle") {
-        store.advanceBubble("boss");
-      }
+      // No current bubble but items in queue - display the next one
+      store.advanceBubble("boss");
     }
 
     // Check agent bubbles

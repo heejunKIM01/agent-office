@@ -235,7 +235,7 @@ describe("syncQueues", () => {
  * branch. Each test below exercises both.
  */
 describe("enqueueBubble — boss branch", () => {
-  it("displays immediately when no bubble is current and not compacting", () => {
+  it("displays immediately when no bubble is current", () => {
     useGameStore.getState().enqueueBubble("boss", BUBBLE);
 
     const boss = useGameStore.getState().boss;
@@ -255,39 +255,26 @@ describe("enqueueBubble — boss branch", () => {
     expect(boss.bubble.queue).toEqual([BUBBLE_B]);
   });
 
-  it("queues (does not display) during compactionPhase !== 'idle'", () => {
-    useGameStore.getState().setCompactionPhase("jumping");
-    useGameStore.getState().enqueueBubble("boss", BUBBLE);
-
-    const boss = useGameStore.getState().boss;
-    expect(boss.bubble.content).toBeNull();
-    expect(boss.bubble.queue).toEqual([BUBBLE]);
-  });
-
-  it("displays during compaction when given { immediate: true }", () => {
-    useGameStore.getState().setCompactionPhase("jumping");
-    useGameStore.getState().enqueueBubble("boss", BUBBLE, { immediate: true });
-
-    expect(useGameStore.getState().boss.bubble.content).toEqual(BUBBLE);
-  });
-
   it("preserves already-queued bubbles when displaying a new one", () => {
-    // Queue two bubbles during compaction so the queue fills.
-    useGameStore.getState().setCompactionPhase("jumping");
-    useGameStore.getState().enqueueBubble("boss", BUBBLE);
-    useGameStore.getState().enqueueBubble("boss", BUBBLE_B);
-
-    // Compaction ends; the next bubble (with immediate) displays while the
-    // previously-queued pair must survive in the queue.
-    useGameStore.getState().setCompactionPhase("idle");
-    const immediateC: BubbleContent = { type: "speech", text: "now" };
-    useGameStore.getState().enqueueBubble("boss", immediateC, {
-      immediate: true,
+    // Nothing on display, but two bubbles still wait in the queue.
+    const { boss } = useGameStore.getState();
+    useGameStore.setState({
+      boss: {
+        ...boss,
+        bubble: {
+          content: null,
+          displayStartTime: null,
+          queue: [BUBBLE, BUBBLE_B],
+        },
+      },
     });
 
-    const boss = useGameStore.getState().boss;
-    expect(boss.bubble.content).toEqual(immediateC);
-    expect(boss.bubble.queue).toEqual([BUBBLE, BUBBLE_B]);
+    const bubbleC: BubbleContent = { type: "speech", text: "now" };
+    useGameStore.getState().enqueueBubble("boss", bubbleC);
+
+    const bubble = useGameStore.getState().boss.bubble;
+    expect(bubble.content).toEqual(bubbleC);
+    expect(bubble.queue).toEqual([BUBBLE, BUBBLE_B]);
   });
 });
 

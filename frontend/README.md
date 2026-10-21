@@ -177,9 +177,8 @@ The unified store (`stores/gameStore.ts`) contains:
 | Category | State                                           |
 | -------- | ----------------------------------------------- |
 | Agents   | `agents`, `arrivalQueue`, `departureQueue`      |
-| Boss     | `boss`, `compactionPhase`                       |
+| Boss     | `boss`, `bossErrand`                            |
 | Office   | `sessionId`, `todos`, `eventLog`, `codingAgent` |
-| Context  | `isCompacting`                                  |
 | UI       | `isConnected`, `isReplaying`, `debugMode`       |
 
 ### Selectors

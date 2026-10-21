@@ -25,7 +25,6 @@ export type {
   PathState,
   BubbleState,
   AgentAnimationState,
-  CompactionAnimationPhase,
   BossAnimationState,
   BossErrandPhase,
   BossErrandState,
@@ -39,7 +38,6 @@ import type {
   AgentPhase,
   PathState,
   AgentAnimationState,
-  CompactionAnimationPhase,
   BossAnimationState,
   BossErrandState,
   AgentErrandState,
@@ -162,11 +160,7 @@ export interface GameStore {
   setBossTyping: (typing: boolean) => void;
 
   // ========== Bubble Actions (unified for boss and agents) ==========
-  enqueueBubble: (
-    entityId: string,
-    content: BubbleContent,
-    options?: { immediate?: boolean },
-  ) => void;
+  enqueueBubble: (entityId: string, content: BubbleContent) => void;
   advanceBubble: (entityId: string) => void;
   clearBubbles: (entityId: string) => void;
   getCurrentBubble: (entityId: string) => BubbleContent | null;
@@ -175,17 +169,12 @@ export interface GameStore {
 
   // ========== Office State ==========
   sessionId: string;
-  isCompacting: boolean; // True when context compaction animation is active
-  compactionPhase: CompactionAnimationPhase; // Phase of the compaction animation
   todos: TodoItem[];
   eventLog: EventLogEntry[];
   codingAgent: string | null; // Coding agent running the session (name tag)
 
   // Office actions
   setSessionId: (id: string) => void;
-  triggerCompaction: () => void; // Trigger context compaction animation
-  setCompactionPhase: (phase: CompactionAnimationPhase) => void; // Set compaction animation phase
-  setIsCompacting: (isCompacting: boolean) => void; // Set isCompacting flag
   setTodos: (todos: TodoItem[]) => void;
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
@@ -289,8 +278,6 @@ export const useGameStore = create<GameStore>()(
         bossErrand: initialBossErrandState,
         agentErrands: new Map(),
         sessionId: "None",
-        isCompacting: false,
-        compactionPhase: "idle",
         todos: [],
         eventLog: [], // Clear event log for new session
         codingAgent: null,
@@ -323,9 +310,6 @@ export const selectShowQueueSlots = (state: GameStore) => state.showQueueSlots;
 export const selectShowPhaseLabels = (state: GameStore) =>
   state.showPhaseLabels;
 export const selectShowObstacles = (state: GameStore) => state.showObstacles;
-export const selectIsCompacting = (state: GameStore) => state.isCompacting;
-export const selectCompactionPhase = (state: GameStore) =>
-  state.compactionPhase;
 export const selectTodos = (state: GameStore) => state.todos;
 export const selectEventLog = (state: GameStore) => state.eventLog;
 export const selectCodingAgent = (state: GameStore) => state.codingAgent;

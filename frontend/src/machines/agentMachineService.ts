@@ -235,13 +235,12 @@ class AgentMachineService implements AnimationListener {
 
   /**
    * Notify that the boss is available for the next agent in queue.
-   * Blocked if boss is doing compaction animation, is away from the desk on
-   * an errand, or if ready position is occupied.
+   * Blocked if the boss is away from the desk on an errand, or if ready
+   * position is occupied.
    */
   notifyBossAvailable(): void {
     const store = useGameStore.getState();
 
-    if (store.compactionPhase !== "idle") return;
     if (store.bossErrand.phase !== "seated") return;
 
     if (store.arrivalQueue.length > 0) {
@@ -596,11 +595,7 @@ class AgentMachineService implements AnimationListener {
       return;
     }
 
-    store.enqueueBubble(
-      "boss",
-      { type: "speech", text, icon },
-      { immediate: true },
-    );
+    store.enqueueBubble("boss", { type: "speech", text, icon });
   }
 
   private handleShowAgentBubble(

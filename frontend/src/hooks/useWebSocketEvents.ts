@@ -133,11 +133,6 @@ export function useWebSocketEvents({
                   typingTrackerRef.current?.onPostToolUse(typingKey);
                 }
               }
-
-              // Trigger compaction animation on context_compaction event.
-              if (message.event.type === "context_compaction") {
-                useGameStore.getState().triggerCompaction();
-              }
             }
             break;
 

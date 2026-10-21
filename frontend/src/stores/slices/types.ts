@@ -94,15 +94,6 @@ export interface AgentAnimationState {
 }
 
 /**
- * Compaction animation phases for the boss walking to and jumping on trash can.
- */
-export type CompactionAnimationPhase =
-  | "idle" // No animation
-  | "walking_to_trash" // Boss walking to trash can
-  | "jumping" // Boss jumping on trash can
-  | "walking_back"; // Boss returning to desk
-
-/**
  * Boss animation state.
  */
 export interface BossAnimationState {
