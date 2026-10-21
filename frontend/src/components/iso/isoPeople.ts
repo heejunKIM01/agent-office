@@ -42,7 +42,8 @@ import {
   type IsoWalker,
 } from "@/systems/isoErrands";
 import { findFloorPath } from "@/systems/isoNavGrid";
-import { loungeAct, type LoungeAct } from "@/systems/loungeActs";
+import { loungeAct } from "@/systems/loungeActs";
+import { watchesTheClock } from "@/systems/roomGimmicks";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import {
@@ -55,6 +56,7 @@ import {
   buildCharacter,
   poseCharacter,
   type CharacterRig,
+  type PoseAct,
 } from "./isoCharacters";
 import { OUTFIT_COLORS } from "./isoPalette";
 
@@ -115,6 +117,8 @@ interface Placed {
   thinkingSince: number | null;
   /** When it sat down on the lounge sofa (Date.now ms), while it sits there. */
   loungeSince: number | null;
+  /** When its command started (performance.now ms), while one runs. */
+  runningSince: number | null;
   walker: IsoWalker;
   seat: IsoSpot;
   /** What it tells Claude when its work is done, read when it gets there. */
@@ -217,6 +221,7 @@ export class IsoPeople {
         bubbleKey: "",
         thinkingSince: null,
         loungeSince: null,
+        runningSince: null,
         walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
@@ -272,7 +277,7 @@ export class IsoPeople {
         placed.person.kind === "claude" &&
         now < this.callUntil &&
         walker.pose === "sit";
-      const act = this.loungeActOf(placed);
+      const act = this.actOf(placed, now);
       poseCharacter(
         placed.rig,
         calling
@@ -341,7 +346,7 @@ export class IsoPeople {
     stuck: boolean,
     now: number,
     quiet: boolean,
-    act: LoungeAct | null,
+    act: PoseAct | null,
   ): void {
     const { person } = placed;
     if (person.thinking) placed.thinkingSince ??= now;
@@ -377,17 +382,27 @@ export class IsoPeople {
   }
 
   /**
-   * What it does on the lounge sofa, counted from the last event (or from
-   * when it sat down); null anywhere else.
+   * What it is up to besides its pose: its pastime on the lounge sofa,
+   * counted from the last event (or from when it sat down), or checking its
+   * watch at the rack once its command has run a while; null otherwise.
    */
-  private loungeActOf(placed: Placed): LoungeAct | null {
-    const { walker } = placed;
-    if (walker.goal !== "lounge" || walker.path || walker.pose !== "sit") {
-      placed.loungeSince = null;
-      return null;
+  private actOf(placed: Placed, now: number): PoseAct | null {
+    const { walker, person } = placed;
+    if (person.activity === "running") placed.runningSince ??= now;
+    else placed.runningSince = null;
+    const lounging =
+      walker.goal === "lounge" && !walker.path && walker.pose === "sit";
+    if (!lounging) placed.loungeSince = null;
+    if (lounging) {
+      const sat = (placed.loungeSince ??= Date.now());
+      return loungeAct(Date.now() - (person.idleSince ?? sat));
     }
-    const sat = (placed.loungeSince ??= Date.now());
-    return loungeAct(Date.now() - (placed.person.idleSince ?? sat));
+    if (walker.goal === "server" && walker.pose === "work") {
+      const running =
+        placed.runningSince === null ? 0 : now - placed.runningSince;
+      return watchesTheClock(running) ? "watch" : null;
+    }
+    return null;
   }
 
   /** Take everyone off the floor; the next `sync` places them afresh. */

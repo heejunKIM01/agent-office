@@ -8,6 +8,9 @@
 import * as THREE from "three";
 import type { IsoPose, IsoRoomId } from "@/systems/isoErrands";
 import type { LoungeAct } from "@/systems/loungeActs";
+
+/** Something a person is up to besides its pose: a lounge pastime, or waiting on a command. */
+export type PoseAct = LoungeAct | "watch";
 import type { Outfit, PersonKind } from "@/systems/officePeople";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, cylinder, material } from "./isoFurniture";
@@ -57,6 +60,8 @@ export interface CharacterRig {
   cup: THREE.Object3D;
   /** A phone held in both hands, looked at on the lounge sofa. */
   handset: THREE.Object3D;
+  /** A wristwatch on the left wrist, checked while waiting on a command. */
+  watch: THREE.Object3D;
   /** A handset at the ear while Claude calls a subagent in. */
   phone: THREE.Object3D;
   /** Cold sweat beside the head while a failed tool keeps it stuck. */
@@ -197,6 +202,13 @@ export function buildCharacter(
   cup.visible = false;
   arms[1].add(cup);
 
+  // On the left wrist, the face turned out.
+  const watch = new THREE.Group();
+  watch.add(box(0.2, 0.06, 0.2, C.watchBand, 0, -0.5, 0));
+  watch.add(box(0.12, 0.02, 0.12, C.watchFace, 0, -0.5, 0.1));
+  watch.visible = false;
+  arms[0].add(watch);
+
   // Held low in both hands in front, screen up.
   const handset = box(0.22, 0.04, 0.36, C.phone, 0, 0.3, 0.62);
   handset.rotation.x = 0.5;
@@ -239,6 +251,7 @@ export function buildCharacter(
     book,
     cup,
     handset,
+    watch,
     phone,
     sweat,
     chipAnchor,
@@ -256,6 +269,8 @@ const SWEAT_DROPS: [number, number, number][] = [
 const PONDER_ARMS: [number, number] = [-1.2, -2.1];
 /** The left hand up at the ear, holding the phone (about x, then out about z). */
 const PHONE_ARM: [number, number] = [-2.5, -0.6];
+/** How often a waiting person glances at its watch (s). */
+const WATCH_CHECK_SECONDS = 4;
 
 /** Arm angles (about x, forward is negative) while working in each room. */
 function workArms(room: IsoRoomId | null, seconds: number): [number, number] {
@@ -297,6 +312,23 @@ function loungeArms(act: LoungeAct, seconds: number): [number, number] {
   }
 }
 
+/**
+ * Arms crossed while waiting on a long command, the left wrist raised to
+ * the eyes every few seconds to check the watch: [x, z] per arm.
+ */
+function watchArms(seconds: number): [[number, number], [number, number]] {
+  const checking = seconds % WATCH_CHECK_SECONDS < 1.2;
+  return checking
+    ? [
+        [-1.75, 0.35],
+        [-1.2, -0.75],
+      ]
+    : [
+        [-1.35, 0.75],
+        [-1.2, -0.75],
+      ];
+}
+
 /** Leaning back to watch TV, slumped and nodding while dozing (about x). */
 function loungeLean(act: LoungeAct, seconds: number): number {
   if (act === "tv") return -0.12;
@@ -320,7 +352,8 @@ function drip(sweat: THREE.Group, seconds: number): void {
  * hand and sweats (spec R3). Standing to report it talks with a hand, waving
  * it raises its left arm, and on the phone (seated) it holds a handset to
  * its ear. Seated in the lounge it keeps busy with ``act`` (a coffee, its
- * phone, a book, the TV, a doze). ``seconds`` drives the motion.
+ * phone, a book, the TV, a doze); at the rack, waiting on a long command, it
+ * crosses its arms and checks its watch. ``seconds`` drives the motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
@@ -328,11 +361,13 @@ export function poseCharacter(
   room: IsoRoomId | null,
   seconds: number,
   stuck = false,
-  act: LoungeAct | null = null,
+  act: PoseAct | null = null,
 ): void {
   const [legL, legR] = rig.legs;
   const [armL, armR] = rig.arms;
-  const pastime = pose === "sit" && !stuck ? act : null;
+  const pastime = pose === "sit" && !stuck && act !== "watch" ? act : null;
+  const waiting = pose === "work" && !stuck && act === "watch";
+  rig.watch.visible = waiting;
   rig.book.visible =
     (pose === "work" && room === "library" && !stuck) || pastime === "book";
   rig.cup.visible =
@@ -381,6 +416,15 @@ export function poseCharacter(
     // Waving: the left arm up and out, swinging side to side. Facing
     // Claude's desk, a reporter shows its left side to the camera.
     if (pose === "wave") armL.rotation.z = -2.5 - 0.3 * Math.sin(seconds * 10);
+    rig.hips.position.y = HIP_HEIGHT;
+    return;
+  }
+  if (waiting) {
+    const [[lx, lz], [rx, rz]] = watchArms(seconds);
+    armL.rotation.set(lx, 0, lz);
+    armR.rotation.set(rx, 0, rz);
+    legL.rotation.x = 0;
+    legR.rotation.x = 0;
     rig.hips.position.y = HIP_HEIGHT;
     return;
   }

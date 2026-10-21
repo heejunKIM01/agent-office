@@ -102,6 +102,8 @@ export const ISO_COLORS = {
   bookCover: "#d9534f",
   bookPages: "#fbf8f1",
   cup: "#f4f1ec",
+  watchBand: "#2a2d33",
+  watchFace: "#f2f4f7",
   coffee: "#6b4226",
   sweat: "#7cc4f2",
   labelText: "#8e98a7",
