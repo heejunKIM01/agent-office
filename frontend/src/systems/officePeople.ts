@@ -22,6 +22,9 @@ export interface IsoPerson {
   kind: PersonKind;
   /** Text on the name chip. */
   label: string;
+  /** What to call it in lists: its task (or name), and its kind (「범용」, 「Claude」). */
+  title: string;
+  typeLabel: string;
   activity: Activity | null;
   /** A failed tool: it ponders where it is. */
   stuck: boolean;
@@ -53,12 +56,19 @@ const LEFT_PHASES: ReadonlySet<AgentPhase> = new Set([
   "in_elevator",
 ]);
 
-function subagentLabel(agent: AgentAnimationState, words: PeopleWords): string {
+function subagentNames(
+  agent: AgentAnimationState,
+  words: PeopleWords,
+): Pick<IsoPerson, "label" | "title" | "typeLabel"> {
   const type =
     agent.agentType === "general-purpose" ? words.generalType : agent.agentType;
   const task = agent.currentTask || agent.name || "";
-  if (type && task) return `${type} · ${task}`;
-  return type || task || agent.id.slice(0, 8);
+  const title = task || type || agent.id.slice(0, 8);
+  return {
+    label: type && task ? `${type} · ${task}` : title,
+    title,
+    typeLabel: type ?? "",
+  };
 }
 
 /** What a person is doing, with a permission wait counted as asking. */
@@ -96,6 +106,8 @@ export function officePeople(
       id: "claude",
       kind: "claude",
       label: words.agentName,
+      title: words.agentName,
+      typeLabel: words.agentName,
       ...doing(state.boss.activity, state.boss.stuck),
       ...said(state.boss.bubble),
       thinking: state.boss.quietSince !== null,
@@ -104,6 +116,8 @@ export function officePeople(
       id: "me",
       kind: "me",
       label: words.me,
+      title: words.me,
+      typeLabel: "",
       activity: null,
       stuck: false,
       bubble: null,
@@ -116,7 +130,7 @@ export function officePeople(
     people.push({
       id: agent.id,
       kind: "subagent",
-      label: subagentLabel(agent, words),
+      ...subagentNames(agent, words),
       ...doing(agent.activity, agent.stuck),
       ...said(agent.bubble),
       thinking:

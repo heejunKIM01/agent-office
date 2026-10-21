@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { AgentLogo } from "@/components/iso/AgentLogo";
 import { IsoOffice } from "@/components/iso/IsoOffice";
+import { IsoSidePanel } from "@/components/iso/IsoSidePanel";
 import { useSessions } from "@/hooks/useSessions";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useWebSocketEvents } from "@/hooks/useWebSocketEvents";
@@ -47,43 +48,46 @@ export default function IsoOfficePage(): React.ReactNode {
 
   return (
     <main
-      className="relative h-dvh w-full overflow-hidden bg-gradient-to-b from-[#f5f7fa] to-[#e8ecf2] text-slate-800"
+      className="flex h-dvh w-full overflow-hidden bg-gradient-to-b from-[#f5f7fa] to-[#e8ecf2] text-slate-800"
       style={{
         fontFamily:
           '"Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif',
       }}
     >
-      <IsoOffice />
+      <div className="relative min-w-0 flex-1">
+        <IsoOffice />
 
-      {session && (
-        <header className="absolute left-4 top-4 flex max-w-[60%] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-2 pr-4 shadow-sm">
-          <AgentLogo codingAgent={codingAgent ?? session.codingAgent} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              {floor && (
-                <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white">
-                  {floor.number}F
+        {session && (
+          <header className="absolute left-4 top-4 flex max-w-[60%] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-2 pr-4 shadow-sm">
+            <AgentLogo codingAgent={codingAgent ?? session.codingAgent} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                {floor && (
+                  <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                    {floor.number}F
+                  </span>
+                )}
+                <span className="truncate text-sm font-bold">
+                  {floor?.name ?? session.projectName}
                 </span>
-              )}
-              <span className="truncate text-sm font-bold">
-                {floor?.name ?? session.projectName}
-              </span>
+              </div>
+              <p className="truncate text-xs text-slate-500">{title}</p>
             </div>
-            <p className="truncate text-xs text-slate-500">{title}</p>
-          </div>
-        </header>
-      )}
+          </header>
+        )}
 
-      <div
-        className={`absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold shadow-sm ${
-          isConnected ? "text-emerald-600" : "text-slate-400"
-        }`}
-      >
-        <span
-          className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-slate-300"}`}
-        />
-        {isConnected ? t("iso.live") : t("iso.offline")}
+        <div
+          className={`absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold shadow-sm ${
+            isConnected ? "text-emerald-600" : "text-slate-400"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-slate-300"}`}
+          />
+          {isConnected ? t("iso.live") : t("iso.offline")}
+        </div>
       </div>
+      <IsoSidePanel session={session} />
     </main>
   );
 }
