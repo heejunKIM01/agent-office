@@ -38,6 +38,7 @@ function person(fields: Partial<IsoPerson>): IsoPerson {
     leaving: false,
     breakRoom: null,
     idleSince: null,
+    typedAt: null,
     outfit: "general",
     ...fields,
   };

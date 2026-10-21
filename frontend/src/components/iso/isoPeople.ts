@@ -4,12 +4,14 @@
  * errand rules in `update`. Claude sits at the front dev desk nearest my
  * desk, subagents and colleagues (other sessions' lead agents on this
  * floor) take the next free dev chairs, and I sit behind the reception
- * desk. Claude rests on the lounge sofa between turns, passing the time
- * with a coffee, its phone, a book or the TV and dozing off after a long
- * rest, and has a coffee in the cafe while its conversation is compacted. `update` also reports what the rooms should show: racks
- * busy while a command runs, code on the screens of people editing,
- * someone writing at the whiteboard, and the elevator doors open while
- * someone steps in or out.
+ * desk, typing for a moment each time I send a question. Claude rests on
+ * the lounge sofa between turns, passing the time with a coffee, its
+ * phone, a book or the TV and dozing off after a long rest, and has a
+ * coffee in the cafe while its conversation is compacted. `update` also
+ * reports what the rooms should show: racks busy while a command runs,
+ * code on the screens of people editing, someone writing at the
+ * whiteboard, the TV on while someone watches, and the elevator doors open
+ * while someone steps in or out.
  *
  * A subagent the backend has just made steps out of the elevator while
  * Claude holds the phone; one whose work is done reports beside Claude,
@@ -83,6 +85,8 @@ const DOOR_OPEN_RANGE = 2.2;
 const IN_CAB_DEPTH = 0.45;
 /** How long Claude holds the phone when it calls a subagent in (ms). */
 const CALL_MS = 3000;
+/** How long I type at my desk after sending a question (ms). */
+const ME_TYPING_MS = 4000;
 
 /** What the rooms should show this frame. */
 export interface RoomsInUse {
@@ -271,7 +275,11 @@ export class IsoPeople {
       const act = this.loungeActOf(placed);
       poseCharacter(
         placed.rig,
-        calling ? "phone" : walker.pose,
+        calling
+          ? "phone"
+          : isTypingMe(placed.person, walker)
+            ? "type"
+            : walker.pose,
         isRoom(walker.goal) ? walker.goal : null,
         now / 1000,
         stuck && !leaving,
@@ -460,6 +468,16 @@ export class IsoPeople {
     this.reporting.delete(id);
     this.placed.delete(id);
   }
+}
+
+/** Me at my desk just after sending a question: typing it out. */
+function isTypingMe(person: IsoPerson, walker: IsoWalker): boolean {
+  return (
+    person.kind === "me" &&
+    walker.pose === "sit" &&
+    person.typedAt !== null &&
+    Date.now() - person.typedAt < ME_TYPING_MS
+  );
 }
 
 /** Beside Claude, telling it the result or saying goodbye. */

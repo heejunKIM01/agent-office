@@ -260,6 +260,27 @@ describe("officePeople — breaks", () => {
     expect(busy.idleSince).toBeNull();
   });
 
+  it("tells me when I last sent a question, and no one else", () => {
+    const prompt = {
+      ...compaction("user_prompt_submit"),
+      timestamp: new Date(7_000),
+    };
+    const later = { ...compaction("pre_tool_use"), timestamp: new Date(9_000) };
+    const people = officePeople(
+      { boss: boss(), agents: new Map(), eventLog: [later, prompt] },
+      WORDS,
+    );
+    expect(people.map((p) => [p.id, p.typedAt])).toEqual([
+      ["claude", null],
+      ["me", 7_000],
+    ]);
+    const quiet = officePeople(
+      { boss: boss(), agents: new Map(), eventLog: [later] },
+      WORDS,
+    );
+    expect(quiet[1].typedAt).toBeNull();
+  });
+
   it("ends the coffee with the next event", () => {
     expect(isCompacting([])).toBe(false);
     expect(isCompacting([compaction("context_compaction")])).toBe(true);
