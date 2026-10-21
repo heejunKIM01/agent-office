@@ -9,13 +9,17 @@
  * What a character is doing with its current tool, in office terms.
  *
  * Drives where the character walks: reading tools send it to the archive,
- * command tools to the server room (docs/plan/spec.md R1, R2). ``None`` on a
- * character means no mapped tool is running.
+ * command tools to the server room (docs/plan/spec.md R1, R2), and in the
+ * isometric office editing keeps it at its desk, browsing sends it to the
+ * search room, planning to the meeting room and asking to my desk
+ * (spec 「방 ↔ 도구」). ``None`` on a character means no mapped tool is
+ * running.
  *
  * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
  * via the `definition` "Activity".
  */
-export type Activity = "reading" | "running";
+export type Activity =
+  "reading" | "running" | "editing" | "browsing" | "planning" | "asking";
 export type Id = string;
 export type Nativeid = string | null;
 export type Name = string | null;
