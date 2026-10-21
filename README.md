@@ -8,18 +8,24 @@
 
 [![Watch the demo](https://img.shields.io/badge/YouTube-Demo-red?logo=youtube)](https://youtu.be/AM2UjKYB8Ew)
 
-> **포크 안내 (heejunKIM01/agent-office)** — [paulrobello/claude-office](https://github.com/paulrobello/claude-office) 의 포크다. 원본 사무실에 자료실 · 서버실을 더해, 코딩 에이전트가 파일을 읽으면 자료실에서 책을 펴고 명령을 돌리면 서버실 랙 앞에 서고 막히면 그 자리에서 턱을 괴게 만든다. Claude Code 에만 묶이지 않게 OpenCode · Gemini CLI · Codex CLI 도 같은 사무실에 띄우는 것이 목표다. 무엇을 왜 만드는지는 [근거 문서](docs/plan/spec.md), 진행 상황은 [작업 분할](docs/plan/work-breakdown.md)에 있다.
+> **포크 안내 (heejunKIM01/agent-office)** — [paulrobello/claude-office](https://github.com/paulrobello/claude-office) 의 포크다. 코딩 에이전트의 일을 밝은 등각 사무실로 보여 준다. 파일을 읽으면 자료실로, 명령을 돌리면 서버실로, 계획을 세우면 회의실 화이트보드로 가고, 물어볼 게 생기면 내 자리까지 찾아온다. 서브에이전트는 엘리베이터로 출퇴근한다. Claude Code 에만 묶이지 않게 OpenCode · Gemini CLI · Codex CLI 도 같은 사무실에 띄우는 것이 목표다. 무엇을 왜 만드는지는 [근거 문서](docs/plan/spec.md), 진행 상황은 [작업 분할](docs/plan/work-breakdown.md)에 있다.
 
 ## 이 포크 실행하기
 
-![자료실에서 책 읽기 · 걷기 · 서버실 콘솔 앞](docs/reports/img/03-poses.png)
+![등각 사무실 — 층별 안내 · 방 일곱 곳 · 사무실 사람들 · 활동 로그](docs/reports/img/20-iso-default.png)
 
 | 에이전트가 하는 일 | 사무실에서 보이는 것 |
 |---|---|
-| 파일 · 웹 읽기 (`Read` · `Grep` · `Glob` · `WebFetch` …) | 자료실 책장 앞으로 걸어가 책을 펴 든다 |
-| 명령 실행 (`Bash` …) | 서버실 랙 앞에 등을 돌리고 선다. 콘솔에 글자가 흐른다 |
-| 도구 실패 · 권한 대기 · 오래 생각 | 그 자리에서 턱을 괴고 생각 점이 찬다 |
-| 서브에이전트 | 엘리베이터로 출근해 자기 책상에서 일하고, 자기 도구에 따라 자료실 · 서버실도 다녀온다 |
+| 파일 읽기 · 검색 (`Read` · `Grep` · `Glob` …) | 📚 자료실 책장 앞에서 책을 편다 |
+| 코드 작성 · 수정 (`Edit` · `Write` …) | 💻 개발실 자기 자리 아이맥에 코드가 흐른다 |
+| 명령 실행 · git (`Bash` …) | 🗄️ 서버실 랙 앞에 선다. 랙 불빛이 빨라진다 |
+| 웹 · 외부 도구 (`WebFetch` · `WebSearch` · MCP) | 🌐 정보검색실 키오스크 앞에 선다 |
+| 계획 · 할 일 · 스킬 (`TodoWrite` · 플랜 모드 · `Skill`) | 🗒️ 회의실 화이트보드에 적는다 |
+| 질문 · 권한 대기 (`AskUserQuestion`) | 🧑‍💻 내 자리(안내 데스크)까지 찾아온다 |
+| 서브에이전트 (`Task`) | Claude 가 전화를 걸면 🛗 엘리베이터로 출근한다. 끝나면 Claude 옆에서 보고하고 「👋 퇴근합니다!」 하고 돌아간다. Explore 는 초록 옷에 모자, Plan 은 보라 옷에 안경 |
+| 생각 · 실패 | 「💭 고민 중」 구름 말풍선. 도구가 실패하면 그 자리에서 식은땀을 흘리며 빨간 말풍선을 띄운다 |
+
+왼쪽 「층별 안내」는 프로젝트를 층으로, 세션을 매장으로 보여 준다. 다른 층을 누르면 「▲ 3F」 표시등이 뜨고 그 층 사무실로 간다. 오른쪽에는 사무실 사람들 · 활동 로그 · 방 범례가 있다. 원본의 2D 픽셀 사무실(화이트보드 · 지휘 센터 · 빌딩 뷰)은 `/classic` 에 그대로 있고, 오른쪽 위 🎮 버튼으로 간다.
 
 ```bash
 git clone https://github.com/heejunKIM01/agent-office.git
@@ -53,6 +59,8 @@ make dev         # 백엔드 :8000 + 프런트 :3000
 * [Related Documentation](#related-documentation)
 
 ## Screenshots
+
+> 아래는 원본의 2D 픽셀 사무실이다. 이 포크에서는 `/classic` 에 있다.
 
 The **Command Center** gathers the boss of every live terminal into one cross-session office — at a glance you can see which terminals need you, which are working, and which are done:
 

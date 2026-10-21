@@ -194,6 +194,7 @@ const es: Record<TranslationKey, string> = {
   // Isometric office
   "iso.live": "LIVE",
   "iso.offline": "SIN CONEXIÓN",
+  "iso.classic": "Oficina 2D",
   "iso.controlsHint":
     "Arrastra para mover · Rueda para ampliar · Doble clic para restablecer",
   "iso.me": "Yo",

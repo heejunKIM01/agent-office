@@ -194,6 +194,7 @@ const ptBR: Record<TranslationKey, string> = {
   // Isometric office
   "iso.live": "LIVE",
   "iso.offline": "OFFLINE",
+  "iso.classic": "Escritório 2D",
   "iso.controlsHint":
     "Arraste para mover · Role para ampliar · Clique duplo para redefinir",
   "iso.me": "Eu",
