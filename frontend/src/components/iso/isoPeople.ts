@@ -44,8 +44,10 @@ import {
 import { findFloorPath } from "@/systems/isoNavGrid";
 import { loungeAct } from "@/systems/loungeActs";
 import {
+  CHEER_MS,
   NO_PILE,
   bookPile,
+  scratchesHead,
   watchesTheClock,
   type BookPile,
 } from "@/systems/roomGimmicks";
@@ -128,6 +130,8 @@ interface Placed {
   runningSince: number | null;
   /** The books it has piled up reading in the library. */
   pile: BookPile;
+  /** When it started typing at its desk (performance.now ms), while it types. */
+  typingSince: number | null;
   walker: IsoWalker;
   seat: IsoSpot;
   /** What it tells Claude when its work is done, read when it gets there. */
@@ -232,6 +236,7 @@ export class IsoPeople {
         loungeSince: null,
         runningSince: null,
         pile: NO_PILE,
+        typingSince: null,
         walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
@@ -405,6 +410,16 @@ export class IsoPeople {
     const { walker, person } = placed;
     if (person.activity === "running") placed.runningSince ??= now;
     else placed.runningSince = null;
+    if (walker.pose === "type") placed.typingSince ??= now;
+    else placed.typingSince = null;
+    // Its tests just passed: arms up, wherever it is (not mid-walk).
+    if (
+      !walker.path &&
+      person.cheeredAt !== null &&
+      Date.now() - person.cheeredAt < CHEER_MS
+    ) {
+      return "cheer";
+    }
     const lounging =
       walker.goal === "lounge" && !walker.path && walker.pose === "sit";
     if (!lounging) placed.loungeSince = null;
@@ -416,6 +431,12 @@ export class IsoPeople {
       const running =
         placed.runningSince === null ? 0 : now - placed.runningSince;
       return watchesTheClock(running) ? "watch" : null;
+    }
+    if (
+      placed.typingSince !== null &&
+      scratchesHead(now - placed.typingSince)
+    ) {
+      return "scratch";
     }
     return null;
   }

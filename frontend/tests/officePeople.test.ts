@@ -281,6 +281,32 @@ describe("officePeople — breaks", () => {
     expect(quiet[1].typedAt).toBeNull();
   });
 
+  it("cheers whoever's tests just passed", () => {
+    const passed = (agentId: string, at: number) =>
+      ({
+        id: `${agentId}${at}`,
+        type: "post_tool_use",
+        agentId,
+        summary: "",
+        timestamp: new Date(at),
+        detail: { toolInput: { command: "npm test" } },
+      }) as unknown as EventLogEntry;
+    const agents = new Map([["a1", agent("a1", {})]]);
+    const people = officePeople(
+      {
+        boss: boss(),
+        agents,
+        eventLog: [passed("a1", 9_000), passed("main", 5_000)],
+      },
+      WORDS,
+    );
+    expect(people.map((p) => [p.id, p.cheeredAt])).toEqual([
+      ["claude", 5_000],
+      ["me", null],
+      ["a1", 9_000],
+    ]);
+  });
+
   it("ends the coffee with the next event", () => {
     expect(isCompacting([])).toBe(false);
     expect(isCompacting([compaction("context_compaction")])).toBe(true);
