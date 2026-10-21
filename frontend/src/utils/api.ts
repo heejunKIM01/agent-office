@@ -8,8 +8,8 @@
 
 /**
  * Backend origin. Explicit env wins; otherwise derive from the page itself:
- * `next dev` talks to the backend on :8000 regardless of the port Next picked
- * (3000 may be taken and auto-incremented); built output (Docker,
+ * `next dev` (on :4747) talks to the backend on :8000 whatever port the page
+ * was opened on; built output (Docker,
  * SERVE_STATIC) is same-origin so the port never needs configuring.
  */
 function backendOrigin(): string {

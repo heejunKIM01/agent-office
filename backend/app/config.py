@@ -26,10 +26,12 @@ class Settings(BaseSettings):
     VERSION: str = _resolve_version()
     API_V1_STR: str = "/api/v1"
 
+    # The frontend dev server runs on :4747 (frontend/package.json), clear of
+    # the many dev servers that take the default :3000.
     BACKEND_CORS_ORIGINS: list[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://0.0.0.0:3000",
+        "http://localhost:4747",
+        "http://127.0.0.1:4747",
+        "http://0.0.0.0:4747",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
     ]

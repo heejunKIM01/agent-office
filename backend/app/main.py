@@ -60,7 +60,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
         )
         logger.info(
             "Open the UI with this URL to authorize destructive actions: "
-            "http://localhost:3000/?token=%s (dev) or "
+            "http://localhost:4747/?token=%s (dev) or "
             "http://localhost:8050/?token=%s (static, published by docker-compose)",
             settings.effective_api_key,
             settings.effective_api_key,
