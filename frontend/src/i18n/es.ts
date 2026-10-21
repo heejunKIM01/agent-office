@@ -191,6 +191,12 @@ const es: Record<TranslationKey, string> = {
   "office.serverRoom": "SALA DE SERVIDORES",
   "office.unknownAgent": "Agente",
 
+  // Isometric office
+  "iso.live": "LIVE",
+  "iso.offline": "SIN CONEXIÓN",
+  "iso.controlsHint":
+    "Arrastra para mover · Rueda para ampliar · Doble clic para restablecer",
+
   // Zoom Controls
   "zoom.in": "Acercar",
   "zoom.out": "Alejar",
