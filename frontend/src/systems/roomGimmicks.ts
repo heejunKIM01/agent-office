@@ -135,3 +135,11 @@ export function lastPassedTestId(
   }
   return null;
 }
+
+/** The lamp over the elevator door stays lit this long after someone steps out (s). */
+export const LAMP_HOLD_SECONDS = 1.5;
+
+/** Lit while someone steps out of the elevator and a moment after (``seconds`` is the clock). */
+export function lampLit(lastArrival: number | null, seconds: number): boolean {
+  return lastArrival !== null && seconds - lastArrival < LAMP_HOLD_SECONDS;
+}

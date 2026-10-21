@@ -549,6 +549,10 @@ function elevator(): THREE.Group {
     new THREE.MeshBasicMaterial({ map: floorSign.texture, transparent: true }),
   );
   indicator.position.set(0, 2.95, 0.16);
+  // The panel and its arrow light up as someone steps out (isoEffects).
+  indicator.userData.elevatorArrow = true;
+  const lamp = box(0.7, 0.26, 0.04, "#20252e", 0, 2.82, 0.12);
+  lamp.userData.elevatorLamp = true;
   // Doors slide apart over the dark cab (isoEffects); people walking into
   // the cab pass behind it and are gone.
   const doors = [-1, 1].map((side) => {
@@ -560,7 +564,7 @@ function elevator(): THREE.Group {
     box(2.7, 2.75, 0.2, C.elevatorFrame, 0, 0, 0),
     box(2.24, 2.55, 0.01, C.elevatorCab, 0, 0, 0.105, { shadow: false }),
     ...doors,
-    box(0.7, 0.26, 0.04, "#20252e", 0, 2.82, 0.12),
+    lamp,
     indicator,
   );
 }

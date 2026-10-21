@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  LAMP_HOLD_SECONDS,
+  lampLit,
   SCRATCH_EVERY_MS,
   SCRATCH_MS,
   isTestCommand,
@@ -146,5 +148,14 @@ describe("test passes", () => {
       post("main", "npm test", 10),
     ];
     expect(lastPassedTestId(log, "main")).toBeNull();
+  });
+});
+
+describe("lampLit", () => {
+  it("lights while someone steps out and a moment after", () => {
+    expect(lampLit(null, 10)).toBe(false);
+    expect(lampLit(10, 10)).toBe(true);
+    expect(lampLit(10, 10 + LAMP_HOLD_SECONDS - 0.01)).toBe(true);
+    expect(lampLit(10, 10 + LAMP_HOLD_SECONDS)).toBe(false);
   });
 });

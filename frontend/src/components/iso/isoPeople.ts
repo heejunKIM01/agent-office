@@ -111,6 +111,8 @@ export interface RoomsInUse {
   tvOn: boolean;
   /** Someone is searching the web or using an outside (MCP) tool. */
   browsing: boolean;
+  /** A newcomer is stepping out of the elevator. */
+  arriving: boolean;
 }
 
 interface Placed {
@@ -259,6 +261,7 @@ export class IsoPeople {
       elevatorOpen: false,
       tvOn: false,
       browsing: false,
+      arriving: false,
     };
     if (this.callPending) {
       this.callPending = false;
@@ -339,6 +342,7 @@ export class IsoPeople {
         inUse.planning = true;
       }
       if (usesElevator(walker)) inUse.elevatorOpen = true;
+      if (walker.trip?.kind === "arrive") inUse.arriving = true;
     }
     for (const id of gone) {
       const placed = this.placed.get(id);
