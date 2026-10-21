@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* The dark theme follows the class on <html> (utils/theme.ts), not the OS. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -13,11 +16,10 @@
   --animate-elevator: elevator-lamp 1.6s ease-in-out forwards;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0d111a;
+  --foreground: #ededed;
+  color-scheme: dark;
 }
 
 body {
@@ -71,5 +73,14 @@ body {
   * {
     scrollbar-width: thin;
     scrollbar-color: #1e293b transparent;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #475569; /* slate-600 */
+    background-clip: padding-box;
+  }
+
+  .dark * {
+    scrollbar-color: #475569 transparent;
   }
 }

@@ -12,6 +12,26 @@ import { textTexture } from "./isoTextures";
 
 const materials = new Map<string, THREE.MeshLambertMaterial>();
 
+/**
+ * Glows that keep the walls, the plate's sides and the boards light by day.
+ * The dark theme turns them down; screens and rack LEDs keep their glow.
+ */
+const SURFACE_GLOWS: ReadonlySet<string> = new Set([
+  C.plateGlow,
+  C.wallGlow,
+  C.wallCap,
+  C.boardGlow,
+]);
+let surfaceGlow = 1;
+
+/** Scale every surface glow (1 by day); materials made later take it too. */
+export function setSurfaceGlow(intensity: number): void {
+  surfaceGlow = intensity;
+  for (const found of materials.values()) {
+    if (found.userData.surfaceGlow) found.emissiveIntensity = intensity;
+  }
+}
+
 /** Shared Lambert material per colour (and transparency/emission). */
 export function material(
   color: string,
@@ -27,6 +47,10 @@ export function material(
       depthWrite: options.opacity === undefined || options.opacity >= 1,
       emissive: options.emissive ?? "#000000",
     });
+    if (options.emissive && SURFACE_GLOWS.has(options.emissive)) {
+      found.userData.surfaceGlow = true;
+      found.emissiveIntensity = surfaceGlow;
+    }
     materials.set(key, found);
   }
   return found;

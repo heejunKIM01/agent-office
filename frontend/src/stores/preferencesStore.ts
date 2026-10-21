@@ -3,6 +3,13 @@
 import { create } from "zustand";
 import { isLocale, type Locale } from "@/i18n";
 import { apiFetch } from "@/utils/api";
+import {
+  DEFAULT_THEME,
+  isTheme,
+  readStoredTheme,
+  storeTheme,
+  type Theme,
+} from "@/utils/theme";
 
 // ============================================================================
 // TYPES
@@ -13,6 +20,7 @@ export interface PreferencesState {
   /** The office also shows the floor's other working sessions (off: only the chosen one). */
   showFloorColleagues: boolean;
   language: Locale;
+  theme: Theme;
   isLoaded: boolean;
 
   // Actions
@@ -20,6 +28,7 @@ export interface PreferencesState {
   setAutoFollowNewSessions: (enabled: boolean) => Promise<void>;
   setShowFloorColleagues: (enabled: boolean) => Promise<void>;
   setLanguage: (language: Locale) => Promise<void>;
+  setTheme: (theme: Theme) => Promise<void>;
 }
 
 // ============================================================================
@@ -64,10 +73,12 @@ async function setPreference(key: string, value: string): Promise<void> {
 // STORE
 // ============================================================================
 
-export const usePreferencesStore = create<PreferencesState>()((set) => ({
+export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
   autoFollowNewSessions: DEFAULT_AUTO_FOLLOW_NEW_SESSIONS,
   showFloorColleagues: DEFAULT_SHOW_FLOOR_COLLEAGUES,
   language: DEFAULT_LANGUAGE,
+  // This browser's last theme until the saved preference arrives.
+  theme: readStoredTheme() ?? DEFAULT_THEME,
   isLoaded: false,
 
   loadPreferences: async () => {
@@ -84,11 +95,15 @@ export const usePreferencesStore = create<PreferencesState>()((set) => ({
         ? DEFAULT_SHOW_FLOOR_COLLEAGUES
         : colleaguesRaw === "true";
     const language = prefs.language || DEFAULT_LANGUAGE;
+    // No saved theme yet: keep the one this browser used.
+    const theme = isTheme(prefs.theme) ? prefs.theme : get().theme;
+    storeTheme(theme);
 
     set({
       autoFollowNewSessions,
       showFloorColleagues,
       language: isLocale(language) ? language : DEFAULT_LANGUAGE,
+      theme,
       isLoaded: true,
     });
   },
@@ -107,6 +122,12 @@ export const usePreferencesStore = create<PreferencesState>()((set) => ({
     set({ language });
     await setPreference("language", language);
   },
+
+  setTheme: async (theme) => {
+    set({ theme });
+    storeTheme(theme);
+    await setPreference("theme", theme);
+  },
 }));
 
 // ============================================================================
@@ -118,4 +139,5 @@ export const selectAutoFollowNewSessions = (state: PreferencesState) =>
 export const selectShowFloorColleagues = (state: PreferencesState) =>
   state.showFloorColleagues;
 export const selectLanguage = (state: PreferencesState) => state.language;
+export const selectTheme = (state: PreferencesState) => state.theme;
 export const selectIsLoaded = (state: PreferencesState) => state.isLoaded;

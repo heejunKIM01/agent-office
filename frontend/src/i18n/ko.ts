@@ -17,6 +17,9 @@ const ko: Record<TranslationKey, string> = {
   "settings.floorTogetherDesc":
     "같은 층에서 일하는 다른 세션의 Claude 도 사무실에 함께 나와요. 끄면 고른 세션만 보여요",
   "settings.language": "언어",
+  "settings.theme": "테마",
+  "settings.theme.light": "밝게",
+  "settings.theme.dark": "어둡게",
   "settings.tabs.general": "일반",
   "settings.tabs.connect": "연결",
   "settings.connect.intro":

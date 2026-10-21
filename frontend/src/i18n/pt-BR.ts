@@ -17,6 +17,9 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.floorTogetherDesc":
     "O Claude de outras sessões trabalhando no mesmo andar entra no escritório. Desligado, só aparece a sessão escolhida.",
   "settings.language": "Idioma",
+  "settings.theme": "Tema",
+  "settings.theme.light": "Claro",
+  "settings.theme.dark": "Escuro",
   "settings.tabs.general": "Geral",
   "settings.tabs.connect": "Conectar",
   "settings.connect.intro":

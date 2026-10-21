@@ -17,6 +17,9 @@ const es: Record<TranslationKey, string> = {
   "settings.floorTogetherDesc":
     "El Claude de otras sesiones que trabajan en el mismo piso entra en la oficina. Desactivado, solo se ve la sesión elegida.",
   "settings.language": "Idioma",
+  "settings.theme": "Tema",
+  "settings.theme.light": "Claro",
+  "settings.theme.dark": "Oscuro",
   "settings.tabs.general": "General",
   "settings.tabs.connect": "Conectar",
   "settings.connect.intro":

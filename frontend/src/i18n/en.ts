@@ -15,6 +15,9 @@ const en = {
   "settings.floorTogetherDesc":
     "Claude from other sessions working on the same floor joins the office. Off shows only the chosen session.",
   "settings.language": "Language",
+  "settings.theme": "Theme",
+  "settings.theme.light": "Light",
+  "settings.theme.dark": "Dark",
   "settings.tabs.general": "General",
   "settings.tabs.connect": "Connect",
   "settings.connect.intro":

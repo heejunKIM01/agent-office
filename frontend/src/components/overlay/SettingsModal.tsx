@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, ReactNode } from "react";
+import { Moon, Sun } from "lucide-react";
 import Modal from "./Modal";
 import { usePreferencesStore } from "@/stores/preferencesStore";
 import { useTranslation } from "@/hooks/useTranslation";
 import { locales, type Locale } from "@/i18n";
 import { ConnectTab } from "@/components/settings/ConnectTab";
+import { themes, type Theme } from "@/utils/theme";
 
 // ============================================================================
 // TYPES
@@ -19,9 +21,69 @@ interface SettingsModalProps {
   initialTab?: SettingsTab;
 }
 
+const sectionLabel =
+  "block text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-2.5";
+
+const THEME_ICONS: Record<Theme, ReactNode> = {
+  light: <Sun size={14} aria-hidden="true" />,
+  dark: <Moon size={14} aria-hidden="true" />,
+};
+
 // ============================================================================
-// COMPONENT
+// COMPONENTS
 // ============================================================================
+
+/** One button per option; the arrow keys move the choice along. */
+function RadioButtons<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  className,
+}: {
+  label: string;
+  options: { value: T; label: ReactNode }[];
+  value: T;
+  onChange: (value: T) => void;
+  className: string;
+}): ReactNode {
+  return (
+    <div className={className} role="radiogroup" aria-label={label}>
+      {options.map((option, idx) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={value === option.value}
+          tabIndex={value === option.value ? 0 : -1}
+          onClick={() => onChange(option.value)}
+          onKeyDown={(e) => {
+            let next: number | null = null;
+            if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+              e.preventDefault();
+              next = (idx + 1) % options.length;
+            } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+              e.preventDefault();
+              next = (idx - 1 + options.length) % options.length;
+            }
+            if (next !== null) {
+              onChange(options[next].value);
+              const parent = e.currentTarget.parentElement;
+              if (parent) (parent.children[next] as HTMLElement)?.focus();
+            }
+          }}
+          className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-[13px] font-bold break-keep transition-colors focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 outline-none ${
+            value === option.value
+              ? "bg-slate-900 border-slate-900 text-white dark:bg-slate-100 dark:border-slate-100 dark:text-slate-900"
+              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** One on/off row of the session settings: label and description, then the switch. */
 function SessionSwitch({
@@ -48,15 +110,19 @@ function SessionSwitch({
           onToggle();
         }
       }}
-      className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+      className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
     >
       <div>
-        <p className="text-slate-700 text-[13px] font-semibold">{label}</p>
-        <p className="text-slate-500 text-[11px] mt-0.5">{description}</p>
+        <p className="text-slate-700 dark:text-slate-200 text-[13px] font-semibold">
+          {label}
+        </p>
+        <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+          {description}
+        </p>
       </div>
       <div
         className={`w-11 h-6 shrink-0 rounded-full relative transition-colors ${
-          checked ? "bg-[#2ca056]" : "bg-slate-200"
+          checked ? "bg-[#2ca056]" : "bg-slate-200 dark:bg-slate-700"
         }`}
       >
         <div
@@ -90,6 +156,8 @@ export default function SettingsModal({
   );
   const language = usePreferencesStore((s) => s.language);
   const setLanguage = usePreferencesStore((s) => s.setLanguage);
+  const theme = usePreferencesStore((s) => s.theme);
+  const setTheme = usePreferencesStore((s) => s.setTheme);
   const setAutoFollowNewSessions = usePreferencesStore(
     (s) => s.setAutoFollowNewSessions,
   );
@@ -117,14 +185,14 @@ export default function SettingsModal({
       footer={
         <button
           onClick={onClose}
-          className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-lg transition-colors dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
           {t("modal.close")}
         </button>
       }
     >
       {/* Tab bar */}
-      <div className="flex gap-1 mb-5 p-1 bg-slate-100 rounded-xl">
+      <div className="flex gap-1 mb-5 p-1 bg-slate-100 rounded-xl dark:bg-slate-800">
         {(["general", "connect"] as const).map((tab) => (
           <button
             key={tab}
@@ -132,8 +200,8 @@ export default function SettingsModal({
             onClick={() => setActiveTab(tab)}
             className={`flex-1 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-colors ${
               activeTab === tab
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-800"
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
+                : "text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
             {t(`settings.tabs.${tab}`)}
@@ -146,57 +214,41 @@ export default function SettingsModal({
         <div className="space-y-6">
           {/* Language */}
           <div>
-            <label className="block text-slate-500 text-[11px] font-bold uppercase tracking-wider mb-2.5">
-              {t("settings.language")}
-            </label>
-            <div
-              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-              role="radiogroup"
-              aria-label={t("settings.language")}
-            >
-              {(Object.entries(locales) as [Locale, string][]).map(
-                ([locale, label]) => (
-                  <button
-                    key={locale}
-                    type="button"
-                    role="radio"
-                    aria-checked={language === locale}
-                    tabIndex={language === locale ? 0 : -1}
-                    onClick={() => handleLanguageChange(locale)}
-                    onKeyDown={(e) => {
-                      const items = Object.keys(locales) as Locale[];
-                      const idx = items.indexOf(locale);
-                      let next: number | null = null;
-                      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-                        e.preventDefault();
-                        next = (idx + 1) % items.length;
-                      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-                        e.preventDefault();
-                        next = (idx - 1 + items.length) % items.length;
-                      }
-                      if (next !== null) {
-                        handleLanguageChange(items[next]);
-                        const parent = e.currentTarget.parentElement;
-                        if (parent)
-                          (parent.children[next] as HTMLElement)?.focus();
-                      }
-                    }}
-                    className={`px-3 py-2.5 rounded-xl border text-[13px] font-bold break-keep transition-colors focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white outline-none ${
-                      language === locale
-                        ? "bg-slate-900 border-slate-900 text-white"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ),
+            <label className={sectionLabel}>{t("settings.language")}</label>
+            <RadioButtons
+              label={t("settings.language")}
+              options={(Object.entries(locales) as [Locale, string][]).map(
+                ([locale, label]) => ({ value: locale, label }),
               )}
-            </div>
+              value={language}
+              onChange={handleLanguageChange}
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+            />
+          </div>
+
+          {/* Theme */}
+          <div>
+            <label className={sectionLabel}>{t("settings.theme")}</label>
+            <RadioButtons
+              label={t("settings.theme")}
+              options={themes.map((value) => ({
+                value,
+                label: (
+                  <>
+                    {THEME_ICONS[value]}
+                    {t(`settings.theme.${value}`)}
+                  </>
+                ),
+              }))}
+              value={theme}
+              onChange={(value) => void setTheme(value)}
+              className="grid grid-cols-2 gap-2"
+            />
           </div>
 
           {/* Session Settings */}
-          <div className="pt-4 border-t border-slate-100">
-            <label className="block text-slate-500 text-[11px] font-bold uppercase tracking-wider mb-2.5">
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+            <label className={sectionLabel}>
               {t("settings.sessionBehavior")}
             </label>
             <div className="space-y-2">

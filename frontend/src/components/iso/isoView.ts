@@ -13,9 +13,11 @@ import {
   WALL_HEIGHT,
 } from "@/constants/isoFloorPlan";
 import type { IsoPerson } from "@/systems/officePeople";
+import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
 import type { BubbleWords } from "./isoBubbles";
 import { IsoEffects } from "./isoEffects";
+import { setSurfaceGlow } from "./isoFurniture";
 import { IsoPeople } from "./isoPeople";
 
 /** The reference video uses a 2:1 isometric view: floor edges climb 1 in 2. */
@@ -33,6 +35,7 @@ const MAX_STEP_SECONDS = 0.1;
 export interface IsoView {
   setPeople(people: IsoPerson[]): void;
   setBubbleWords(words: BubbleWords): void;
+  setTheme(theme: Theme): void;
   zoomBy(factor: number): void;
   resetView(): void;
   dispose(): void;
@@ -114,13 +117,35 @@ function fitFrustum(
 }
 
 /**
+ * Daylight as in the video, and the dark theme's night: dimmer, cooler light
+ * with the surface glow turned down, so the lit screens and rack LEDs stand
+ * out (docs/plan/spec.md 「어두운 테마」).
+ */
+const LIGHTING: Record<
+  Theme,
+  { color: string; ambient: number; sun: number; glow: number }
+> = {
+  light: { color: "#ffffff", ambient: 1.9, sun: 1.6, glow: 1 },
+  dark: { color: "#b9c6ec", ambient: 0.85, sun: 0.75, glow: 0.12 },
+};
+
+/**
  * Mostly even light with the sun high over the front, a little to the left,
  * as in the video: faces towards the lower left are the brightest, faces
  * towards the lower right a step darker. Shadows are kept faint.
  */
-function addLights(scene: THREE.Scene): void {
-  scene.add(new THREE.AmbientLight("#ffffff", 1.9));
-  const sun = new THREE.DirectionalLight("#ffffff", 1.6);
+function addLights(scene: THREE.Scene): {
+  ambient: THREE.AmbientLight;
+  sun: THREE.DirectionalLight;
+} {
+  const {
+    color,
+    ambient: ambientIntensity,
+    sun: sunIntensity,
+  } = LIGHTING.light;
+  const ambient = new THREE.AmbientLight(color, ambientIntensity);
+  scene.add(ambient);
+  const sun = new THREE.DirectionalLight(color, sunIntensity);
   sun.position.set(FLOOR_CENTER.x + 4, 30, FLOOR_CENTER.z + 26);
   sun.target.position.set(FLOOR_CENTER.x, 0, FLOOR_CENTER.z);
   sun.castShadow = true;
@@ -135,6 +160,7 @@ function addLights(scene: THREE.Scene): void {
   sun.shadow.bias = -0.0006;
   sun.shadow.normalBias = 0.02;
   scene.add(sun, sun.target);
+  return { ambient, sun };
 }
 
 /** ``onPersonLeft`` hears of each subagent that rode the elevator away. */
@@ -159,7 +185,7 @@ export function createIsoView(
   const scene = new THREE.Scene();
   const office = buildIsoOffice();
   scene.add(office);
-  addLights(scene);
+  const lights = addLights(scene);
   const people = new IsoPeople(scene, onPersonLeft);
   const effects = new IsoEffects(office);
 
@@ -232,6 +258,14 @@ export function createIsoView(
     },
     setBubbleWords(words: BubbleWords): void {
       people.setWords(words);
+    },
+    setTheme(theme: Theme): void {
+      const { color, ambient, sun, glow } = LIGHTING[theme];
+      lights.ambient.color.set(color);
+      lights.ambient.intensity = ambient;
+      lights.sun.color.set(color);
+      lights.sun.intensity = sun;
+      setSurfaceGlow(glow);
     },
     zoomBy(factor: number): void {
       camera.zoom = THREE.MathUtils.clamp(

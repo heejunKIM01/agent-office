@@ -6,6 +6,7 @@ import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
 import { agentMachineService } from "@/machines/agentMachineService";
 import { useGameStore } from "@/stores/gameStore";
+import { selectTheme, usePreferencesStore } from "@/stores/preferencesStore";
 import type { AgentPhase } from "@/stores/slices/types";
 import {
   officePeople,
@@ -70,6 +71,7 @@ export function IsoOffice({
 }): React.ReactNode {
   const { t } = useTranslation();
   const agentName = useCodingAgentName();
+  const theme = usePreferencesStore(selectTheme);
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<IsoView | null>(null);
   const words = useMemo<PeopleWords>(
@@ -108,6 +110,10 @@ export function IsoOffice({
     viewRef.current?.setBubbleWords(bubbleWords);
   }, [bubbleWords]);
 
+  useEffect(() => {
+    viewRef.current?.setTheme(theme);
+  }, [theme]);
+
   // Keep the people on the floor in step with the session.
   useEffect(() => {
     let showing = false;
@@ -127,7 +133,7 @@ export function IsoOffice({
   }, [words, colleagues]);
 
   const buttonClass =
-    "flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400";
+    "flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800";
 
   return (
     <div className="relative h-full w-full">
@@ -160,7 +166,7 @@ export function IsoOffice({
           <RotateCcw size={13} />
         </button>
       </div>
-      <p className="pointer-events-none absolute bottom-3 right-4 text-[11px] text-slate-400">
+      <p className="pointer-events-none absolute bottom-3 right-4 text-[11px] text-slate-400 dark:text-slate-500">
         {t("iso.controlsHint")}
       </p>
     </div>
