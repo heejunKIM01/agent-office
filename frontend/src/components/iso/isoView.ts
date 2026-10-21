@@ -126,7 +126,7 @@ const LIGHTING: Record<
   { color: string; ambient: number; sun: number; glow: number }
 > = {
   light: { color: "#ffffff", ambient: 1.9, sun: 1.6, glow: 1 },
-  dark: { color: "#b9c6ec", ambient: 0.85, sun: 0.75, glow: 0.3 },
+  dark: { color: "#b9c6ec", ambient: 0.85, sun: 0.75, glow: 0.12 },
 };
 
 /**
