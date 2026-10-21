@@ -31,6 +31,7 @@ const ROOM_LEGEND = [
   { icon: "🌐", room: "search" },
   { icon: "🗒️", room: "meeting" },
   { icon: "🧑‍💻", room: "mydesk" },
+  { icon: "🛋️", room: "lounge" },
   { icon: "🛗", room: "elevator" },
 ] as const;
 

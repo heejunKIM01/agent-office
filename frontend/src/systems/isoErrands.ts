@@ -4,7 +4,9 @@
  * stays ERRAND_LINGER_MS after the tool ends, finishing the walk first
  * (rule 2), turns at once when another tool starts, even mid-walk (rule 3),
  * and otherwise walks back to its seat and sits down (rule 4). Editing is
- * done at its own desk. A stuck person (a failed tool) stops where it is,
+ * done at its own desk. With its turn over and nothing to run it rests on
+ * the lounge sofa instead, and a new turn sends it straight back to its
+ * seat (docs/plan/spec.md 「라운지 · 카페」). A stuck person (a failed tool) stops where it is,
  * even mid-walk, and does not move until it moves on (rule 7).
  *
  * Subagents come and go by elevator (작성자 댓글): a newcomer steps out of
@@ -18,7 +20,11 @@
 
 import type { Activity } from "@/types";
 import type { PathState } from "@/stores/slices/types";
-import type { ErrandRoomId, IsoSpot } from "@/constants/isoFloorPlan";
+import type {
+  BreakRoomId,
+  ErrandRoomId,
+  IsoSpot,
+} from "@/constants/isoFloorPlan";
 import { ERRAND_LINGER_MS } from "./bossErrands";
 import type { FloorPoint } from "./isoNavGrid";
 import { advanceAlongPath } from "./pathFollow";
@@ -42,8 +48,11 @@ export const BYE_MS = 1800;
 /** Sitting idle, typing at the desk, walking, working in a room, standing, or waving. */
 export type IsoPose = "sit" | "type" | "walk" | "work" | "stand" | "wave";
 
+/** A room a walker can be sent to: for a tool, or for a break. */
+export type IsoRoomId = ErrandRoomId | BreakRoomId;
+
 /** Where a walker is heading: its seat, a room, beside Claude, the elevator door or cab. */
-export type IsoGoal = "seat" | ErrandRoomId | "report" | "elevator" | "cab";
+export type IsoGoal = "seat" | IsoRoomId | "report" | "elevator" | "cab";
 
 /** A subagent's way in or out of the office. */
 export type IsoTrip =
@@ -80,7 +89,7 @@ export interface IsoWalkerInput {
   stuck: boolean;
   seat: IsoSpot;
   /** The spot this walker holds in a room. */
-  spotIn: (room: ErrandRoomId) => IsoSpot;
+  spotIn: (room: IsoRoomId) => IsoSpot;
   findPath: (from: FloorPoint, to: FloorPoint) => FloorPoint[];
   /** Milliseconds, the clock lingering is measured with. */
   now: number;
@@ -88,18 +97,23 @@ export interface IsoWalkerInput {
   dt: number;
   /** Its work is done: it reports to Claude and goes home. */
   leaving: boolean;
+  /** Its turn is over: with nothing to run it rests in the lounge. */
+  resting: boolean;
   /** Where it stands to report beside Claude (asked only while it leaves). */
   reportSpot: () => IsoSpot;
   elevator: IsoElevator;
 }
 
-/** A walker sitting in its seat. */
-export function seatedWalker(seat: IsoSpot): IsoWalker {
+/** A walker sitting in its seat, or at ``goal`` (the lounge sofa) when given. */
+export function seatedWalker(
+  seat: IsoSpot,
+  goal: "seat" | "lounge" = "seat",
+): IsoWalker {
   return {
     x: seat.x,
     z: seat.z,
     facing: seat.facing,
-    goal: "seat",
+    goal,
     path: null,
     pose: "sit",
     lingerUntil: null,
@@ -151,6 +165,8 @@ function restingPose(walker: IsoWalker, input: IsoWalkerInput): IsoPose {
   switch (walker.goal) {
     case "seat":
       return input.activity === "editing" ? "type" : "sit";
+    case "lounge":
+      return "sit";
     case "report":
     case "elevator":
     case "cab":
@@ -286,17 +302,21 @@ export function stepIsoWalker(
       : walker;
   }
   const wanted = input.activity ? ROOM_FOR_ACTIVITY[input.activity] : null;
+  const home: IsoGoal = input.resting ? "lounge" : "seat";
   let next = walker;
   if (wanted) {
     next =
       next.goal === wanted
         ? { ...next, lingerUntil: null }
         : headTo(next, wanted, input);
-  } else if (next.goal !== "seat" && !next.path) {
+  } else if (next.goal === "lounge" && !input.resting) {
+    // A new turn: back to its seat at once, even on the way to the sofa.
+    next = headTo(next, "seat", input);
+  } else if (next.goal !== home && !next.path) {
     if (next.lingerUntil === null) {
       next = { ...next, lingerUntil: input.now + ERRAND_LINGER_MS };
     } else if (input.now >= next.lingerUntil) {
-      next = headTo(next, "seat", input);
+      next = headTo(next, home, input);
     }
   }
   return advance(next, input);

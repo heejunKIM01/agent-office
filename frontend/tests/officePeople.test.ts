@@ -25,6 +25,7 @@ function boss(
     stuck: null,
     bubble: NO_BUBBLE,
     quietSince: null,
+    turnActive: true,
     ...fields,
   };
 }
@@ -191,6 +192,24 @@ describe("officePeople", () => {
       false,
       true,
     ]);
+  });
+});
+
+describe("officePeople — resting", () => {
+  it("rests Claude between turns and no one else", () => {
+    const agents = new Map([["a", agent("a", {})]]);
+    const idle = officePeople(
+      { boss: boss({ turnActive: false }), agents },
+      WORDS,
+      [],
+    );
+    expect(idle.map((p) => [p.id, p.resting])).toEqual([
+      ["claude", true],
+      ["me", false],
+      ["a", false],
+    ]);
+    const busy = officePeople({ boss: boss(), agents }, WORDS);
+    expect(busy[0].resting).toBe(false);
   });
 });
 

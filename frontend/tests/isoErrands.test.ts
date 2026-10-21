@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Activity } from "@/types";
-import type { ErrandRoomId, IsoSpot } from "@/constants/isoFloorPlan";
+import type { IsoSpot } from "@/constants/isoFloorPlan";
 import { ERRAND_LINGER_MS } from "@/systems/bossErrands";
 import {
   BYE_MS,
@@ -9,17 +9,19 @@ import {
   seatedWalker,
   stepIsoWalker,
   type IsoElevator,
+  type IsoRoomId,
   type IsoWalker,
 } from "@/systems/isoErrands";
 import type { FloorPoint } from "@/systems/isoNavGrid";
 
 const SEAT: IsoSpot = { x: 0, z: 0, facing: Math.PI };
-const SPOTS: Record<ErrandRoomId, IsoSpot> = {
+const SPOTS: Record<IsoRoomId, IsoSpot> = {
   library: { x: 6.4, z: 0, facing: 0 },
   server: { x: 0, z: 6.4, facing: Math.PI / 2 },
   search: { x: 3.2, z: 3.2, facing: 0 },
   meeting: { x: -3.2, z: 0, facing: 0 },
   mydesk: { x: 0, z: -3.2, facing: 0 },
+  lounge: { x: -3.2, z: 3.2, facing: 0 },
 };
 const REPORT: IsoSpot = { x: -1.6, z: 1.6, facing: 0 };
 const ELEVATOR: IsoElevator = {
@@ -37,6 +39,7 @@ function run(
   stuck = false,
   leaving = false,
   onStep?: (walker: IsoWalker, now: number) => void,
+  resting = false,
 ): { walker: IsoWalker; now: number } {
   let w = walker;
   let now = start;
@@ -51,6 +54,7 @@ function run(
       now,
       dt: 0.1,
       leaving,
+      resting,
       reportSpot: () => REPORT,
       elevator: ELEVATOR,
     });
@@ -309,5 +313,70 @@ describe("iso errands", () => {
     const home = goHome(seatedWalker(SEAT), 15);
     const later = run(home.walker, "reading", 2, home.now);
     expect(later.walker).toEqual(home.walker);
+  });
+});
+
+describe("stepIsoWalker — resting in the lounge", () => {
+  const rest = (walker: IsoWalker, seconds: number, start = 0) =>
+    run(walker, null, seconds, start, false, false, undefined, true);
+  const walkTo = (from: IsoSpot, to: IsoSpot): number =>
+    Math.hypot(to.x - from.x, to.z - from.z) / 3.2;
+
+  it("leaves its seat after lingering and sits on the sofa", () => {
+    const early = rest(seatedWalker(SEAT), ERRAND_LINGER_MS / 1000 - 0.2);
+    expect(early.walker).toMatchObject({ goal: "seat", pose: "sit" });
+    const there = rest(
+      seatedWalker(SEAT),
+      ERRAND_LINGER_MS / 1000 + walkTo(SEAT, SPOTS.lounge) + 0.3,
+    );
+    expect(there.walker).toMatchObject({
+      goal: "lounge",
+      x: SPOTS.lounge.x,
+      z: SPOTS.lounge.z,
+      pose: "sit",
+      path: null,
+    });
+  });
+
+  it("stays seated on the sofa while the turn is over", () => {
+    const sofa = seatedWalker(SPOTS.lounge, "lounge");
+    expect(rest(sofa, 10).walker).toEqual(sofa);
+  });
+
+  it("goes straight back to its seat when a new turn starts", () => {
+    const sofa = seatedWalker(SPOTS.lounge, "lounge");
+    const first = run(sofa, null, 0.1);
+    expect(first.walker).toMatchObject({ goal: "seat", pose: "walk" });
+    const back = run(sofa, null, walkTo(SPOTS.lounge, SEAT) + 0.3);
+    expect(back.walker).toMatchObject({
+      goal: "seat",
+      x: 0,
+      z: 0,
+      pose: "sit",
+    });
+  });
+
+  it("turns back mid-walk when the turn starts on the way to the sofa", () => {
+    const leaving = rest(
+      seatedWalker(SEAT),
+      ERRAND_LINGER_MS / 1000 + 0.3,
+    ).walker;
+    expect(leaving).toMatchObject({ goal: "lounge", pose: "walk" });
+    expect(run(leaving, null, 0.1).walker.goal).toBe("seat");
+  });
+
+  it("still runs its tools from the sofa", () => {
+    const sofa = seatedWalker(SPOTS.lounge, "lounge");
+    const { walker } = run(
+      sofa,
+      "reading",
+      0.1,
+      0,
+      false,
+      false,
+      undefined,
+      true,
+    );
+    expect(walker.goal).toBe("library");
   });
 });
