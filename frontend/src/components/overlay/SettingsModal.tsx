@@ -67,23 +67,23 @@ export default function SettingsModal({
       footer={
         <button
           onClick={onClose}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-lg transition-colors"
+          className="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
           {t("modal.close")}
         </button>
       }
     >
       {/* Tab bar */}
-      <div className="flex gap-1 mb-6 p-1 bg-slate-800/50 rounded-lg border border-slate-700">
+      <div className="flex gap-1 mb-5 p-1 bg-slate-100 rounded-xl">
         {(["general", "connect"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 px-4 py-2 rounded-md text-sm font-bold transition-colors ${
+            className={`flex-1 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-colors ${
               activeTab === tab
-                ? "bg-purple-500/20 border border-purple-500 text-purple-300"
-                : "bg-transparent border border-transparent text-slate-400 hover:text-slate-300 hover:bg-slate-800"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-600 hover:text-slate-800"
             }`}
           >
             {t(`settings.tabs.${tab}`)}
@@ -96,11 +96,11 @@ export default function SettingsModal({
         <div className="space-y-6">
           {/* Language */}
           <div>
-            <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">
+            <label className="block text-slate-500 text-[11px] font-bold uppercase tracking-wider mb-2.5">
               {t("settings.language")}
             </label>
             <div
-              className="flex gap-3"
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
               role="radiogroup"
               aria-label={t("settings.language")}
             >
@@ -131,10 +131,10 @@ export default function SettingsModal({
                           (parent.children[next] as HTMLElement)?.focus();
                       }
                     }}
-                    className={`flex-1 px-4 py-3 rounded-lg border text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 outline-none ${
+                    className={`px-3 py-2.5 rounded-xl border text-[13px] font-bold break-keep transition-colors focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white outline-none ${
                       language === locale
-                        ? "bg-purple-500/20 border-purple-500 text-purple-300"
-                        : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600"
+                        ? "bg-slate-900 border-slate-900 text-white"
+                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
                     {label}
@@ -145,8 +145,8 @@ export default function SettingsModal({
           </div>
 
           {/* Session Settings */}
-          <div className="pt-4 border-t border-slate-800">
-            <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">
+          <div className="pt-4 border-t border-slate-100">
+            <label className="block text-slate-500 text-[11px] font-bold uppercase tracking-wider mb-2.5">
               {t("settings.sessionBehavior")}
             </label>
             <div
@@ -161,19 +161,19 @@ export default function SettingsModal({
                   handleAutoFollowToggle();
                 }
               }}
-              className="flex items-center justify-between p-3 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer hover:border-slate-600 transition-colors"
+              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             >
               <div>
-                <p className="text-slate-300 text-sm font-medium">
+                <p className="text-slate-700 text-[13px] font-semibold">
                   {t("settings.autoFollow")}
                 </p>
-                <p className="text-slate-500 text-xs mt-0.5">
+                <p className="text-slate-500 text-[11px] mt-0.5">
                   {t("settings.autoFollowDesc")}
                 </p>
               </div>
               <div
-                className={`w-11 h-6 rounded-full relative transition-colors ${
-                  autoFollowNewSessions ? "bg-purple-500" : "bg-slate-600"
+                className={`w-11 h-6 shrink-0 rounded-full relative transition-colors ${
+                  autoFollowNewSessions ? "bg-[#2ca056]" : "bg-slate-200"
                 }`}
               >
                 <div

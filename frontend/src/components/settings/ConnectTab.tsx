@@ -57,7 +57,7 @@ function connectLabel(connected: boolean, isRunning: boolean): TranslationKey {
 }
 
 const button =
-  "px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  "px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400";
 
 /**
  * Connects coding agents to the office: each button runs the same install
@@ -146,7 +146,7 @@ export function ConnectTab(): React.ReactNode {
 
   if (loadFailed) {
     return (
-      <p className="text-sm text-rose-400">
+      <p className="text-sm text-rose-600">
         {t("settings.connect.loadFailed")}
       </p>
     );
@@ -157,12 +157,12 @@ export function ConnectTab(): React.ReactNode {
 
   return (
     <div className="space-y-4">
-      <p className="text-slate-400 text-xs leading-relaxed">
+      <p className="text-slate-500 text-xs leading-relaxed">
         {t("settings.connect.intro")}
       </p>
 
       {!overview.available && (
-        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
           {overview.reason === "not_local"
             ? t("settings.connect.notLocal")
             : t("settings.connect.cannotRun", {
@@ -171,7 +171,7 @@ export function ConnectTab(): React.ReactNode {
         </p>
       )}
       {overview.available && tokenRefused && (
-        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
           {t("settings.connect.needToken")}
         </p>
       )}
@@ -183,12 +183,12 @@ export function ConnectTab(): React.ReactNode {
           return (
             <li
               key={status.agent}
-              className="rounded-lg border border-slate-700 bg-slate-800 p-3"
+              className="rounded-xl border border-slate-200 bg-white p-3"
             >
               <div className="flex items-center gap-3">
                 <AgentLogo codingAgent={status.agent} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-slate-200">
+                  <p className="text-[13px] font-bold text-slate-800">
                     {AGENT_PRODUCTS[status.agent] ?? status.agent}
                   </p>
                   <p className="truncate font-mono text-[11px] text-slate-500">
@@ -196,10 +196,10 @@ export function ConnectTab(): React.ReactNode {
                   </p>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold ${
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                     status.connected
-                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                      : "border-slate-600 bg-slate-700/50 text-slate-400"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {status.connected
@@ -216,12 +216,12 @@ export function ConnectTab(): React.ReactNode {
                 </p>
               )}
               {status.connected && !status.tool_found && (
-                <p className="mt-2 text-xs text-amber-300">
+                <p className="mt-2 text-xs text-amber-700">
                   {t("settings.connect.toolMissing")}
                 </p>
               )}
               {status.connected && AFTER_CONNECT[status.agent] && (
-                <p className="mt-2 text-xs text-slate-400">
+                <p className="mt-2 text-xs text-slate-500">
                   {t(AFTER_CONNECT[status.agent])}
                 </p>
               )}
@@ -231,7 +231,7 @@ export function ConnectTab(): React.ReactNode {
                   type="button"
                   disabled={blocked}
                   onClick={() => void run(status.agent, "install")}
-                  className={`${button} border-purple-500 bg-purple-500/20 text-purple-200 enabled:hover:bg-purple-500/30`}
+                  className={`${button} border-slate-900 bg-slate-900 text-white enabled:hover:bg-slate-700`}
                 >
                   {t(connectLabel(status.connected, isRunning))}
                 </button>
@@ -240,7 +240,7 @@ export function ConnectTab(): React.ReactNode {
                     type="button"
                     disabled={blocked}
                     onClick={() => void run(status.agent, "remove")}
-                    className={`${button} border-slate-600 text-slate-300 enabled:hover:border-slate-500`}
+                    className={`${button} border-slate-200 bg-white text-slate-600 enabled:hover:bg-slate-50`}
                   >
                     {t("settings.connect.disconnect")}
                   </button>
@@ -248,23 +248,23 @@ export function ConnectTab(): React.ReactNode {
               </div>
 
               {note?.kind === "error" && (
-                <p className="mt-2 text-xs text-rose-400">{t(note.message)}</p>
+                <p className="mt-2 text-xs text-rose-600">{t(note.message)}</p>
               )}
               {note?.kind === "ran" && (
                 <div className="mt-2">
                   <p
                     role="status"
-                    className={`text-xs ${note.ok ? "text-emerald-300" : "text-rose-400"}`}
+                    className={`text-xs ${note.ok ? "text-emerald-700" : "text-rose-600"}`}
                   >
                     {note.ok
                       ? t("settings.connect.done")
                       : t("settings.connect.failed")}
                   </p>
                   <details className="mt-1" open={!note.ok}>
-                    <summary className="cursor-pointer text-[11px] text-slate-400">
+                    <summary className="cursor-pointer text-[11px] text-slate-500">
                       {t("settings.connect.output", { command: note.command })}
                     </summary>
-                    <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-950 p-2 font-mono text-[11px] text-slate-300">
+                    <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-2 font-mono text-[11px] text-slate-600">
                       {note.output}
                     </pre>
                   </details>
