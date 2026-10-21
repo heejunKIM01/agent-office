@@ -57,6 +57,8 @@ export interface IsoPerson {
   breakRoom: BreakRoomId | null;
   /** Resting in the lounge: when the last event came (Date.now ms), for its pastimes. */
   idleSince: number | null;
+  /** Me: when I last sent a question (Date.now ms), to type it out. */
+  typedAt: number | null;
   outfit: Outfit;
 }
 
@@ -177,6 +179,12 @@ const said = (bubble: BubbleState): Pick<IsoPerson, "bubble" | "bubbleAt"> => ({
   bubbleAt: bubble.displayStartTime,
 });
 
+/** When I last sent a question, from the log (newest first). */
+function lastPromptAt(eventLog: readonly EventLogEntry[]): number | null {
+  const prompt = eventLog.find((entry) => entry.type === "user_prompt_submit");
+  return prompt ? prompt.timestamp.getTime() : null;
+}
+
 /** Where Claude takes a break: the cafe while compacting, the lounge between turns. */
 function breakRoomOf(
   compacting: boolean,
@@ -225,6 +233,7 @@ export function officePeople(
         claudeBreak === "lounge"
           ? (state.eventLog[0]?.timestamp.getTime() ?? null)
           : null,
+      typedAt: null,
       outfit: "general",
     },
     {
@@ -242,6 +251,7 @@ export function officePeople(
       leaving: false,
       breakRoom: null,
       idleSince: null,
+      typedAt: lastPromptAt(state.eventLog),
       outfit: "general",
     },
   ];
@@ -263,6 +273,7 @@ export function officePeople(
       leaving,
       breakRoom: null,
       idleSince: null,
+      typedAt: null,
       outfit: outfitOf(agent.agentType),
     });
   }
@@ -281,6 +292,7 @@ export function officePeople(
       leaving: false,
       breakRoom: null,
       idleSince: null,
+      typedAt: null,
       outfit: "general",
     });
   }
