@@ -35,7 +35,7 @@ const ROOM_LEGEND = [
 ] as const;
 
 const card =
-  "rounded-2xl border border-slate-200/80 bg-white/95 px-3 py-2.5 shadow-sm";
+  "rounded-2xl border border-slate-200/80 bg-white/95 px-3 py-2.5 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/90";
 
 /** When each row's status and task were last seen to change. */
 interface Clock {
@@ -165,11 +165,11 @@ export function IsoSidePanel({
         className={`${card} grid grid-cols-[3.5em_1fr] gap-x-2 gap-y-0.5 text-[11px]`}
       >
         <span className="text-slate-400">{t("iso.panel.project")}</span>
-        <span className="truncate font-mono text-slate-700">
+        <span className="truncate font-mono text-slate-700 dark:text-slate-300">
           {session?.projectRoot || session?.projectName || "—"}
         </span>
         <span className="text-slate-400">{t("iso.panel.session")}</span>
-        <span className="truncate font-mono text-slate-700">
+        <span className="truncate font-mono text-slate-700 dark:text-slate-300">
           {session?.id.slice(0, 8) ?? "—"}
         </span>
       </section>
@@ -199,8 +199,8 @@ export function IsoSidePanel({
                     <span
                       className={`ml-auto shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold ${
                         row.status === "thinking"
-                          ? "bg-violet-100 text-violet-600"
-                          : "bg-blue-100 text-blue-600"
+                          ? "bg-violet-100 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300"
+                          : "bg-blue-100 text-blue-600 dark:bg-blue-400/15 dark:text-blue-300"
                       }`}
                     >
                       {row.status === "thinking"
@@ -210,7 +210,7 @@ export function IsoSidePanel({
                   )}
                 </div>
                 {row.doing && (
-                  <p className="truncate text-[11px] text-slate-600">
+                  <p className="truncate text-[11px] text-slate-600 dark:text-slate-300">
                     {row.doing}
                   </p>
                 )}
@@ -242,7 +242,7 @@ export function IsoSidePanel({
                 })}
               </span>
               <span className="truncate font-semibold">{line.who}</span>
-              <span className="line-clamp-4 break-words text-slate-600">
+              <span className="line-clamp-4 break-words text-slate-600 dark:text-slate-300">
                 {line.what}
               </span>
             </li>

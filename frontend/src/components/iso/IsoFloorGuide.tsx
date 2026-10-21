@@ -75,7 +75,7 @@ export function IsoFloorGuide({
           <span aria-hidden="true">🏬</span>
           {t("iso.floor.title")}
         </h2>
-        <span className="text-[8.5px] font-bold tracking-[0.14em] text-slate-400">
+        <span className="text-[8.5px] font-bold tracking-[0.14em] text-slate-400 dark:text-slate-500">
           {t("iso.floor.caption")}
         </span>
       </header>
@@ -101,7 +101,7 @@ export function IsoFloorGuide({
                   <span className="block truncate text-[12px] font-bold">
                     {floor.name}
                   </span>
-                  <span className="line-clamp-2 block text-[10px] leading-snug text-slate-400">
+                  <span className="line-clamp-2 block text-[10px] leading-snug text-slate-400 dark:text-slate-500">
                     {t("iso.floor.sessions", { count: floor.sessions.length })}
                     {" · "}
                     {floor.active
@@ -112,7 +112,9 @@ export function IsoFloorGuide({
                 <span
                   aria-hidden="true"
                   className={`h-2 w-2 shrink-0 rounded-full ${
-                    floor.active ? "bg-[#2ca056]" : "bg-slate-300"
+                    floor.active
+                      ? "bg-[#2ca056]"
+                      : "bg-slate-300 dark:bg-slate-600"
                   }`}
                 />
               </>
@@ -120,8 +122,10 @@ export function IsoFloorGuide({
             return (
               <li
                 key={floor.projectKey}
-                className={`overflow-hidden rounded-xl border bg-white/95 shadow-sm ${
-                  open ? "border-[1.5px]" : "border-slate-200/80"
+                className={`overflow-hidden rounded-xl border bg-white/95 shadow-sm dark:bg-slate-900/90 ${
+                  open
+                    ? "border-[1.5px]"
+                    : "border-slate-200/80 dark:border-slate-700/70"
                 }`}
                 style={open ? { borderColor: tone.strong } : undefined}
               >
@@ -131,21 +135,23 @@ export function IsoFloorGuide({
                   <button
                     type="button"
                     onClick={() => onSelectSession(entranceOf(floor, now))}
-                    className="flex w-full items-center gap-2 p-2 text-left hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 p-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     {summary}
                   </button>
                 )}
 
                 {open && (
-                  <div className="border-t border-slate-100 px-1.5 pb-1.5 pt-1">
+                  <div className="border-t border-slate-100 px-1.5 pb-1.5 pt-1 dark:border-slate-800">
                     <button
                       type="button"
                       role="switch"
                       aria-checked={autoFollow}
                       onClick={() => void setAutoFollow(!autoFollow)}
-                      className={`mb-0.5 flex w-full items-center gap-1 rounded-md px-1 py-1 text-left text-[10.5px] hover:bg-slate-50 ${
-                        autoFollow ? "text-slate-600" : "text-slate-400"
+                      className={`mb-0.5 flex w-full items-center gap-1 rounded-md px-1 py-1 text-left text-[10.5px] hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                        autoFollow
+                          ? "text-slate-600 dark:text-slate-300"
+                          : "text-slate-400 dark:text-slate-500"
                       }`}
                     >
                       <span
@@ -168,8 +174,8 @@ export function IsoFloorGuide({
                               onClick={() => onSelectSession(session.id)}
                               className={`flex w-full items-center gap-1 rounded-md px-1 py-[3px] text-left text-[10.5px] ${
                                 here
-                                  ? "bg-[#fdf1e1] font-bold text-slate-800"
-                                  : "text-slate-600 hover:bg-slate-50"
+                                  ? "bg-[#fdf1e1] font-bold text-slate-800 dark:bg-amber-400/15 dark:text-amber-100"
+                                  : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
                               }`}
                             >
                               <span className="min-w-0 flex-1 truncate">
@@ -183,7 +189,7 @@ export function IsoFloorGuide({
                                 className={`shrink-0 text-[9.5px] ${
                                   working
                                     ? "font-semibold text-[#2ca056]"
-                                    : "font-normal text-slate-400"
+                                    : "font-normal text-slate-400 dark:text-slate-500"
                                 }`}
                               >
                                 {working
@@ -206,7 +212,7 @@ export function IsoFloorGuide({
           <button
             type="button"
             onClick={() => setShowIdle(!showIdle)}
-            className="py-1 text-[11px] text-slate-500 hover:text-slate-700"
+            className="py-1 text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           >
             {showIdle
               ? t("iso.floor.lessIdle")

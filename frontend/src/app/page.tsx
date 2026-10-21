@@ -23,15 +23,16 @@ import {
   selectIsConnected,
   useGameStore,
 } from "@/stores/gameStore";
-import { usePreferencesStore } from "@/stores/preferencesStore";
+import { selectTheme, usePreferencesStore } from "@/stores/preferencesStore";
 import { buildFloors, floorOfSession, sessionTitle } from "@/systems/floors";
 import { initApiKeyFromBrowser } from "@/utils/api";
+import { DARK_CLASS } from "@/utils/theme";
 
 /** How long the 「▲ 3F」 lamp shows while the office changes floors (globals.css). */
 const ELEVATOR_LAMP_MS = 1600;
 
 const toolButton =
-  "flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400";
+  "flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200";
 
 export default function IsoOfficePage(): React.ReactNode {
   const { t } = useTranslation();
@@ -52,6 +53,11 @@ export default function IsoOfficePage(): React.ReactNode {
     initApiKeyFromBrowser();
     loadPreferences();
   }, [loadPreferences]);
+
+  const theme = usePreferencesStore(selectTheme);
+  useEffect(() => {
+    document.documentElement.classList.toggle(DARK_CLASS, theme === "dark");
+  }, [theme]);
 
   const isConnected = useGameStore(selectIsConnected);
   const codingAgent = useGameStore(selectCodingAgent);
@@ -108,7 +114,7 @@ export default function IsoOfficePage(): React.ReactNode {
 
   return (
     <main
-      className="flex h-dvh w-full overflow-hidden bg-gradient-to-b from-[#f5f7fa] to-[#e8ecf2] text-slate-800"
+      className="flex h-dvh w-full overflow-hidden bg-gradient-to-b from-[#f5f7fa] to-[#e8ecf2] text-slate-800 dark:from-[#151b27] dark:to-[#0d111a] dark:text-slate-100"
       style={{
         fontFamily:
           '"Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif',
@@ -136,13 +142,13 @@ export default function IsoOfficePage(): React.ReactNode {
               setSheet(null);
               goToSession(id);
             }}
-            className="flex h-full w-[260px] max-w-[85vw] flex-col gap-2 bg-[#f5f7fa] p-3 shadow-xl"
+            className="flex h-full w-[260px] max-w-[85vw] flex-col gap-2 bg-[#f5f7fa] p-3 shadow-xl dark:bg-[#151b27]"
           />
           <button
             type="button"
             aria-label="close floor guide"
             onClick={() => setSheet(null)}
-            className="flex-1 bg-slate-900/30"
+            className="flex-1 bg-slate-900/30 dark:bg-black/50"
           />
         </div>
       )}
@@ -163,14 +169,14 @@ export default function IsoOfficePage(): React.ReactNode {
 
         {/* An empty office points at the connect tab: nothing is wired up yet. */}
         {!sessionsLoading && sessions.length === 0 && (
-          <div className="absolute left-4 top-4 flex max-w-[min(60%,calc(100%_-_13rem))] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-3 pr-2 shadow-sm">
-            <p className="hidden min-w-0 truncate text-xs text-slate-500 sm:block">
+          <div className="absolute left-4 top-4 flex max-w-[min(60%,calc(100%_-_13rem))] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-3 pr-2 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/90">
+            <p className="hidden min-w-0 truncate text-xs text-slate-500 sm:block dark:text-slate-400">
               {t("iso.connect.empty")}
             </p>
             <button
               type="button"
               onClick={() => openSettings("connect")}
-              className="shrink-0 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-slate-700"
+              className="shrink-0 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
             >
               {t("iso.connect.cta")}
             </button>
@@ -178,12 +184,12 @@ export default function IsoOfficePage(): React.ReactNode {
         )}
 
         {session && (
-          <header className="absolute left-4 top-4 flex max-w-[min(60%,calc(100%_-_13rem))] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-2 pr-4 shadow-sm">
+          <header className="absolute left-4 top-4 flex max-w-[min(60%,calc(100%_-_13rem))] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-2 pr-4 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/90">
             <AgentLogo codingAgent={codingAgent ?? session.codingAgent} />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 {floor && (
-                  <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                  <span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white dark:bg-slate-100 dark:text-slate-900">
                     {floor.number}F
                   </span>
                 )}
@@ -191,7 +197,9 @@ export default function IsoOfficePage(): React.ReactNode {
                   {floor?.name ?? session.projectName}
                 </span>
               </div>
-              <p className="truncate text-xs text-slate-500">{title}</p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                {title}
+              </p>
             </div>
           </header>
         )}
@@ -225,12 +233,14 @@ export default function IsoOfficePage(): React.ReactNode {
             <Settings size={14} />
           </button>
           <div
-            className={`flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold shadow-sm ${
-              isConnected ? "text-emerald-600" : "text-slate-400"
+            className={`flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 ${
+              isConnected
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-slate-400"
             }`}
           >
             <span
-              className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-slate-300"}`}
+              className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`}
             />
             {/* Phones keep just the dot: the top row is shared with the header. */}
             <span className="sr-only sm:not-sr-only">
@@ -254,11 +264,11 @@ export default function IsoOfficePage(): React.ReactNode {
             type="button"
             aria-label="close people"
             onClick={() => setSheet(null)}
-            className="flex-1 bg-slate-900/30"
+            className="flex-1 bg-slate-900/30 dark:bg-black/50"
           />
           <IsoSidePanel
             session={session}
-            className="flex h-full w-[280px] max-w-[85vw] flex-col gap-2 overflow-y-auto bg-[#f5f7fa] p-3 shadow-xl"
+            className="flex h-full w-[280px] max-w-[85vw] flex-col gap-2 overflow-y-auto bg-[#f5f7fa] p-3 shadow-xl dark:bg-[#151b27]"
           />
         </div>
       )}

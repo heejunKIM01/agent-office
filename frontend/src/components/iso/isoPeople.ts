@@ -107,7 +107,7 @@ function nameChip(color: string): {
 } {
   const element = document.createElement("div");
   element.className =
-    "flex max-w-[150px] items-center gap-1 whitespace-nowrap rounded-full border border-slate-200/90 bg-white/95 px-2 py-0.5 text-[11px] font-semibold leading-4 text-slate-700 shadow-sm";
+    "flex max-w-[150px] items-center gap-1 whitespace-nowrap rounded-full border border-slate-200/90 bg-white/95 px-2 py-0.5 text-[11px] font-semibold leading-4 text-slate-700 shadow-sm dark:border-slate-700/90 dark:bg-slate-900/90 dark:text-slate-200";
   const dot = document.createElement("span");
   dot.className = "h-1.5 w-1.5 shrink-0 rounded-full";
   dot.style.backgroundColor = color;

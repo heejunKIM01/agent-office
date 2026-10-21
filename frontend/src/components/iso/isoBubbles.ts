@@ -64,21 +64,21 @@ export function drawBubble(
   if (bubble.kind === "thinking") {
     const box = el(
       "div",
-      "rounded-2xl border border-violet-200 bg-white/95 px-2.5 py-1 text-center shadow-sm",
+      "rounded-2xl border border-violet-200 bg-white/95 px-2.5 py-1 text-center shadow-sm dark:border-violet-400/40 dark:bg-slate-900/95",
     );
     const head = el(
       "div",
-      "whitespace-nowrap text-[11px] font-semibold text-slate-700",
+      "whitespace-nowrap text-[11px] font-semibold text-slate-700 dark:text-slate-200",
     );
     head.append(
       `💭 ${words.thinking} `,
-      el("span", "animate-pulse text-violet-500", "· · ·"),
+      el("span", "animate-pulse text-violet-500 dark:text-violet-300", "· · ·"),
     );
     box.append(
       head,
       el(
         "div",
-        "whitespace-nowrap text-[10px] text-violet-500",
+        "whitespace-nowrap text-[10px] text-violet-500 dark:text-violet-300",
         words.thinkingFor(bubble.seconds),
       ),
     );
@@ -88,26 +88,35 @@ export function drawBubble(
   if (bubble.kind === "tool") {
     const box = el(
       "div",
-      "flex max-w-[240px] items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-3 py-1.5 shadow-sm",
+      "flex max-w-[240px] items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-3 py-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900/95",
     );
     const lines = el("div", "min-w-0");
     lines.append(
       el(
         "div",
-        "truncate text-[12px] font-semibold text-slate-800",
+        "truncate text-[12px] font-semibold text-slate-800 dark:text-slate-100",
         bubble.text,
       ),
     );
     if (!bubble.asking)
-      lines.append(el("div", "text-[10px] text-slate-400", words.looking));
+      lines.append(
+        el(
+          "div",
+          "text-[10px] text-slate-400 dark:text-slate-500",
+          words.looking,
+        ),
+      );
     box.append(el("span", "text-[15px] leading-none", bubble.icon), lines);
     holder.append(box);
     return;
   }
   const styles: Record<"thought" | "speech" | "failed", string> = {
-    thought: "border-violet-200 bg-violet-50/95 text-slate-700",
-    speech: "border-slate-200 bg-white text-slate-800",
-    failed: "border-red-300 bg-red-50 text-red-600",
+    thought:
+      "border-violet-200 bg-violet-50/95 text-slate-700 dark:border-violet-400/40 dark:bg-[#231d3a] dark:text-violet-100",
+    speech:
+      "border-slate-200 bg-white text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100",
+    failed:
+      "border-red-300 bg-red-50 text-red-600 dark:border-red-400/50 dark:bg-[#3a1a1f] dark:text-red-300",
   };
   const prefix = { thought: "💭 ", speech: "", failed: "❗ " }[bubble.kind];
   const box = el(
