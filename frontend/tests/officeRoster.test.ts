@@ -66,6 +66,7 @@ describe("rosterRows", () => {
         kind: "subagent",
         title: "T-013 부속 작성",
         typeLabel: "범용",
+        outfit: "explore",
         activity: "reading",
         bubble: {
           type: "thought",
@@ -113,6 +114,7 @@ describe("rosterRows", () => {
     expect(rows[1]).toMatchObject({
       title: "T-013 부속 작성",
       typeLabel: "범용",
+      outfit: "explore",
     });
   });
 
