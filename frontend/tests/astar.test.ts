@@ -2,7 +2,7 @@
  * Characterization tests for the A* pathfinding stack.
  *
  * `findPath`, `gridPathToWorld`, and `findWorldPath` each accept an injectable
- * `PathGrid`, so no canvas/Pixi is required — we drive them with a small stub
+ * `PathGrid`, so no canvas is required — we drive them with a small stub
  * grid that mirrors `NavigationGrid`'s contract (8-directional neighbors with
  * diagonal corner-cutting prevented, exactly like
  * `NavigationGrid.getNeighbors`).

@@ -94,7 +94,7 @@ export interface GridPosition {
 
 /**
  * Minimal grid surface the A* pathfinder depends on. Implemented by the office
- * {@link NavigationGrid} and by the Command Center grid, so A* can run on either.
+ * {@link NavigationGrid}; tests drive A* with small stubs of it.
  */
 export interface PathGrid {
   worldToGrid(x: number, y: number): GridPosition;
@@ -490,46 +490,4 @@ export function getNavigationGrid(): NavigationGrid {
     gridInstance = new NavigationGrid();
   }
   return gridInstance;
-}
-
-export function resetNavigationGrid(): void {
-  gridInstance = new NavigationGrid();
-}
-
-/**
- * Get obstacle tiles for debug visualization.
- * Returns array of {x, y, width, height, type} for each non-floor tile.
- */
-export function getObstacleTiles(): Array<{
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  type: TileType;
-}> {
-  const grid = getNavigationGrid();
-  const obstacles: Array<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    type: TileType;
-  }> = [];
-
-  for (let gy = 0; gy < GRID_HEIGHT; gy++) {
-    for (let gx = 0; gx < GRID_WIDTH; gx++) {
-      const type = grid.getStaticTile(gx, gy);
-      if (type !== TileType.FLOOR && type !== TileType.ELEVATOR) {
-        obstacles.push({
-          x: gx * TILE_SIZE,
-          y: gy * TILE_SIZE,
-          width: TILE_SIZE,
-          height: TILE_SIZE,
-          type,
-        });
-      }
-    }
-  }
-
-  return obstacles;
 }

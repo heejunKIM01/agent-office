@@ -1,105 +1,21 @@
 import type { TranslationKey } from "./en";
 
 const ko: Record<TranslationKey, string> = {
-  // App
-  "app.initializingSystems": "시스템 준비 중...",
-
   // Header Controls
-  "header.simulate": "시뮬레이션",
-  "header.reset": "초기화",
-  "header.clearDb": "DB 비우기",
-  "header.debugOn": "디버그 켬",
-  "header.debugOff": "디버그 끔",
   "header.settings": "설정",
-  "header.help": "도움말",
-  "header.status": "상태",
-  "header.connected": "연결됨",
-  "header.disconnected": "연결 끊김",
-  "header.aiOn": "켬",
-  "header.aiOff": "끔",
-  "header.agents": "명",
-  "header.tour": "둘러보기",
-  "header.commandCenter": "지휘 센터",
-  "header.more": "더보기",
-  "header.moreMenu": "작업 더보기",
-  "help.tour": "둘러보기 시작",
-
-  // Command Center
-  "commandCenter.title": "지휘 센터",
-  "commandCenter.zone.needsYou": "확인 필요",
-  "commandCenter.zone.working": "작업 중",
-  "commandCenter.zone.done": "완료",
-  "commandCenter.zone.ended": "종료",
-  "commandCenter.moreCount": "+{count}개 더",
-  "commandCenter.popup.todos": "할 일",
-  "commandCenter.popup.employees": "직원",
-  "commandCenter.popup.terminal": "터미널",
-  "commandCenter.popup.drillIn": "열기",
-  "commandCenter.initializing": "지휘 센터 준비 중...",
-  "commandCenter.board.allSessions": "전체 세션",
-  "commandCenter.board.terminals": "터미널",
-  "commandCenter.board.employees": "직원",
-  "commandCenter.board.todos": "할 일",
 
   // Modals
-  "modal.confirmDbWipe": "데이터베이스 비우기 확인",
-  "modal.cancel": "취소",
-  "modal.wipeAllData": "모든 데이터 지우기",
-  "modal.wipeWarning":
-    "모든 세션 기록과 이벤트를 영구히 지울까요? 되돌릴 수 없고, 지금 화면 상태도 초기화돼요.",
-  "modal.keyboardShortcuts": "단축키",
   "modal.close": "닫기",
-  "modal.toggleDebug": "디버그 모드 켜고 끄기",
-  "modal.showAgentPaths": "에이전트 경로 보기",
-  "modal.showQueueSlots": "대기열 자리 보기",
-  "modal.showPhaseLabels": "단계 라벨 보기",
-  "modal.deleteSession": "세션 삭제",
-  "modal.delete": "삭제",
-  // Rendered as "<confirm> <session name>?" and "<warning> <count> <events>."
-  "modal.deleteSessionConfirm": "이 세션을 삭제할까요:",
-  "modal.deleteSessionWarning": "영구히 지워지는 것:",
-  "modal.events": "개 이벤트",
-  "modal.cannotBeUndone": "되돌릴 수 없어요.",
 
   // Settings
   "settings.title": "설정",
-  "settings.clockType": "시계 종류",
-  "settings.analog": "아날로그",
-  "settings.digital": "디지털",
-  "settings.timeFormat": "시간 형식",
-  "settings.12hour": "12시간",
-  "settings.24hour": "24시간",
   "settings.sessionBehavior": "세션 동작",
   "settings.autoFollow": "새 세션 자동으로 따라가기",
   "settings.autoFollowDesc":
     "같은 프로젝트에서 새 세션이 시작되면 자동으로 전환해요",
-  "settings.clockTip": "팁: 사무실 시계를 누르면 표시 방식이 바로 바뀌어요.",
   "settings.language": "언어",
   "settings.tabs.general": "일반",
-  "settings.tabs.building": "건물",
   "settings.tabs.connect": "연결",
-  "settings.building.name": "건물 이름",
-  "settings.building.namePlaceholder": "우리 회사",
-  "settings.building.floors": "층",
-  "settings.building.addFloor": "층 추가",
-  "settings.building.floorName": "층 이름",
-  "settings.building.floorNumber": "층",
-  "settings.building.accentColor": "강조 색",
-  "settings.building.icon": "아이콘",
-  "settings.building.repos": "프로젝트 폴더",
-  "settings.building.reposPlaceholder": "agent-office, my-api, web-ui",
-  "settings.building.save": "저장",
-  "settings.building.saving": "저장 중...",
-  "settings.building.saved": "저장했어요!",
-  "settings.building.deleteFloor": "삭제",
-  "settings.building.noFloors": "설정한 층이 없어요",
-  "settings.building.enableHint":
-    "층을 추가하고 프로젝트 폴더 이름을 연결하면 건물 보기가 켜져요",
-  "settings.building.unsavedWarning":
-    "저장하지 않은 건물 변경이 있어요. 버릴까요?",
-  "settings.building.saveFailed": "저장 실패: {status} {statusText}",
-  "settings.building.saveUnreachable":
-    "백엔드에 연결할 수 없어요. 서버가 켜져 있나요?",
   "settings.connect.intro":
     "버튼을 누르면 이 컴퓨터에서 연결 명령을 대신 실행해요. 다른 설정은 그대로 두고 Agent Office 훅만 더해요.",
   "settings.connect.connected": "연결됨",
@@ -130,100 +46,15 @@ const ko: Record<TranslationKey, string> = {
   "settings.connect.loadFailed":
     "연결 상태를 불러오지 못했어요. 백엔드가 떠 있는지 확인해 주세요.",
 
-  // Sessions
-  "sessions.title": "세션",
-  "sessions.loading": "세션 불러오는 중...",
-  "sessions.noSessions": "세션이 없어요",
-  "sessions.unknownProject": "알 수 없는 프로젝트",
-  "sessions.deleteSession": "세션 삭제",
-  "sessions.events": "개 이벤트",
-  "sessions.events_one": "이벤트 {count}개",
-  "sessions.events_other": "이벤트 {count}개",
-  "sessions.expandSidebar": "사이드바 펼치기",
-  "sessions.collapseSidebar": "사이드바 접기",
-  "sessions.dragToResize": "끌어서 크기 조절",
-
-  // Right Sidebar
-  "sidebar.events": "이벤트",
-  "sidebar.conversation": "대화",
-
-  // Event Log
-  "eventLog.title": "이벤트 로그",
-  "eventLog.events": "개 이벤트",
-  "eventLog.events_one": "이벤트 {count}개",
-  "eventLog.events_other": "이벤트 {count}개",
-  "eventLog.waiting": "이벤트를 기다리는 중...",
-
   // Agent Status
-  "agentStatus.title": "에이전트 상태",
-  "agentStatus.agents": "명",
-  "agentStatus.agents_one": "에이전트 {count}명",
-  "agentStatus.agents_other": "에이전트 {count}명",
-  "agentStatus.noAgents": "에이전트 없음",
-  "agentStatus.agent": "에이전트",
-  "agentStatus.desk": "책상",
-  "agentStatus.noTaskSummary": "작업 요약 없음",
-  "agentStatus.noRecentToolCall": "최근 도구 호출 없음",
   "agentStatus.inQueue": "{queueType} 대기열 {position}번째",
 
-  // Git Status
-  "git.title": "Git 상태",
-  "git.waitingForStatus": "Git 상태를 기다리는 중...",
-  "git.noSession": "선택한 세션이 없어요",
-  "git.noRepo": "Git 저장소를 찾지 못했어요",
-  "git.changedFiles": "바뀐 파일",
-  "git.staged": "스테이징됨",
-  "git.recentCommits": "최근 커밋",
-  "git.noCommits": "커밋이 없어요",
-  "git.modified": "수정",
-  "git.added": "추가",
-  "git.deleted": "삭제",
-  "git.renamed": "이름 변경",
-  "git.copied": "복사",
-  "git.untracked": "추적 안 함",
-  "git.ignored": "무시됨",
-
-  // Conversation
-  "conversation.title": "대화",
-  "conversation.msgs": "개 메시지",
-  "conversation.msgs_one": "메시지 {count}개",
-  "conversation.msgs_other": "메시지 {count}개",
-  "conversation.thinking": "생각",
-  "conversation.showMore": "더 보기",
-  "conversation.collapse": "접기",
-  "conversation.showFullResponse": "전체 응답 보기",
-  "conversation.hideToolCalls": "도구 호출 숨기기",
-  "conversation.showToolCalls": "도구 호출 보기",
-  "conversation.expandConversation": "대화 펼치기",
-  "conversation.close": "닫기",
-  "conversation.noConversation":
-    "아직 대화가 없어요. 코딩 에이전트 세션을 시작해 보세요.",
-
-  // Event Detail Modal
-  "eventDetail.summary": "요약",
-  "eventDetail.tool": "도구",
-  "eventDetail.agentName": "에이전트 이름",
-  "eventDetail.taskDescription": "작업 설명",
-  "eventDetail.userPrompt": "사용자 프롬프트",
-  "eventDetail.thinking": "생각",
-  "eventDetail.message": "메시지",
-  "eventDetail.resultSummary": "결과 요약",
-  "eventDetail.errorType": "오류 종류",
-  "eventDetail.toolInput": "도구 입력",
-  "eventDetail.noDetail": "이 이벤트에는 더 볼 내용이 없어요.",
-
-  // Loading Screen
-  "loading.office": "사무실 불러오는 중...",
-
   // Office rooms
-  "office.archive": "자료실",
-  "office.serverRoom": "서버실",
   "office.unknownAgent": "에이전트",
 
   // Isometric office
   "iso.live": "LIVE",
   "iso.offline": "오프라인",
-  "iso.classic": "2D 사무실",
   "iso.controlsHint": "드래그로 이동 · 휠로 확대 · 더블클릭으로 원위치",
   "iso.me": "나",
   "iso.agentType.general": "범용",
@@ -276,12 +107,6 @@ const ko: Record<TranslationKey, string> = {
   "zoom.out": "축소",
   "zoom.reset": "원래 크기",
 
-  // Mobile
-  "mobile.menu": "메뉴",
-  "mobile.agentActivity": "에이전트 활동",
-  "mobile.boss": "사장",
-  "mobile.noActiveAgents": "일하는 에이전트가 없어요",
-
   // Status Messages
   "status.switchedToSession": "세션 {sessionId}(으)로 전환하는 중...",
   "status.deletingSession": "세션 {sessionId} 삭제하는 중...",
@@ -302,70 +127,6 @@ const ko: Record<TranslationKey, string> = {
   "status.sessionDeletedNoOthers": "세션을 삭제했어요. 다른 세션이 없어요.",
   "status.connectedTo": "{sessionName}에 연결했어요",
   "status.autoFollowed": "새 세션을 따라갔어요: {sessionName}",
-
-  // Navigation
-  "navigation.building": "건물",
-
-  // Tour
-  "tour.steps.welcome.title": "환영해요",
-  "tour.steps.welcome.description":
-    "여기가 지휘 센터예요. 층을 눌러 둘러보세요.",
-  "tour.steps.singleWelcome.title": "Agent Office 에 오신 걸 환영해요",
-  "tour.steps.singleWelcome.description":
-    "이 픽셀 사무실은 코딩 에이전트 세션을 실시간으로 보여 줘요. 한번 둘러볼까요?",
-  "tour.steps.simulate.title": "시뮬레이션 시작",
-  "tour.steps.simulate.description":
-    "시뮬레이션을 누르면 사무실이 움직이기 시작해요.",
-  "tour.steps.agentsArrive.title": "에이전트 출근",
-  "tour.steps.agentsArrive.description":
-    "에이전트는 엘리베이터로 출근해 자기 책상으로 걸어가 일을 시작해요.",
-  "tour.steps.inspectAgent.title": "에이전트 살펴보기",
-  "tour.steps.inspectAgent.description": "아무 캐릭터나 눌러 자세히 보세요.",
-  "tour.steps.focusPopup.title": "포커스 창",
-  "tour.steps.focusPopup.description":
-    "여기서 메시지를 클립보드에 복사하거나 터미널로 바로 갈 수 있어요. 에이전트가 일하는 동안 사무실은 실시간으로 바뀌어요.",
-  "tour.steps.zoomOut.title": "축소",
-  "tour.steps.zoomOut.description": "다시 축소해서 전체를 보세요.",
-  "tour.steps.settings.title": "층 설정",
-  "tour.steps.settings.description":
-    "설정에서 층을 추가하고 프로젝트 폴더를 연결하면 여러 층 건물로 볼 수 있어요.",
-  "tour.skip": "둘러보기 건너뛰기",
-  "tour.next": "다음",
-
-  // Attention System
-  "attention.toast.permissionRequest": "{agentName}: 권한이 필요해요",
-  "attention.toast.error": "{agentName}: 오류가 났어요",
-  "attention.toast.taskCompleted": "{agentName}: 작업을 마쳤어요",
-  "attention.toast.agentArrived": "{agentName}: 사무실에 출근했어요",
-  "attention.toast.stop": "{agentName}: 멈췄어요",
-  "attention.toast.backgroundTask": "{agentName}: {taskDescription}",
-  "attention.commandBar.placeholder": "명령을 입력하세요...",
-  "attention.commandBar.focusAgent": "에이전트 보기: {name}",
-  "attention.commandBar.focusBoss": "사장 터미널 보기",
-  "attention.commandBar.showAttention": "알림 대기열 보기",
-  "attention.commandBar.dismissAll": "알림 모두 닫기",
-  "attention.commandBar.toggleDebug": "디버그 보기 켜고 끄기",
-  "attention.commandBar.togglePaths": "경로 표시 켜고 끄기",
-  "attention.commandBar.toggleQueueSlots": "대기열 자리 켜고 끄기",
-  "attention.commandBar.togglePhaseLabels": "단계 라벨 켜고 끄기",
-  "attention.commandBar.toggleObstacles": "장애물 켜고 끄기",
-  "attention.commandBar.noResults": "맞는 명령이 없어요",
-  "attention.popup.focusTerminal": "터미널 보기",
-  "attention.popup.close": "닫기",
-  "attention.popup.state": "상태",
-  "attention.popup.task": "작업",
-  "attention.popup.type": "종류",
-  "attention.popup.desk": "책상",
-  "attention.popup.boss": "사장",
-  "attention.popup.agent": "에이전트",
-  "settings.commandBar": "명령 바 (⌘K)",
-  "settings.clickToFocus": "눌러서 보기",
-  "settings.toastFilters": "토스트 알림",
-  "settings.toastAutoDismiss": "자동으로 닫히는 시간",
-  "settings.filterPermission": "권한 요청",
-  "settings.filterError": "오류와 멈춤",
-  "settings.filterTaskComplete": "작업 완료",
-  "settings.filterArrival": "에이전트 출근",
 };
 
 export default ko;

@@ -1,6 +1,6 @@
 # Claude Office Visualizer Frontend
 
-Next.js application that renders a real-time pixel art office simulation using PixiJS, visualizing Claude Code operations as animated office activities.
+Next.js application that renders a real-time isometric office with three.js, visualizing coding agent operations as people working in an office.
 
 ## Table of Contents
 
@@ -12,21 +12,19 @@ Next.js application that renders a real-time pixel art office simulation using P
 - [Project Structure](#project-structure)
 - [Key Components](#key-components)
 - [State Management](#state-management)
-- [Debug Tools](#debug-tools)
 - [Environment Variables](#environment-variables)
 - [Testing](#testing)
 - [Related Documentation](#related-documentation)
 
 ## Overview
 
-The frontend provides an interactive visualization of Claude Code operations:
+The frontend provides an interactive visualization of coding agent operations:
 
-- **Real-time Rendering**: PixiJS-powered 2D canvas at 1280x1024 native resolution
-- **Character Animation**: Boss and agent sprites with walk, idle, and typing animations
-- **State Machines**: XState v5 manages agent lifecycle with explicit states and transitions
+- **Isometric Office**: A three.js orthographic scene of one floor with seven rooms; people walk to the room of the tool they run, with name chips and bubbles drawn as HTML on top
+- **Floor Guide and Side Panel**: Projects shown as floors with their sessions, plus the people in the office, an activity log and a room legend
+- **State Machines**: XState v5 manages the subagent lifecycle with explicit states and transitions
 - **WebSocket Updates**: Live state synchronization with the backend
-- **Session Browser**: Collapsible sidebar for session history and replay
-- **Debug Tools**: Keyboard shortcuts for path visualization, queue slots, and time controls
+- **Settings**: Language, auto-follow and connecting coding agents from the browser
 
 ## Architecture
 
@@ -35,32 +33,33 @@ graph TD
     WS[WebSocket Connection]
     Store[Zustand Store]
     Machines[XState Machines]
-    Animation[Animation System]
-    Canvas[PixiJS Canvas]
-    UI[React UI Panels]
+    People[Office People and Bubbles]
+    Scene[three.js Scene]
+    UI[React Panels]
 
     WS -->|Events| Store
     Store --> Machines
-    Machines --> Animation
-    Animation --> Canvas
+    Machines --> Store
+    Store --> People
+    People --> Scene
     Store --> UI
 
     style WS fill:#880e4f,stroke:#c2185b,stroke-width:2px,color:#ffffff
     style Store fill:#e65100,stroke:#ff9800,stroke-width:3px,color:#ffffff
     style Machines fill:#1b5e20,stroke:#4caf50,stroke-width:2px,color:#ffffff
-    style Animation fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
-    style Canvas fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
+    style People fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
+    style Scene fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
     style UI fill:#37474f,stroke:#78909c,stroke-width:2px,color:#ffffff
 ```
 
 ### Data Flow
 
-1. WebSocket receives state updates from backend
-2. Zustand store updates with new state (agents, boss, context)
-3. XState machines process agent lifecycle transitions
-4. Animation system interpolates positions and timing
-5. PixiJS canvas renders the current frame
-6. React UI panels display session info, event log, git status
+1. WebSocket receives state updates and events from the backend
+2. `systems/stateReconciler.ts` syncs the Zustand store (agents, boss, office)
+3. XState machines track each subagent's arrival and departure
+4. `systems/officePeople.ts` and `officeBubbles.ts` derive who is on the floor and what each person says
+5. The three.js scene walks the people on the floor plan and draws their bubbles
+6. React panels show the floor guide, the people, the activity log and the room legend
 
 ## Prerequisites
 
@@ -126,38 +125,26 @@ This exports the frontend and copies it to `backend/static/` for FastAPI serving
 
 ```
 frontend/src/
-├── app/            # Next.js App Router pages and layout
+├── app/            # Next.js App Router: the isometric office page (/iso redirects to /)
 ├── components/
-│   ├── attention/  # Urgency toasts and fuzzy command bar
-│   ├── command/    # Command Center (cross-session overview)
-│   ├── debug/      # Sprite-debug tooling
-│   ├── game/       # PixiJS office canvas, sprites, and decor
-│   ├── layout/     # Header, sidebars, and mobile drawer
-│   ├── navigation/ # Breadcrumb and view transitions
-│   ├── overlay/    # Modals (settings, etc.)
-│   ├── settings/   # Settings tabs (general, building, ...)
-│   ├── tour/       # Onboarding tour overlay
-│   └── views/      # Building and floor views
-├── constants/      # Canvas dimensions, positions, quotes
-├── hooks/          # WebSocket, floors, overview, sessions, i18n
-├── i18n/           # Locale loader and translations (en, es, pt-BR)
+│   ├── iso/        # three.js scene, people, bubbles, floor guide, side panel
+│   ├── overlay/    # Modals (settings)
+│   └── settings/   # Settings tabs (connect)
+├── constants/      # Iso floor plan, rooms, positions, quotes, coding agents
+├── hooks/          # WebSocket, sessions, session switching, i18n
+├── i18n/           # Locale loader and translations (en, es, ko, pt-BR)
 ├── machines/       # XState agent machines + queue manager
-├── stores/         # Zustand stores (game, overview, preferences, attention, navigation, tour)
-├── systems/        # Animation, pathfinding, queue positions, Command Center motion
+├── stores/         # Zustand stores (game, preferences)
+├── systems/        # Path finding, walk grids, errand rules, office people, state reconciler
 ├── types/          # TypeScript types incl. generated.ts (backend contract)
-└── utils/          # API client, bubble text, cron helpers, event-type styles
+└── utils/          # API client, cron helpers
 ```
 
 ## Key Components
 
-### OfficeGame
+### IsoOffice
 
-The main canvas component that orchestrates all rendering:
-
-- Floor, walls, and furniture drawing
-- Character sprite management
-- Speech bubble display
-- Debug overlay rendering
+`components/iso/IsoOffice.tsx` mounts the three.js scene (`isoView.ts`), subscribes to the game store and hands the people from `systems/officePeople.ts` to the scene. Arriving subagents are seated at once and each person shows their latest bubble; `isoPeople.ts` walks them between rooms on the floor plan in `constants/isoFloorPlan.ts`.
 
 ### Agent State Machine
 
@@ -172,25 +159,14 @@ Departure: idle → departing → in_departure_queue → walking_to_ready → co
            → waiting_for_door_close → elevator_closing → removed
 ```
 
+The isometric office skips the arrival walk (it seats newcomers at once) and reads the departure phases to send a person home by elevator.
+
 The machine is split across:
 
 - `agentMachine.ts` — Composition root with shared setup
 - `agentArrivalMachine.ts` — Arrival flow states
 - `agentDepartureMachine.ts` — Departure flow states
 - `agentMachineCommon.ts` — Shared actions, guards, and delays
-
-### Animation System
-
-Single `requestAnimationFrame` loop manages:
-
-- Position interpolation (200 pixels/second)
-- Bubble timers (3 second minimum display)
-- Queue advancement checks
-- Path recalculation on collision
-
-### Command Center
-
-The cross-session overview (`components/command/`) renders every live session's boss as a peer in a single open-plan office with status columns (Needs-you, Working, Done, Ended). It is driven by a dedicated `/ws/overview` WebSocket (`hooks/useOverviewWebSocket.ts`) feeding the `overviewStore.ts` Zustand store, separate from the session-bound game store.
 
 ## State Management
 
@@ -211,30 +187,20 @@ The unified store (`stores/gameStore.ts`) contains:
 Use primitive selectors to prevent unnecessary re-renders:
 
 ```typescript
-const contextUtilization = useGameStore(selectContextUtilization);
-const isCompacting = useGameStore(selectIsCompacting);
+const isConnected = useGameStore(selectIsConnected);
+const boss = useGameStore(selectBoss);
 ```
 
 ### Preferences Store
 
 User preferences are stored in the backend and synced via `preferencesStore.ts`:
 
-| Preference              | Values              | Default  | Description                              |
-| ----------------------- | ------------------- | -------- | ---------------------------------------- |
-| `clockType`             | `analog`, `digital` | `analog` | Wall clock display mode                  |
-| `clockFormat`           | `12h`, `24h`        | `12h`    | Digital clock time format                |
-| `autoFollowNewSessions` | `true`, `false`     | `true`   | Auto-follow new sessions in same project |
-| `language`              | `en`, `es`, `pt-BR` | `en`     | UI language                              |
+| Preference              | Values                    | Default | Description                              |
+| ----------------------- | ------------------------- | ------- | ---------------------------------------- |
+| `autoFollowNewSessions` | `true`, `false`           | `true`  | Auto-follow new sessions in same project |
+| `language`              | `en`, `es`, `ko`, `pt-BR` | `en`    | UI language                              |
 
-Click the wall clock to cycle through modes, or use the Settings modal to configure all preferences.
-
-### Additional Stores
-
-| Store      | File                 | Purpose                                                                               |
-| ---------- | -------------------- | ------------------------------------------------------------------------------------- |
-| Attention  | `attentionStore.ts`  | Tracks which session the user is currently following and manages auto-follow behavior |
-| Navigation | `navigationStore.ts` | Manages floor navigation state for multi-floor building views                         |
-| Tour       | `tourStore.ts`       | Controls the onboarding tour walkthrough state                                        |
+Both are set in the Settings modal (the gear button by 「LIVE」).
 
 ### Internationalization
 
@@ -242,30 +208,15 @@ The frontend supports multiple languages via a lightweight i18n system in `front
 
 To add a language, create a new file (e.g., `fr.ts`) with all `TranslationKey` entries, register it in `index.ts`, and add the locale to the `Locale` type.
 
-## Debug Tools
-
-Press `D` to toggle debug mode, then use additional shortcuts:
-
-| Key | Action                                            |
-| --- | ------------------------------------------------- |
-| `D` | Toggle debug mode                                 |
-| `P` | Show agent paths (waypoints as colored lines)     |
-| `Q` | Show queue slot positions                         |
-| `L` | Show phase labels above agents                    |
-| `O` | Show obstacle grid                                |
-| `T` | Fast-forward city time (24h cycle in ~12 seconds) |
-
-Debug preferences persist to `localStorage`.
-
 ## Environment Variables
 
 The frontend reads these at build time (Next.js `NEXT_PUBLIC_` convention):
 
-| Variable                 | Default                 | Description                                             |
-| ------------------------ | ----------------------- | ------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`    | `http://localhost:8000` | Backend HTTP API base URL                               |
-| `NEXT_PUBLIC_WS_URL`     | `ws://<hostname>:8000`  | Backend WebSocket base URL (session and overview feeds) |
-| `NEXT_PUBLIC_I18N_DEBUG` | (unset)                 | Set to `true` to log i18n lookup misses                 |
+| Variable                 | Default                 | Description                               |
+| ------------------------ | ----------------------- | ----------------------------------------- |
+| `NEXT_PUBLIC_API_URL`    | `http://localhost:8000` | Backend HTTP API base URL                 |
+| `NEXT_PUBLIC_WS_URL`     | `ws://<hostname>:8000`  | Backend WebSocket base URL (session feed) |
+| `NEXT_PUBLIC_I18N_DEBUG` | (unset)                 | Set to `true` to log i18n lookup misses   |
 
 ## Testing
 

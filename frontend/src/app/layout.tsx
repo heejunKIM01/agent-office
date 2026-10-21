@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Agent Office",
   description:
-    "Real-time pixel art office for coding agents: Claude Code, OpenCode, Gemini CLI and Codex",
+    "Real-time office for coding agents: Claude Code, OpenCode, Gemini CLI and Codex",
 };
 
 export default function RootLayout({

@@ -16,24 +16,18 @@ System architecture and design documentation for Claude Office Visualizer.
 - [Work Acceptance Quotes](#work-acceptance-quotes)
 - [Work Completion Quotes](#work-completion-quotes)
 - [Beads Issue Tracker Integration](#beads-issue-tracker-integration)
-- [Context Compaction Animation](#context-compaction-animation)
-- [Printer Animation](#printer-animation)
-- [City Skyline Window](#city-skyline-window)
-- [Wall Clock](#wall-clock)
 - [User Preferences](#user-preferences)
 - [Internationalization](#internationalization)
 - [Isometric Office](#isometric-office)
-- [PixiJS Rendering](#pixijs-rendering)
 - [Multi-Floor / Agent Teams](#multi-floor--agent-teams)
-- [Command Center](#command-center)
 - [Configuration Reference](#configuration-reference)
 - [Related Documentation](#related-documentation)
 
 ## Overview
 
-Claude Office Visualizer transforms Claude Code operations into a real-time pixel art office simulation. A "boss" character (main Claude agent) manages work, spawns "employee" agents (subagents), and orchestrates tasks visually.
+Claude Office Visualizer transforms Claude Code operations into a real-time isometric office. A "boss" character (main Claude agent) manages work, spawns "employee" agents (subagents), and orchestrates tasks visually.
 
-In this fork the main page (`/`) is an isometric office drawn with three.js (see [Isometric Office](#isometric-office)). The original 2D pixel office, with the whiteboard, the Command Center and the Building view, is at `/classic`; both read the same store and backend.
+In this fork the office (`/`) is drawn with three.js (see [Isometric Office](#isometric-office)). The original 2D pixel office, with the whiteboard, the Command Center and the Building view, has been removed.
 
 **Design Principle:** The backend is the source of truth. The frontend is a "dumb" renderer that displays whatever state it receives via WebSocket.
 
@@ -60,7 +54,7 @@ graph TD
 
     subgraph "Frontend"
         React[React/Next.js]
-        Pixi[PixiJS Canvas]
+        Scene[three.js Scene]
         Zustand[Zustand Store]
     end
 
@@ -73,7 +67,7 @@ graph TD
     SM --> WS
     WS --> Zustand
     Zustand --> React
-    React --> Pixi
+    React --> Scene
 
     style CLI fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
     style Events fill:#37474f,stroke:#78909c,stroke-width:2px,color:#ffffff
@@ -84,7 +78,7 @@ graph TD
     style WS fill:#880e4f,stroke:#c2185b,stroke-width:2px,color:#ffffff
     style DB fill:#1a237e,stroke:#3f51b5,stroke-width:2px,color:#ffffff
     style React fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
-    style Pixi fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
+    style Scene fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
     style Zustand fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
 ```
 
@@ -95,7 +89,7 @@ graph LR
     CC[Claude Code]
     Hooks[Hooks]
     Backend[FastAPI Backend]
-    Frontend[Next.js + PixiJS]
+    Frontend[Next.js + three.js]
 
     CC -->|HTTP POST| Hooks
     Hooks -->|/api/v1/events| Backend
@@ -112,7 +106,7 @@ graph LR
 2. Hooks POST events to backend API
 3. Backend state machine transforms events into game state changes
 4. State updates broadcast to frontend via WebSocket
-5. Frontend renders state using PixiJS
+5. Frontend renders state as the isometric office (three.js)
 
 ## Components
 
@@ -165,100 +159,42 @@ graph LR
 
 | File | Purpose |
 |------|---------|
-| `components/game/OfficeGame.tsx` | Main PixiJS canvas, renders boss, agents, office |
-| `components/game/OfficeBackground.tsx` | Office floor, walls, and static decor |
-| `components/game/BossSprite.tsx` | Boss character with typing animation and MobileBoss for compaction |
-| `components/game/AgentSprite.tsx` | Agent characters with walk/idle/typing animations |
-| `components/game/DeskGrid.tsx` | Agent desk arrangement and positioning |
-| `components/game/DeskMarquee.tsx` | Scrolling text marquee for agent task display |
-| `components/game/MarqueeText.tsx` | Reusable scrolling text component |
-| `components/game/TrashCanSprite.tsx` | Context utilization visualization with stomp effect |
-| `components/game/CityWindow.tsx` | City skyline with real-time day/night cycle |
-| `components/game/EmployeeOfTheMonth.tsx` | Employee of the Month wall poster |
-| `components/game/Whiteboard.tsx` | Multi-mode display with 12 visualization modes |
-| `components/game/SafetySign.tsx` | Tool counter since last compaction |
-| `components/game/PrinterStation.tsx` | Animated printer for report generation |
-| `components/game/Elevator.tsx` | Agent arrival/departure elevator with doors |
-| `components/game/WallClock.tsx` | Clickable wall clock (analog/digital modes) |
-| `components/game/DigitalClock.tsx` | LED-style digital clock display |
-| `components/game/DebugOverlays.tsx` | Development debug visualizations |
-| `components/game/LoadingScreen.tsx` | Loading state display |
-| `components/game/ZoomControls.tsx` | Canvas zoom controls |
-| `components/game/EventLog.tsx` | Event history display panel |
-| `components/game/EventDetailModal.tsx` | Modal for viewing event details |
-| `components/game/ConversationHistory.tsx` | Conversation history display |
-| `components/game/GitStatusPanel.tsx` | Git repository status display |
-| `components/game/AgentStatus.tsx` | Agent status indicators |
-| `components/game/city/buildingRenderer.ts` | City building rendering with lit windows |
-| `components/game/city/skyRenderer.ts` | Sky gradient and celestial body rendering |
-| `components/game/city/timeUtils.ts` | Time period calculations for day/night cycle |
-| `components/game/whiteboard/*.tsx` | Whiteboard mode components (12 modes) and mode registry |
-| `components/game/shared/drawBubble.ts` | Speech/thought bubble rendering utility |
-| `components/game/shared/drawArm.ts` | Clock arm rendering utility |
-| `components/game/shared/iconMap.ts` | Tool name to icon mapping |
-| `components/layout/HeaderControls.tsx` | Header with session controls |
-| `components/layout/RightSidebar.tsx` | Right sidebar container |
-| `components/layout/SessionSidebar.tsx` | Session list and switcher |
-| `components/layout/MobileDrawer.tsx` | Mobile-friendly drawer component |
-| `components/layout/MobileAgentActivity.tsx` | Mobile agent activity display |
-| `components/layout/StatusToast.tsx` | Toast notification component |
-| `components/attention/CommandBar.tsx` | Fuzzy-search command bar for filtering events |
-| `components/attention/AttentionToasts.tsx` | Urgency-based toast notifications for agent events |
-| `components/attention/AgentPopup.tsx` | Popover for focused agent details and terminal access |
-| `components/navigation/Breadcrumb.tsx` | Two-level breadcrumb (Building > Floor) for multi-floor navigation |
-| `components/navigation/ViewTransition.tsx` | Animated transitions between building/floor/single views |
-| `components/views/BuildingView.tsx` | Building overview showing all floors with active sessions |
-| `components/views/FloorView.tsx` | Floor-level view with office canvas and sidebars |
-| `components/settings/BuildingTab.tsx` | Settings tab for building/floor/room configuration |
-| `components/tour/TourOverlay.tsx` | Guided tour orchestrator with step advancement conditions |
-| `components/tour/NarratorBar.tsx` | Bottom bar with tour step title, description, and progress |
-| `components/tour/PointerRing.tsx` | Animated highlight ring targeting elements by data-tour-id |
-| `components/tour/SpotlightDim.tsx` | Dimming overlay with rectangular cutout for targeted element |
+| `app/page.tsx` | The isometric office page: floor guide, scene, side panel, settings (`/iso` redirects here) |
+| `components/iso/IsoOffice.tsx` | Mounts the three.js scene and feeds it the people from the store |
+| `components/iso/isoView.ts` | three.js orthographic 2:1 camera, lights, MapControls, CSS2D name chips and bubbles |
+| `components/iso/buildIsoOffice.ts` · `isoFurniture.ts` · `isoPalette.ts` · `isoTextures.ts` | The floor plate, walls, labels and furniture as simple solids, and their canvas textures |
+| `components/iso/isoCharacters.ts` | Two-head-tall people: poses and outfits |
+| `components/iso/isoPeople.ts` | The people on the floor: walking by the errand rules, bubbles, elevator trips |
+| `components/iso/isoBubbles.ts` | Bubbles over the people, drawn as HTML |
+| `components/iso/isoEffects.ts` | Room effects: rack lights, code on iMacs, whiteboard writing, elevator doors |
+| `components/iso/IsoFloorGuide.tsx` · `IsoSidePanel.tsx` · `AgentLogo.tsx` | 「층별 안내」, the right-hand panels and the coding agent logo |
 | `components/overlay/Modal.tsx` | Base modal component |
-| `components/overlay/SettingsModal.tsx` | Settings configuration modal |
+| `components/overlay/SettingsModal.tsx` | Settings modal: general (language, auto-follow) and connect tabs |
+| `components/settings/ConnectTab.tsx` | Installs and removes coding agent hooks from the browser |
 | `stores/gameStore.ts` | Unified Zustand store for all game state (includes bubble queue) |
-| `stores/preferencesStore.ts` | User preferences store (clock type, format) |
-| `stores/attentionStore.ts` | Attention system store for toast/popup focus management |
-| `stores/navigationStore.ts` | Navigation state for building/floor/single view modes |
-| `stores/tourStore.ts` | Guided tour state and step definitions |
-| `systems/compactionAnimation.ts` | Boss stomp animation when context compacts |
-| `systems/animationSystem.ts` | Single RAF loop for all movement and timing |
-| `systems/pathfinding.ts` | A* pathfinding with navigation grid |
-| `systems/astar.ts` | A* algorithm implementation |
-| `systems/navigationGrid.ts` | Grid-based navigation obstacles |
-| `systems/pathSmoothing.ts` | Path smoothing for natural movement |
-| `systems/agentCollision.ts` | Agent collision detection |
-| `systems/queuePositions.ts` | Queue position management for arrivals and departures |
-| `systems/hmrCleanup.ts` | Hot module replacement cleanup |
+| `stores/preferencesStore.ts` | User preferences store (language, auto-follow) |
+| `systems/stateReconciler.ts` | Applies backend state updates to the store |
+| `systems/webSocketController.ts` | WebSocket transport: connect, reconnect, backoff |
+| `systems/typingTracker.ts` | Minimum typing duration per character |
+| `systems/officePeople.ts` · `officeBubbles.ts` · `officeRoster.ts` · `floors.ts` | Who is in the office, which bubble each shows, the panel rows and log lines, projects as floors |
+| `systems/isoErrands.ts` · `isoNavGrid.ts` | Iso walker rules and the 0.5 m walk grid |
+| `systems/astar.ts` · `pathFollow.ts` | A* path finding and path following, shared by both grids |
+| `systems/animationSystem.ts` · `pathfinding.ts` · `navigationGrid.ts` · `pathSmoothing.ts` · `agentCollision.ts` · `queuePositions.ts` · `bossErrands.ts` · `agentErrands.ts` | The agent machine's grid, paths and queue positions |
 | `hooks/useWebSocketEvents.ts` | WebSocket handler with state machine integration |
-| `hooks/useOfficeTextures.ts` | Texture loading and caching |
 | `hooks/useSessions.ts` | Session listing and management hooks |
 | `hooks/useSessionSwitch.ts` | Session switching logic with auto-follow |
-| `hooks/useFloorConfig.ts` | Fetches building configuration from the backend |
-| `hooks/useFloorSessions.ts` | Filters sessions assigned to a specific floor |
-| `hooks/useRoomSessions.ts` | Filters sessions assigned to a specific room |
-| `hooks/useDragResize.ts` | Drag-to-resize sidebar panels |
-| `hooks/useTranslation.ts` | i18n translation hook |
-| `machines/agentArrivalMachine.ts` | XState machine for agent arrival flow |
-| `machines/agentDepartureMachine.ts` | XState machine for agent departure flow |
-| `machines/agentMachine.ts` | XState machine for agent state management |
-| `machines/agentMachineCommon.ts` | Shared agent machine utilities |
-| `machines/agentMachineService.ts` | Agent machine service functions |
-| `machines/positionHelpers.ts` | Position calculation helpers for agents |
-| `machines/queueManager.ts` | Queue management for arrival/departure |
+| `hooks/useTranslation.ts` · `useCodingAgentName.ts` · `useNow.ts` | i18n, the session's coding agent name, a ticking clock |
+| `machines/agentMachine.ts` · `agentArrivalMachine.ts` · `agentDepartureMachine.ts` · `agentMachineCommon.ts` | XState agent lifecycle |
+| `machines/agentMachineService.ts` · `positionHelpers.ts` · `queueManager.ts` | Machine service, position helpers, arrival and departure queues |
 | `types/index.ts` | TypeScript types barrel (re-exports from generated.ts) |
 | `types/generated.ts` | Auto-generated types from backend Pydantic models |
-| `types/navigation.ts` | Navigation types (ViewMode, BuildingConfig, FloorConfig) |
-| `constants/canvas.ts` | Canvas-related constants |
-| `constants/positions.ts` | Position constants for game elements |
+| `constants/isoFloorPlan.ts` | Iso rooms, walls and furniture in metres; seats and room spots |
+| `constants/positions.ts` · `rooms.ts` | Desk grid and side rooms of the agent machine's grid |
 | `constants/quotes.ts` | Work acceptance and completion quotes |
+| `constants/codingAgents.ts` | Display names for the coding agents |
 | `i18n/index.ts` | i18n setup and language loader |
-| `i18n/en.ts` | English translations |
-| `i18n/es.ts` | Spanish translations |
-| `i18n/pt-BR.ts` | Brazilian Portuguese translations |
-| `utils/event-type-styles.ts` | Event type to style mapping for event log |
-| `utils/bubbleText.ts` | Shared bubble text truncation utilities |
-| `components/debug/sprite-debug/*.tsx` | Sprite builder/debug tool (standalone debug page) |
+| `i18n/en.ts` · `es.ts` · `ko.ts` · `pt-BR.ts` | Translations |
+| `utils/api.ts` | API client and base URLs |
 
 ### Hooks (`hooks/src/claude_office_hooks/`)
 
@@ -431,11 +367,11 @@ const { boss, agents } = useGameStore((state) => ({ boss: state.boss, agents: st
 ```
 
 **Key State Areas:**
-- Agent animation state (position, phase, bubbles)
+- Agent state (phase, bubbles)
 - Boss state (backend state, typing, task)
-- Office state (elevator, phone, context utilization)
+- Office state (todos, context utilization)
 - Queues (arrival and departure queues)
-- UI state (debug overlays, replay)
+- UI state (connection, replay)
 
 ## Boss State Machine
 
@@ -524,91 +460,14 @@ The visualizer can integrate with the [beads](https://github.com/paulrobello/bea
 - Thread pool execution for non-blocking CLI calls
 - WARNING-level logging on first failure, DEBUG for subsequent failures
 
-## Context Compaction Animation
-
-When Claude Code performs context compaction (`context_compaction` event), the boss walks to the trashcan and stomps it empty:
-
-**Animation Phases:**
-1. `walking_to_trash` (800ms) - Boss leaves desk and walks to trashcan
-2. `jumping` (36 seconds) - Boss jumps 36 times, each stomp reduces context incrementally until 0%
-3. `walking_back` (800ms) - Boss returns to desk after context reaches 0%
-
-**Implementation:**
-- `systems/compactionAnimation.ts` - Animation state machine hook
-- `BossSprite.tsx` - `MobileBoss` component renders boss body during animation
-- `TrashCanSprite.tsx` - Squish effect on stomp
-
-## Printer Animation
-
-The printer animation triggers when:
-1. The main agent completes (`stop` event, not `subagent_stop`)
-2. The user's original prompt requested a report/document
-
-Detection methods:
-- **Primary (AI):** Asks Claude "Does this request ask for a report, document, or documentation to be created?"
-- **Fallback (keywords):** Matches "report", "documentation", "readme", "architecture", "guide", ".md", or patterns like `create|write|generate|update|add` + `.md`
-
-## City Skyline Window
-
-The city window shows an animated skyline with real-time day/night cycle based on the current season:
-
-**Time Periods (vary by season):**
-
-| Period | Features |
-|--------|----------|
-| Night  | Stars, moon arc, lit windows (35% lit probability) |
-| Dawn   | Rising sun, gradient transition (20% lit probability) |
-| Day    | Sun arc, animated drifting clouds, few lit windows (5% lit probability) |
-| Dusk   | Setting sun, gradient transition (30% lit probability) |
-
-**Animated Clouds:**
-- Two clouds drift slowly across the sky during daytime
-- Top cloud moves slower than bottom cloud (parallax effect)
-- Clouds are clipped to window bounds using PixiJS mask
-
-**Seasonal Variations:**
-
-| Season | Dawn            | Dusk            |
-|--------|-----------------|-----------------|
-| Winter | 6:30am - 8:00am | 4:30pm - 6:30pm |
-| Spring | 5:30am - 7:00am | 6:00pm - 8:30pm |
-| Summer | 4:30am - 6:00am | 7:30pm - 9:30pm |
-| Fall   | 6:00am - 7:30am | 5:30pm - 7:30pm |
-
-**Building Lights:**
-- Window lit probability varies by time of day
-- Session-based seed ensures each session has unique but stable light patterns
-- Seed falls back to date-based if no session ID (pattern changes daily)
-- Individual lights randomly toggle on/off every 1-3 minutes
-- Creates a "living city" effect where occupants come and go
-- Toggled state persists and accumulates during session
-
-**Debug:** Press `D` then `T` to fast-forward (full 24-hour cycle in ~12 seconds)
-
-## Wall Clock
-
-The wall clock supports multiple display modes:
-
-| Mode | Description |
-|------|-------------|
-| Analog | Traditional clock face with hour, minute, and second hands |
-| Digital 12h | LED-style display with AM/PM indicator |
-| Digital 24h | LED-style display with 24-hour format |
-
-**Interaction:** Click the clock to cycle through modes (analog → digital 12h → digital 24h → analog)
-
-**Persistence:** Clock preferences are stored in the backend database and persist across sessions.
-
 ## User Preferences
 
 User preferences are stored in the backend SQLite database as key-value pairs:
 
 | Key | Values | Default | Description |
 |-----|--------|---------|-------------|
-| `clock_type` | `analog`, `digital` | `analog` | Wall clock display mode |
-| `clock_format` | `12h`, `24h` | `12h` | Digital clock time format |
 | `auto_follow_new_sessions` | `true`, `false` | `true` | Auto-follow new sessions in the current project |
-| `language` | `en`, `es`, `pt-BR` | `en` | UI language for internationalization |
+| `language` | `en`, `es`, `ko`, `pt-BR` | `en` | UI language for internationalization |
 
 **Auto-Follow New Sessions:**
 When enabled (default), the frontend automatically detects new Claude Code sessions in the same project and switches to follow them. Detection is based on matching `projectRoot` paths. This is useful when working in the same repository and starting multiple Claude Code sessions.
@@ -638,11 +497,11 @@ The frontend supports multiple languages via a lightweight i18n system in `front
 
 ## Isometric Office
 
-The main page, after the video in [the spec](../plan/spec.md) (「화면 재설계」): one bright floor with seven rooms, the floor guide on the left and the people, activity log and room legend on the right. It reads the same Zustand store as the 2D office; the 2D office's animation loop does not run here, so the page drains bubble queues and seats newcomers itself.
+The main page, after the video in [the spec](../plan/spec.md) (「화면 재설계」): one bright floor with seven rooms, the floor guide on the left and the people, activity log and room legend on the right. It reads the shared Zustand store; the agent machine's animation loop does not run, so the page drains bubble queues and seats newcomers itself.
 
 | File | Purpose |
 |------|---------|
-| `app/page.tsx` | The page: floor guide, scene, side panel, settings, links to `/classic` (`/iso` redirects here) |
+| `app/page.tsx` | The page: floor guide, scene, side panel, settings (`/iso` redirects here) |
 | `constants/isoFloorPlan.ts` | Rooms, walls and furniture in metres; seats, room spots, the elevator and the report spots |
 | `components/iso/isoView.ts` | three.js orthographic 2:1 camera, lights, MapControls, CSS2D name chips and bubbles |
 | `components/iso/buildIsoOffice.ts` · `isoFurniture.ts` · `isoPalette.ts` | The floor plate, walls, labels and furniture as simple solids |
@@ -653,32 +512,6 @@ The main page, after the video in [the spec](../plan/spec.md) (「화면 재설�
 | `systems/isoErrands.ts` | Pure walker rules: rooms by tool, linger, stuck, and the trip in by elevator and home after reporting |
 | `systems/isoNavGrid.ts` | 0.5 m walk grid over the floor plan for the shared A* path finder |
 | `systems/officePeople.ts` · `officeBubbles.ts` · `officeRoster.ts` · `floors.ts` | Who is in the office, which bubble each shows, the panel rows and log lines, projects as floors |
-
-## PixiJS Rendering
-
-### Sharp Text at 2x
-
-For crisp text rendering in PixiJS, render text at 2x size and scale down:
-
-```tsx
-// Render at 2x fontSize, scale container to 0.5
-<pixiContainer scale={0.5}>
-  <pixiText
-    text="Sharp text"
-    style={{ fontSize: 24 }}  // 2x the desired 12px size
-    resolution={2}
-  />
-</pixiContainer>
-```
-
-This produces sharper text than rendering at native size. Apply to all in-scene text (labels, bubbles, UI elements).
-
-### Sprite Art Style
-
-- 45-degree front/top-down perspective (NOT isometric)
-- Magenta (#FF00FF) chroma key background for transparency
-- 16-bit retro pixel art aesthetic
-- Tintable items rendered WHITE/GRAYSCALE for runtime color variation
 
 ## Multi-Floor / Agent Teams
 
@@ -786,87 +619,7 @@ repo_name = "my-application"
 |------|-------------|
 | `/ws/room/{room_id}` | Real-time state updates for all sessions in a room (team view) |
 
-The room WebSocket broadcasts the merged `GameState` from the `RoomOrchestrator`. Frontend clients connect to this endpoint instead of the session-level `/ws/{session_id}` when viewing a team session.
-
-## Command Center
-
-The Command Center is a cross-session overview: a single pixel office that gathers the boss (main agent) of every live session into one room, so you can see at a glance which terminals need you, which are working, and which are done. It is reachable from the header (when two or more sessions are active) or from the Building view's penthouse tile.
-
-### Components
-
-| File | Purpose |
-|------|---------|
-| `backend/app/models/overview.py` | `OverviewBucket = Literal["needs_you", "working", "done"]`, `OverviewEntry` (per-session: `session_id`, `bucket`, `state`, `current_task`, `todo_done`, `todo_total`, `subagent_count`), and `OverviewState` (`entries`, `last_updated`). The "ended" bucket is derived frontend-side, not sent by the backend. |
-| `backend/app/core/room_orchestrator.py` | `build_overview(sessions) -> OverviewState` buckets each live session into `needs_you` / `working` / `done`. |
-| `backend/app/core/event_processor.py` | Async `build_overview_snapshot` collects the per-session `StateMachine`s and calls `build_overview()`; `_schedule_overview_broadcast` debounces the broadcast (~50 ms) and is scheduled last in event processing. |
-| `frontend/src/stores/overviewStore.ts` | Zustand store holding the raw per-session boss snapshots, connection state, and last-update timestamp from `/ws/overview`. |
-| `frontend/src/hooks/useOverviewWebSocket.ts` | Connects to `/ws/overview` only while the Command Center is visible; tears down on unmount. Separate from the session-bound `useWebSocketEvents`. |
-| `frontend/src/components/command/CommandCenterView.tsx` | Top-level Command Center view component. |
-| `frontend/src/components/command/CommandCenterCanvas.tsx` | PixiJS canvas for the Command Center room. |
-| `frontend/src/components/command/layout.ts` | Open-plan layout: four status columns (Needs-you, Working, Done, Ended) each holding a 2×4 grid of slots. |
-| `frontend/src/components/command/CommandCenterBackground.tsx` | Floor and walls, mirroring the office theme. |
-| `frontend/src/components/command/CommandCenterDecor.tsx` | Open-plan decor — framed posters on the top wall and a furniture row (plants, printer, water cooler, coffee machine) along the bottom. |
-| `frontend/src/components/command/CommandCenterFurniture.tsx` | Desk workstations composed from office sprites for the Needs-you and Working columns. |
-| `frontend/src/components/command/CommandCenterZones.tsx` | Renders the status-column zones. |
-| `frontend/src/components/command/CommandCenterBoard.tsx` | Top-wall whiteboard showing combined stats across every session: terminal count, per-status counts, total subagents, aggregate todo progress. |
-| `frontend/src/components/command/CommandCenterPeer.tsx` | A single session's boss rendered as a peer (body geometry compact relative to the office `BossSprite`). |
-| `frontend/src/components/command/ExitingPeer.tsx` | Exit animation body for sessions entering the Ended column (walks to the elevator doorway at the top-centre of the Ended column). |
-| `frontend/src/components/command/PeerPopup.tsx` | Popover showing focused-session details. |
-| `frontend/src/components/command/sessionMatchesFloor.ts` | Returns whether a session belongs to a configured floor (repo-name match). |
-| `frontend/src/components/command/useCommandCenterPeers.ts` | Derives render-ready peers from the overview store, including the linger duration for sessions that end. |
-| `frontend/src/systems/commandCenterGrid.ts` | Navigation grid marking static furniture (desks, lounge couches, exit elevator, top wall) as obstacles for A*. |
-| `frontend/src/systems/commandCenterMotion.ts` | Walks Command Center agents to their fixed slot positions via the shared A*, self-gating the RAF loop while anything is moving. |
-| `frontend/src/systems/exitAnimation.ts` | Lightweight per-frame clock for the Ended column: a finished session's agent walks to the elevator, the doors open, and it fades out. |
-
-### Data Flow
-
-```mermaid
-graph TD
-    CC[Claude Code Sessions]
-    EP[EventProcessor]
-    SM1[StateMachine Session 1]
-    SM2[StateMachine Session 2]
-    BO[build_overview_snapshot]
-    OV[OverviewState]
-    WS[WebSocket /ws/overview]
-    OS[overviewStore]
-    UI[command/ components]
-
-    CC -->|Events| EP
-    EP --> SM1
-    EP --> SM2
-    SM1 --> BO
-    SM2 --> BO
-    BO --> OV
-    OV -->|debounced ~50 ms| WS
-    WS --> OS
-    OS --> UI
-
-    style CC fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
-    style EP fill:#e65100,stroke:#ff9800,stroke-width:3px,color:#ffffff
-    style SM1 fill:#1b5e20,stroke:#4caf50,stroke-width:2px,color:#ffffff
-    style SM2 fill:#1b5e20,stroke:#4caf50,stroke-width:2px,color:#ffffff
-    style BO fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
-    style OV fill:#1a237e,stroke:#3f51b5,stroke-width:2px,color:#ffffff
-    style WS fill:#880e4f,stroke:#c2185b,stroke-width:2px,color:#ffffff
-    style OS fill:#0d47a1,stroke:#2196f3,stroke-width:2px,color:#ffffff
-    style UI fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
-```
-
-**Flow sequence:**
-
-1. Any processed event schedules an overview broadcast via `_schedule_overview_broadcast`, debounced at roughly 50 ms (a no-op when there are zero watchers).
-2. `build_overview_snapshot` collects the per-session `StateMachine`s and calls `build_overview()` to bucket each live session into `needs_you`, `working`, or `done`.
-3. The `OverviewState` fans out to at most 16 `/ws/overview` clients.
-4. `useOverviewWebSocket` feeds `overviewStore`; the `command/` components render each session as a peer in the Command Center room. The "ended" bucket is derived frontend-side so a session can linger briefly before walking to the elevator.
-
-### WebSocket
-
-| Path | Description |
-|------|-------------|
-| `/ws/overview` | Cross-session Command Center feed carrying one `OverviewState` per debounced update (max 16 clients) |
-
-The `/ws/overview` endpoint is declared before `/ws/{session_id}` so "overview" is not captured as a session id. On connect the client receives an initial `state_update` snapshot. New connections are refused (close code 4013) once the 16-client cap is reached; disallowed origins close with 4003.
+The room WebSocket broadcasts the merged `GameState` from the `RoomOrchestrator`. The 2D office's floor view connected to this endpoint; the isometric office reads the session-level `/ws/{session_id}` only.
 
 ## Configuration Reference
 
@@ -899,5 +652,4 @@ The backend has a two-mode API-key model. When `CLAUDE_OFFICE_API_KEY` is unset 
 
 - [README.md](../../README.md) - Project overview and quick start
 - [CLAUDE.md](../../CLAUDE.md) - AI assistant instructions and commands
-- [Whiteboard Modes](../reference/whiteboard-modes.md) - Whiteboard multi-mode display documentation
 - [Claude Code JSONL Format](../research/claude-code-jsonl-format.md) - Transcript file format research

@@ -15,7 +15,7 @@ Get Claude Office Visualizer running in under 5 minutes. This guide covers the f
 
 ## Overview
 
-Claude Office Visualizer transforms Claude Code operations into a real-time office. Once installed, it automatically captures Claude Code events and displays them as animated office activities. In this fork the main page is a bright isometric office; the original pixel art office stays at `/classic`.
+Claude Office Visualizer transforms Claude Code operations into a real-time office. Once installed, it automatically captures Claude Code events and displays them as animated office activities. In this fork the office is a bright isometric one; the original pixel art office has been removed.
 
 ```mermaid
 graph LR
@@ -157,8 +157,6 @@ You should see the isometric office with:
 - One floor with its rooms (library, dev room, server room, search room, meeting room, lounge, cafe), my desk and an elevator
 - The people in the office, an activity log and a room legend on the right
 
-The original pixel art office, with the whiteboard, the Command Center and the Building view, is at [http://localhost:4747/classic](http://localhost:4747/classic) (the gamepad button at the top right).
-
 ### 3. Test with Claude Code
 
 In a separate terminal, run any Claude Code command:
@@ -192,21 +190,9 @@ Now that the visualizer is running:
 
 | Task | Command/Action |
 |------|----------------|
-| Run simulation | `uv run --frozen python scripts/simulate_events.py errands`, or **Simulate** in the `/classic` header |
-| Enable debug mode | Press `D` in the browser |
+| Run simulation | `uv run --frozen python scripts/simulate_events.py errands` |
 | View hook logs | `make hooks-logs` |
 | Stop services | `make dev-tmux-kill` |
-
-### Keyboard Shortcuts (2D office at `/classic`)
-
-| Key | Action |
-|-----|--------|
-| `D` | Toggle debug mode |
-| `P` | Show agent paths (debug mode only) |
-| `Q` | Show queue slots (debug mode only) |
-| `L` | Show phase labels (debug mode only) |
-| `O` | Show obstacles (debug mode only) |
-| `T` | Fast-forward city time (debug mode only) |
 
 ## Troubleshooting
 
