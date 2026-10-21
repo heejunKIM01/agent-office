@@ -13,6 +13,9 @@ const SEAT: IsoSpot = { x: 0, z: 0, facing: Math.PI };
 const SPOTS: Record<ErrandRoomId, IsoSpot> = {
   library: { x: 6.4, z: 0, facing: 0 },
   server: { x: 0, z: 6.4, facing: Math.PI / 2 },
+  search: { x: 3.2, z: 3.2, facing: 0 },
+  meeting: { x: -3.2, z: 0, facing: 0 },
+  mydesk: { x: 0, z: -3.2, facing: 0 },
 };
 const straight = (from: FloorPoint, to: FloorPoint): FloorPoint[] => [from, to];
 
@@ -22,6 +25,7 @@ function run(
   activity: Activity | null,
   seconds: number,
   start = 0,
+  stuck = false,
 ): { walker: IsoWalker; now: number } {
   let w = walker;
   let now = start;
@@ -29,6 +33,7 @@ function run(
     now += 100;
     w = stepIsoWalker(w, {
       activity,
+      stuck,
       seat: SEAT,
       spotIn: (room) => SPOTS[room],
       findPath: straight,
@@ -48,6 +53,21 @@ describe("iso errands", () => {
       goal: "library",
       pose: "work",
       facing: 0,
+    });
+  });
+
+  it.each([
+    ["running", "server"],
+    ["browsing", "search"],
+    ["planning", "meeting"],
+    ["asking", "mydesk"],
+  ] as const)("sends %s to the %s", (activity, room) => {
+    const { walker } = run(seatedWalker(SEAT), activity, 3);
+    expect(walker).toMatchObject({
+      x: SPOTS[room].x,
+      z: SPOTS[room].z,
+      goal: room,
+      pose: "work",
     });
   });
 
@@ -102,6 +122,28 @@ describe("iso errands", () => {
       pose: "work",
       lingerUntil: null,
     });
+  });
+
+  it("edits at its own desk: goes straight back without lingering and types", () => {
+    const working = run(seatedWalker(SEAT), "reading", 3);
+    const turned = run(working.walker, "editing", 0.1, working.now);
+    expect(turned.walker).toMatchObject({ goal: "seat", lingerUntil: null });
+    const typing = run(turned.walker, "editing", 3, turned.now);
+    expect(typing.walker).toMatchObject({ x: 0, z: 0, pose: "type" });
+    const idle = run(typing.walker, null, 0.2, typing.now);
+    expect(idle.walker.pose).toBe("sit");
+  });
+
+  it("a stuck person stays where it is until it moves on", () => {
+    const working = run(seatedWalker(SEAT), "reading", 3);
+    const stuck = run(working.walker, null, 4, working.now, true);
+    expect(stuck.walker).toMatchObject({
+      x: 6.4,
+      goal: "library",
+      lingerUntil: null,
+    });
+    const movedOn = run(stuck.walker, "running", 4, stuck.now);
+    expect(movedOn.walker).toMatchObject({ goal: "server", pose: "work" });
   });
 
   it("sits still with nothing to do", () => {

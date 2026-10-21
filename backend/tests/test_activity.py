@@ -35,7 +35,7 @@ def _tool(event_type: EventType, tool_name: str, tool_use_id: str | None, **data
 class TestActivityForTool:
     @pytest.mark.parametrize(
         "tool_name",
-        ["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch", "read", "read_file", "grep_search"],
+        ["Read", "Grep", "Glob", "LS", "NotebookRead", "read", "read_file", "grep_search"],
     )
     def test_reading_tools(self, tool_name: str) -> None:
         assert activity_for_tool(tool_name) == Activity.READING
@@ -46,7 +46,34 @@ class TestActivityForTool:
     def test_command_tools(self, tool_name: str) -> None:
         assert activity_for_tool(tool_name) == Activity.RUNNING
 
-    @pytest.mark.parametrize("tool_name", ["Edit", "Write", "TodoWrite", "mcp__x__read", "", None])
+    @pytest.mark.parametrize(
+        ("tool_name", "activity"),
+        [
+            ("Edit", Activity.EDITING),
+            ("MultiEdit", Activity.EDITING),
+            ("NotebookEdit", Activity.EDITING),
+            ("write", Activity.EDITING),
+            ("replace", Activity.EDITING),
+            ("apply_patch", Activity.EDITING),
+            ("WebFetch", Activity.BROWSING),
+            ("WebSearch", Activity.BROWSING),
+            ("google_web_search", Activity.BROWSING),
+            ("mcp__github__get_issue", Activity.BROWSING),
+            ("TodoWrite", Activity.PLANNING),
+            ("EnterPlanMode", Activity.PLANNING),
+            ("ExitPlanMode", Activity.PLANNING),
+            ("Skill", Activity.PLANNING),
+            ("write_todos", Activity.PLANNING),
+            ("update_plan", Activity.PLANNING),
+            ("AskUserQuestion", Activity.ASKING),
+            ("request_user_input", Activity.ASKING),
+            ("ask_user", Activity.ASKING),
+        ],
+    )
+    def test_room_tools(self, tool_name: str, activity: Activity) -> None:
+        assert activity_for_tool(tool_name) == activity
+
+    @pytest.mark.parametrize("tool_name", ["Task", "SlashCommand", "mcp_x", "", None])
     def test_other_tools_have_no_activity(self, tool_name: str | None) -> None:
         assert activity_for_tool(tool_name) is None
 
@@ -102,7 +129,7 @@ class TestBossActivity:
 
     def test_unmapped_tool_keeps_boss_at_desk(self) -> None:
         sm = StateMachine()
-        sm.transition(_tool(EventType.PRE_TOOL_USE, "Edit", "e1"))
+        sm.transition(_tool(EventType.PRE_TOOL_USE, "SlashCommand", "s1"))
         assert sm.boss_activity is None
 
     def test_turn_boundaries_clear_leftovers(self) -> None:
@@ -250,7 +277,8 @@ class TestToolBubble:
             ("run_shell_command", {"command": "pytest -q"}, "pytest -q", "💻"),
             ("task", {"prompt": "look around"}, "Delegating...", "🎯"),
             ("Agent", {"prompt": "look around"}, "Delegating...", "🎯"),
-            ("TodoWrite", {"todos": []}, "TodoWrite", "⚙️"),
+            ("TodoWrite", {"todos": []}, "TodoWrite", "📋"),
+            ("replace", {"file_path": "src/a.py"}, "src/a.py", "📝"),
         ],
     )
     def test_text_and_icon(

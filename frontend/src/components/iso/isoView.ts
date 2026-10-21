@@ -14,6 +14,7 @@ import {
 } from "@/constants/isoFloorPlan";
 import type { IsoPerson } from "@/systems/officePeople";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
+import { IsoEffects } from "./isoEffects";
 import { IsoPeople } from "./isoPeople";
 
 /** The reference video uses a 2:1 isometric view: floor edges climb 1 in 2. */
@@ -150,9 +151,11 @@ export function createIsoView(container: HTMLElement): IsoView {
   container.appendChild(labels.domElement);
 
   const scene = new THREE.Scene();
-  scene.add(buildIsoOffice());
+  const office = buildIsoOffice();
+  scene.add(office);
   addLights(scene);
   const people = new IsoPeople(scene);
+  const effects = new IsoEffects(office);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
   const home = new THREE.Vector3(FLOOR_CENTER.x, 0, FLOOR_CENTER.z);
@@ -210,7 +213,7 @@ export function createIsoView(container: HTMLElement): IsoView {
     lastFrame = now;
     stepReset(now);
     controls.update();
-    people.update(now, dt);
+    effects.update(now / 1000, dt, people.update(now, dt));
     renderer.render(scene, camera);
     labels.render(scene, camera);
     frame = requestAnimationFrame(loop);
@@ -236,6 +239,7 @@ export function createIsoView(container: HTMLElement): IsoView {
       renderer.domElement.removeEventListener("dblclick", resetView);
       controls.dispose();
       people.dispose();
+      effects.dispose();
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
           object.geometry.dispose();

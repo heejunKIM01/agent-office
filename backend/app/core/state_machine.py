@@ -582,7 +582,14 @@ _TOOL_ICONS: dict[str, str] = {
 }
 # Lookup for any agent's casing (OpenCode sends "read", "bash", ...).
 _TOOL_ICONS_LOWER: dict[str, str] = {name.lower(): icon for name, icon in _TOOL_ICONS.items()}
-_ACTIVITY_ICONS: dict[Activity, str] = {Activity.READING: "📖", Activity.RUNNING: "💻"}
+_ACTIVITY_ICONS: dict[Activity, str] = {
+    Activity.READING: "📖",
+    Activity.RUNNING: "💻",
+    Activity.EDITING: "📝",
+    Activity.BROWSING: "🌐",
+    Activity.PLANNING: "📋",
+    Activity.ASKING: "❓",
+}
 
 
 def _tool_icon(tool_name: str) -> str:
