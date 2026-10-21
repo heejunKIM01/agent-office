@@ -20,6 +20,9 @@ export const ISO_COLORS = {
   glassFrame: "#e9eef4",
   window: "#b9dcef",
   skyline: "#9cc2e6",
+  /** The dark theme's view out of the windows: night sky and dark towers. */
+  nightWindow: "#22305a",
+  nightSkyline: "#121a33",
   woodLight: "#e6d2b3",
   woodDark: "#dcc5a2",
   beigeA: "#ece0cc",

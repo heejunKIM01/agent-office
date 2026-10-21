@@ -17,7 +17,7 @@ import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
 import type { BubbleWords } from "./isoBubbles";
 import { IsoEffects } from "./isoEffects";
-import { setSurfaceGlow } from "./isoFurniture";
+import { setNightView } from "./isoFurniture";
 import { IsoPeople } from "./isoPeople";
 
 /** The reference video uses a 2:1 isometric view: floor edges climb 1 in 2. */
@@ -117,17 +117,15 @@ function fitFrustum(
 }
 
 /**
- * Daylight as in the video, and the dark theme's night: dimmer, cooler light
- * with the surface glow turned down, so the lit screens and rack LEDs stand
- * out (docs/plan/spec.md 「어두운 테마」).
+ * Daylight as in the video, and the dark theme's office at night: the lights
+ * are on, a little warmer, and only the view out of the windows turns dark
+ * (docs/plan/spec.md 「어두운 테마」).
  */
-const LIGHTING: Record<
-  Theme,
-  { color: string; ambient: number; sun: number; glow: number }
-> = {
-  light: { color: "#ffffff", ambient: 1.9, sun: 1.6, glow: 1 },
-  dark: { color: "#b9c6ec", ambient: 0.85, sun: 0.75, glow: 0.12 },
-};
+const LIGHTING: Record<Theme, { color: string; ambient: number; sun: number }> =
+  {
+    light: { color: "#ffffff", ambient: 1.9, sun: 1.6 },
+    dark: { color: "#fff7ee", ambient: 1.8, sun: 1.45 },
+  };
 
 /**
  * Mostly even light with the sun high over the front, a little to the left,
@@ -260,12 +258,12 @@ export function createIsoView(
       people.setWords(words);
     },
     setTheme(theme: Theme): void {
-      const { color, ambient, sun, glow } = LIGHTING[theme];
+      const { color, ambient, sun } = LIGHTING[theme];
       lights.ambient.color.set(color);
       lights.ambient.intensity = ambient;
       lights.sun.color.set(color);
       lights.sun.intensity = sun;
-      setSurfaceGlow(glow);
+      setNightView(theme === "dark");
     },
     zoomBy(factor: number): void {
       camera.zoom = THREE.MathUtils.clamp(
