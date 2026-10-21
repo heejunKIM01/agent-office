@@ -102,6 +102,8 @@ export interface RoomsInUse {
   elevatorOpen: boolean;
   /** Someone on the lounge sofa is watching TV. */
   tvOn: boolean;
+  /** Someone is searching the web or using an outside (MCP) tool. */
+  browsing: boolean;
 }
 
 interface Placed {
@@ -237,6 +239,7 @@ export class IsoPeople {
       planning: false,
       elevatorOpen: false,
       tvOn: false,
+      browsing: false,
     };
     if (this.callPending) {
       this.callPending = false;
@@ -306,6 +309,7 @@ export class IsoPeople {
       );
       if (activity === "running") inUse.serverBusy = true;
       if (act === "tv") inUse.tvOn = true;
+      if (activity === "browsing") inUse.browsing = true;
       if (walker.pose === "type") inUse.editingSeats.push(placed.seat);
       if (walker.goal === "meeting" && walker.pose === "work") {
         inUse.planning = true;

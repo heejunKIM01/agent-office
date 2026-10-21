@@ -46,3 +46,19 @@ export function latestTodoNotes(
   }
   return null;
 }
+
+/** How fast the search room globe turns while someone searches (rad/s). */
+export const GLOBE_SPIN_SPEED = 1.8;
+/** How quickly it gets up to speed and winds down (rad/s per second). */
+const GLOBE_EASE = 2.4;
+
+/** The globe's turning speed after ``dt`` seconds, easing toward full or still. */
+export function globeSpeed(
+  current: number,
+  searching: boolean,
+  dt: number,
+): number {
+  const target = searching ? GLOBE_SPIN_SPEED : 0;
+  const step = GLOBE_EASE * dt;
+  return current + Math.max(-step, Math.min(step, target - current));
+}

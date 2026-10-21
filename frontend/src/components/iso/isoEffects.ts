@@ -8,7 +8,7 @@
 
 import * as THREE from "three";
 import type { Furniture, IsoSpot } from "@/constants/isoFloorPlan";
-import type { NoteStatus } from "@/systems/roomGimmicks";
+import { globeSpeed, type NoteStatus } from "@/systems/roomGimmicks";
 import { material } from "./isoFurniture";
 import { ISO_COLORS } from "./isoPalette";
 import type { RoomsInUse } from "./isoPeople";
@@ -182,6 +182,8 @@ export class IsoEffects {
   private readonly tvOn = new THREE.MeshBasicMaterial();
   /** The whiteboard's to-do note slots, in order. */
   private readonly notes: THREE.Mesh[] = [];
+  private readonly globes: THREE.Object3D[] = [];
+  private globeTurn = 0;
 
   constructor(office: THREE.Object3D) {
     const found: { whiteboard?: THREE.Object3D } = {};
@@ -198,6 +200,7 @@ export class IsoEffects {
       ) {
         this.notes[object.userData.todoNote] = object;
       }
+      if (object.userData.globeSpin) this.globes.push(object);
       if (object.userData.tvScreen && object instanceof THREE.Mesh) {
         this.tv = { mesh: object, off: object.material };
       }
@@ -276,6 +279,9 @@ export class IsoEffects {
         this.tvOn.color.setHSL(hue, 0.55, flicker);
       }
     }
+
+    this.globeTurn = globeSpeed(this.globeTurn, inUse.browsing, dt);
+    for (const globe of this.globes) globe.rotation.y += this.globeTurn * dt;
 
     const target = inUse.elevatorOpen ? 1 : 0;
     const step = DOOR_SPEED * dt;
