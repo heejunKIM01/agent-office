@@ -59,6 +59,14 @@ class TestExtractFirstSentence:
         text = "What is this? Here is the answer."
         assert service._extract_first_sentence(text) == "What is this?"
 
+    def test_dots_inside_names_do_not_end_a_sentence(self, service: SummaryService) -> None:
+        """A dot inside a file name or a version is not a sentence end."""
+        text = "SESSION_TIMEOUT is 30 in src/auth.py. That is the cause."
+        assert service._extract_first_sentence(text) == "SESSION_TIMEOUT is 30 in src/auth.py."
+        assert service._extract_first_sentence("Version 1.2 is out now. Next.") == (
+            "Version 1.2 is out now."
+        )
+
     def test_min_sentence_length(self, service: SummaryService) -> None:
         """Very short sentences (< 10 chars) should not be cut off."""
         text = "Hi. This is the actual first real sentence."

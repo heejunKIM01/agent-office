@@ -10,7 +10,13 @@ from typing import Any
 
 import pytest
 
-from app.core.activity import ToolActivityTracker, ToolSubject, activity_for_tool, tool_subject
+from app.core.activity import (
+    ToolActivityTracker,
+    ToolSubject,
+    activity_for_call,
+    activity_for_tool,
+    tool_subject,
+)
 from app.core.event_processor import EventProcessor
 from app.core.state_machine import StateMachine
 from app.models.agents import Activity, Agent, AgentState
@@ -35,7 +41,17 @@ def _tool(event_type: EventType, tool_name: str, tool_use_id: str | None, **data
 class TestActivityForTool:
     @pytest.mark.parametrize(
         "tool_name",
-        ["Read", "Grep", "Glob", "LS", "NotebookRead", "read", "read_file", "grep_search"],
+        [
+            "Read",
+            "Grep",
+            "Glob",
+            "LS",
+            "NotebookRead",
+            "read",
+            "read_file",
+            "grep_search",
+            "view_image",
+        ],
     )
     def test_reading_tools(self, tool_name: str) -> None:
         assert activity_for_tool(tool_name) == Activity.READING
@@ -73,9 +89,18 @@ class TestActivityForTool:
     def test_room_tools(self, tool_name: str, activity: Activity) -> None:
         assert activity_for_tool(tool_name) == activity
 
-    @pytest.mark.parametrize("tool_name", ["Task", "SlashCommand", "mcp_x", "", None])
+    @pytest.mark.parametrize(
+        "tool_name", ["Task", "spawn_agent", "wait_agent", "SlashCommand", "mcp_x", "", None]
+    )
     def test_other_tools_have_no_activity(self, tool_name: str | None) -> None:
         assert activity_for_tool(tool_name) is None
+
+    @pytest.mark.parametrize("tool_name", ["Task", "Agent", "spawn_agent"])
+    def test_handing_out_work_puts_the_boss_on_delegating(self, tool_name: str) -> None:
+        sm = StateMachine()
+        sm.transition(_tool(EventType.PRE_TOOL_USE, tool_name, "d1"))
+        assert sm.boss_state.value == "delegating"
+        assert sm.boss_bubble is None
 
 
 class TestToolActivityTracker:
@@ -311,3 +336,55 @@ async def test_event_log_summary_names_an_opencode_tools_target() -> None:
     history = ep.sessions["summary-oc"].history
     assert history[0]["summary"] == "Session started"
     assert history[-1]["summary"] == "Using read src/auth.ts"
+
+
+class TestReadOnlyCommands:
+    """A command tool that only reads counts as reading (Codex reads with the shell)."""
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "cat src/auth.py",
+            "sed -n 1,80p src/auth.py",
+            "rg TODO src | head -20",
+            "cd src && ls -la",
+            "bash -lc 'sed -n 1,80p src/auth.py'",
+            "nl -ba src/auth.py | sed -n '1,40p'",
+            "find . -name '*.py'",
+        ],
+    )
+    def test_reading_commands(self, command: str) -> None:
+        assert activity_for_call("Bash", {"command": command}) is Activity.READING
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "pytest -q",
+            "cat a.py > b.py",
+            "sed -i 's/>/>=/' src/auth.py",
+            "sed 's/a/b/' src/auth.py",
+            "find . -name '*.pyc' -delete",
+            "cat $(git ls-files)",
+            "cat a.py && rm a.py",
+            "bash -lc 'npm test'",
+        ],
+    )
+    def test_other_commands_run(self, command: str) -> None:
+        assert activity_for_call("Bash", {"command": command}) is Activity.RUNNING
+
+    def test_argv_lists_are_read_too(self) -> None:
+        call = {"command": ["bash", "-lc", "cat src/auth.py"]}
+        assert activity_for_call("shell", call) is Activity.READING
+
+    def test_reading_command_sends_the_boss_to_the_archive(self) -> None:
+        sm = StateMachine()
+        sm.transition(
+            _tool(EventType.PRE_TOOL_USE, "Bash", "t1", tool_input={"command": "cat a.py"})
+        )
+        assert sm.boss_activity is Activity.READING
+
+    def test_reading_command_bubble_uses_the_reading_icon(self) -> None:
+        event = _tool(EventType.PRE_TOOL_USE, "Bash", "t1", tool_input={"command": "cat a.py"})
+        assert isinstance(event, ToolEvent)
+        bubble = StateMachine().tool_to_thought(event)
+        assert (bubble.text, bubble.icon) == ("cat a.py", "📖")

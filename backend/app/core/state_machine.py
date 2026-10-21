@@ -10,6 +10,7 @@ from app.core.activity import (
     SUBAGENT_TOOLS,
     TODO_TOOLS,
     ToolActivityTracker,
+    activity_for_call,
     activity_for_tool,
     tool_subject,
 )
@@ -283,7 +284,7 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
                 if agent_id in sm.arrival_queue:
                     sm.arrival_queue.remove(agent_id)
 
-        sm.tool_activity.start(agent_id, tool_name, event.data.tool_use_id)
+        sm.tool_activity.start(agent_id, tool_name, event.data.tool_use_id, event.data.tool_input)
         sm.sync_activity(agent_id)
         sm.set_stuck(agent_id, None)
 
@@ -592,15 +593,20 @@ _ACTIVITY_ICONS: dict[Activity, str] = {
 }
 
 
-def _tool_icon(tool_name: str) -> str:
-    """Icon for a tool: by name in any casing, else by the office activity it drives."""
+def _tool_icon(tool_name: str, tool_input: dict[str, Any] | None) -> str:
+    """Icon for a tool call: by name in any casing, else by the office activity it drives.
+
+    A command that only reads (``cat``, ``sed -n``) shows the reading icon.
+    """
     name = tool_name.lower()
     if name in SUBAGENT_TOOLS:
         return "🎯"
+    activity = activity_for_call(tool_name, tool_input)
+    if activity is Activity.READING and activity_for_tool(tool_name) is Activity.RUNNING:
+        return _ACTIVITY_ICONS[Activity.READING]
     icon = _TOOL_ICONS_LOWER.get(name)
     if icon is not None:
         return icon
-    activity = activity_for_tool(tool_name)
     return _ACTIVITY_ICONS[activity] if activity is not None else "⚙️"
 
 
@@ -892,7 +898,7 @@ class StateMachine:
             A BubbleContent with type THOUGHT, a short description, and an icon.
         """
         tool_name = event.data.tool_name or ""
-        icon = _tool_icon(tool_name)
+        icon = _tool_icon(tool_name, event.data.tool_input)
         subject = tool_subject(tool_name, event.data.tool_input)
 
         text: str = tool_name

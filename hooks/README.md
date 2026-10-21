@@ -13,6 +13,7 @@ Python package that integrates Claude Code lifecycle events with the Claude Offi
 - [Debugging](#debugging)
 - [Troubleshooting](#troubleshooting)
 - [Gemini CLI](#gemini-cli)
+- [Codex CLI](#codex-cli)
 - [Related Documentation](#related-documentation)
 
 ## Overview
@@ -299,6 +300,30 @@ Each Gemini event runs `gemini-office-hook`, which reads the event JSON on stdin
 | `Notification` (`ToolPermission`) | `permission_request` | Names the command or file waiting for approval |
 
 Limitations: Gemini sends no tool call id, so the backend pairs a tool's end with its start by name; Gemini's subagents have no hooks, so they do not appear as employees.
+
+## Codex CLI
+
+The same package ships `codex-office-hook` for [Codex CLI](https://learn.chatgpt.com/docs/hooks) hooks (checked against codex-cli 0.160.1).
+
+```bash
+make codex-hooks-install    # installs the tool and adds groups to $CODEX_HOME/hooks.json (else ~/.codex/hooks.json)
+make codex-hooks-status
+make codex-hooks-uninstall  # removes only the agent-office groups
+```
+
+Codex runs a new or changed hook only once it is trusted: after installing, open Codex and trust the Agent Office hooks with `/hooks`. Each event runs `codex-office-hook`, which reads the event JSON on stdin, posts it to the backend and prints nothing (Codex adds a SessionStart or UserPromptSubmit hook's stdout to the model's context). Hooks from other tools in the same file are kept, and a hooks file that is not valid JSON is never overwritten. `manage_codex_hooks.py --hooks-file <path>` targets another file, such as a project's `.codex/hooks.json`.
+
+| Codex hook | Office event | Notes |
+|---|---|---|
+| `SessionStart` / `SessionEnd` | `session_start` / `session_end` | |
+| `UserPromptSubmit` | `user_prompt_submit` | A subagent's first prompt (it carries `agent_id`) is its task, so it becomes `subagent_start` instead |
+| `PreToolUse` / `PostToolUse` | `pre_tool_use` / `post_tool_use` | Codex's tool names are kept (shell commands are `Bash`), without the `multi_agent_v1` namespace. A subagent's call ids are scoped by its id. `apply_patch` run through the shell gets no `PostToolUse`, so it is sent as an edit that ends at once |
+| `PermissionRequest` | `permission_request` | Names the tool waiting for approval |
+| `PreCompact` | `context_compaction` | Both `manual` and `auto` |
+| `SubagentStop` | `subagent_stop` | `last_assistant_message` becomes the subagent's report |
+| `Stop` | `stop` | `last_assistant_message` becomes the boss's reply; Codex's transcript is not read |
+
+`SubagentStart` (no task yet), `PostCompact` and `Interrupt` are not mapped. Limitations: a tool's result holds no exit code, so a failed command is not shown as failed; hosted tools such as `web_search` fire no hooks. `scripts/codex_session.sh` drives your installed Codex CLI with a scripted fake model in a throwaway `CODEX_HOME`, so you can watch it without an account or touching `~/.codex`.
 
 ## Uninstallation
 

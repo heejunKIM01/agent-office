@@ -43,6 +43,21 @@ export function toolCounts(entries: EventLogEntry[]): Map<string, number> {
   return counts;
 }
 
+/**
+ * The task each subagent was last started with, from the event log (newest
+ * first): a subagent that has gone home is still named by it in the log.
+ */
+export function startedTasks(entries: EventLogEntry[]): Map<string, string> {
+  const tasks = new Map<string, string>();
+  for (const entry of entries) {
+    const task = entry.detail?.taskDescription;
+    if (entry.type === "subagent_start" && task && !tasks.has(entry.agentId)) {
+      tasks.set(entry.agentId, task);
+    }
+  }
+  return tasks;
+}
+
 /** The event-log id of a person: the lead agent logs as "main". */
 const logId = (person: IsoPerson): string =>
   person.kind === "claude" ? "main" : person.id;
@@ -91,7 +106,7 @@ export interface LogLine {
   what: string;
 }
 
-/** Icons of common tools, as the tool bubbles show them. */
+/** Icons of common tools, as the tool bubbles show them (every agent's names). */
 const TOOL_ICONS: Record<string, string> = {
   read: "📖",
   write: "✍️",
@@ -106,6 +121,21 @@ const TOOL_ICONS: Record<string, string> = {
   agent: "🎯",
   todowrite: "📋",
   askuserquestion: "❓",
+  // Gemini CLI
+  read_file: "📖",
+  write_file: "✍️",
+  replace: "📝",
+  run_shell_command: "💻",
+  google_web_search: "🌐",
+  web_fetch: "📥",
+  write_todos: "📋",
+  ask_user: "❓",
+  // Codex CLI
+  apply_patch: "📝",
+  spawn_agent: "🎯",
+  update_plan: "📋",
+  request_user_input: "❓",
+  view_image: "📖",
 };
 
 /** Tool input keys that name what a call works on, most specific first. */

@@ -241,7 +241,14 @@ async def handle_subagent_stop(
     if poller:
         await poller.stop_polling(resolved_agent_id)
 
-    await extract_and_set_agent_speech(sm, resolved_agent_id, event.data.agent_transcript_path)
+    spoke = await extract_and_set_agent_speech(
+        sm, resolved_agent_id, event.data.agent_transcript_path
+    )
+    # Producers whose transcript the backend cannot read (Codex CLI) send the
+    # subagent's last reply itself as its speech.
+    reply = event.data.speech_content.agent if event.data.speech_content else None
+    if not spoke and reply:
+        await set_agent_speech(sm, resolved_agent_id, reply)
 
     await broadcast_state(event.session_id, sm)
 
@@ -354,16 +361,19 @@ async def extract_and_set_agent_speech(
     sm: StateMachine,
     agent_id: str,
     transcript_path: str | None,
-) -> None:
+) -> bool:
     """Extract an agent's last response from transcript and set its speech bubble.
 
     Args:
         sm: The StateMachine for this session.
         agent_id: The agent whose bubble should be updated.
         transcript_path: Path to the JSONL transcript, or None.
+
+    Returns:
+        Whether a speech bubble was set.
     """
     if not transcript_path or agent_id not in sm.agents:
-        return
+        return False
 
     from app.config import get_settings  # local import to avoid cycles
 
@@ -372,15 +382,28 @@ async def extract_and_set_agent_speech(
 
     response = await asyncio.to_thread(get_last_assistant_response, translated_path)
     if not response:
-        return
+        return False
+    return await set_agent_speech(sm, agent_id, response)
+
+
+async def set_agent_speech(sm: StateMachine, agent_id: str, response: str) -> bool:
+    """Show a summary of a finished agent's *response* as its speech bubble.
+
+    Returns:
+        Whether a speech bubble was set.
+    """
+    if agent_id not in sm.agents:
+        return False
 
     summary_service = get_summary_service()
     summary = await summary_service.summarize_response(response)
 
-    if summary:
-        sm.agents[agent_id].bubble = BubbleContent(
-            type=BubbleType.SPEECH,
-            text=summary,
-            icon="✅",
-        )
-        logger.debug(f"Set agent {agent_id} completion summary: {summary[:50]}...")
+    if not summary:
+        return False
+    sm.agents[agent_id].bubble = BubbleContent(
+        type=BubbleType.SPEECH,
+        text=summary,
+        icon="✅",
+    )
+    logger.debug(f"Set agent {agent_id} completion summary: {summary[:50]}...")
+    return True

@@ -17,6 +17,7 @@ import { OUTFIT_COLORS } from "./isoPalette";
 import {
   logLines,
   rosterRows,
+  startedTasks,
   toolCounts,
   type RosterRow,
   type RosterWords,
@@ -142,12 +143,14 @@ export function IsoSidePanel({
   const seconds = useSecondsInState(rows);
   const lines = useMemo(() => {
     const titles = new Map(people.map((p) => [p.id, p.title]));
+    // Subagents that went home are named by the task they were started with.
+    const tasks = startedTasks(eventLog);
     return logLines(
       eventLog,
       (agentId, type) => {
         if (type === "user_prompt_submit") return t("iso.me");
         if (agentId === "main") return agentName;
-        return titles.get(agentId) ?? agentId.slice(0, 8);
+        return titles.get(agentId) ?? tasks.get(agentId) ?? agentId.slice(0, 8);
       },
       words,
     );

@@ -44,3 +44,34 @@ async def test_stop_without_reply_or_transcript_adds_nothing() -> None:
     await ep.process_event(_event(EventType.STOP, sid))
 
     assert [e for e in ep.sessions[sid].conversation if e["role"] == "assistant"] == []
+
+
+@pytest.mark.asyncio
+async def test_subagent_reply_with_its_stop_becomes_its_report(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Codex CLI sends a subagent's last reply with SUBAGENT_STOP; it is the agent's report."""
+    sid = "reply-codex-subagent"
+    ep = EventProcessor()
+    reports: list[str | None] = []
+
+    async def capture(session_id: str, sm: Any) -> None:
+        agent = sm.agents.get("sa1")
+        reports.append(agent.bubble.text if agent and agent.bubble else None)
+
+    monkeypatch.setattr("app.core.handlers.agent_handler.broadcast_state", capture)
+    await ep.process_event(_event(EventType.SESSION_START, sid, coding_agent="codex"))
+    await ep.process_event(
+        _event(EventType.SUBAGENT_START, sid, agent_id="sa1", task_description="Find the timeout")
+    )
+    await ep.process_event(
+        _event(
+            EventType.SUBAGENT_STOP,
+            sid,
+            agent_id="sa1",
+            speech_content={"agent": "SESSION_TIMEOUT is 30 in src/auth.py. That is the cause."},
+        )
+    )
+
+    assert "SESSION_TIMEOUT is 30 in src/auth.py." in reports
+    assert "sa1" not in ep.sessions[sid].agents

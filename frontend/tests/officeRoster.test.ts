@@ -4,6 +4,7 @@ import type { IsoPerson } from "@/systems/officePeople";
 import {
   logLines,
   rosterRows,
+  startedTasks,
   toolCounts,
   type RosterWords,
 } from "@/systems/officeRoster";
@@ -129,6 +130,23 @@ describe("rosterRows", () => {
       ["main", 2],
       ["sa1", 1],
     ]);
+  });
+});
+
+describe("startedTasks", () => {
+  it("names each subagent by the task it was started with", () => {
+    const tasks = startedTasks(
+      [
+        entry("1", "subagent_start", "sa1", {
+          taskDescription: "Find the timeout",
+        }),
+        entry("2", "pre_tool_use", "sa1", { toolName: "Bash" }),
+        entry("3", "subagent_start", "sa2", {}),
+        // Started again later: its latest task names it.
+        entry("4", "subagent_start", "sa1", { taskDescription: "Look again" }),
+      ].reverse(),
+    );
+    expect([...tasks]).toEqual([["sa1", "Look again"]]);
   });
 });
 

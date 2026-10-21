@@ -11,6 +11,7 @@ dependencies = [
 [project.scripts]
 claude-office-hook = "claude_office_hooks.main:main"
 gemini-office-hook = "claude_office_hooks.gemini_main:main"
+codex-office-hook = "claude_office_hooks.codex_main:main"
 
 [build-system]
 requires = [
