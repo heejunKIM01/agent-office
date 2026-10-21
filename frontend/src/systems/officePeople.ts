@@ -48,6 +48,8 @@ export interface IsoPerson {
   arriving: boolean;
   /** A subagent whose work is done: it reports to Claude and goes home. */
   leaving: boolean;
+  /** Claude with its turn over: it rests in the lounge (spec 「라운지 · 카페」). */
+  resting: boolean;
   outfit: Outfit;
 }
 
@@ -168,6 +170,8 @@ export function officePeople(
       bubble: BubbleState;
       /** Set while the boss is quiet mid-turn (see stateReconciler). */
       quietSince: number | null;
+      /** A user prompt is being worked on. */
+      turnActive: boolean;
     };
     agents: Map<string, AgentAnimationState>;
   },
@@ -186,6 +190,7 @@ export function officePeople(
       thinking: state.boss.quietSince !== null,
       arriving: false,
       leaving: false,
+      resting: !state.boss.turnActive,
       outfit: "general",
     },
     {
@@ -201,6 +206,7 @@ export function officePeople(
       thinking: false,
       arriving: false,
       leaving: false,
+      resting: false,
       outfit: "general",
     },
   ];
@@ -220,6 +226,7 @@ export function officePeople(
         !agent.stuck,
       arriving: ARRIVING_STATES.has(agent.backendState),
       leaving,
+      resting: false,
       outfit: outfitOf(agent.agentType),
     });
   }
@@ -236,6 +243,7 @@ export function officePeople(
       thinking: colleague.thinking,
       arriving: false,
       leaving: false,
+      resting: false,
       outfit: "general",
     });
   }

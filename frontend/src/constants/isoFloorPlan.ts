@@ -430,6 +430,24 @@ export const ERRAND_SPOTS: Record<ErrandRoomId, IsoSpot[]> = {
 };
 
 /**
+ * Rooms people go to with nothing to run (docs/plan/spec.md 「라운지 · 카페」):
+ * the lounge, where Claude rests between turns.
+ */
+export type BreakRoomId = Extract<RoomId, "lounge">;
+
+/** Where people sit in each break room, the first taken first (FURNITURE). */
+export const BREAK_SPOTS: Record<BreakRoomId, IsoSpot[]> = {
+  // The sofa facing the room, then the one facing the wall, then the armchair.
+  lounge: [
+    { x: 4.23, z: 22.3, facing: 0 },
+    { x: 5.57, z: 22.3, facing: 0 },
+    { x: 5.67, z: 25.7, facing: FACING_BACK },
+    { x: 4.33, z: 25.7, facing: FACING_BACK },
+    { x: 7.2, z: 28.35, facing: FACING_BACK },
+  ],
+};
+
+/**
  * The elevator between the dev and server rooms (FURNITURE): people step out
  * of the cab, behind the back wall, to the door and back in again.
  */

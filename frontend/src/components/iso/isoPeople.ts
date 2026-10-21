@@ -4,7 +4,7 @@
  * errand rules in `update`. Claude sits at the front dev desk nearest my
  * desk, subagents and colleagues (other sessions' lead agents on this
  * floor) take the next free dev chairs, and I sit behind the reception
- * desk. `update` also reports what the rooms should show: racks
+ * desk. Claude rests on the lounge sofa between turns. `update` also reports what the rooms should show: racks
  * busy while a command runs, code on the screens of people editing,
  * someone writing at the whiteboard, and the elevator doors open while
  * someone steps in or out.
@@ -17,6 +17,7 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import {
+  BREAK_SPOTS,
   CLAUDE_SEAT,
   ELEVATOR_CAB,
   ELEVATOR_DOOR,
@@ -24,7 +25,6 @@ import {
   MY_SEAT,
   REPORT_SPOTS,
   SUBAGENT_SEATS,
-  type ErrandRoomId,
   type IsoSpot,
 } from "@/constants/isoFloorPlan";
 import {
@@ -33,6 +33,7 @@ import {
   stepIsoWalker,
   type IsoElevator,
   type IsoGoal,
+  type IsoRoomId,
   type IsoWalker,
 } from "@/systems/isoErrands";
 import { findFloorPath } from "@/systems/isoNavGrid";
@@ -62,8 +63,13 @@ const dotColor = (person: IsoPerson): string =>
     ? OUTFIT_COLORS[person.outfit]
     : DOT_COLORS[person.kind];
 
-const ROOMS = Object.keys(ERRAND_SPOTS) as ErrandRoomId[];
-const isRoom = (goal: IsoGoal): goal is ErrandRoomId =>
+/** The spots of every room people walk to: for a tool, or for a break. */
+const ROOM_SPOTS: Record<IsoRoomId, IsoSpot[]> = {
+  ...ERRAND_SPOTS,
+  ...BREAK_SPOTS,
+};
+const ROOMS = Object.keys(ROOM_SPOTS) as IsoRoomId[];
+const isRoom = (goal: IsoGoal): goal is IsoRoomId =>
   (ROOMS as string[]).includes(goal);
 
 const ELEVATOR: IsoElevator = { door: ELEVATOR_DOOR, cab: ELEVATOR_CAB };
@@ -121,10 +127,10 @@ function nameChip(color: string): {
 
 export class IsoPeople {
   private readonly placed = new Map<string, Placed>();
-  /** Which spot each walker holds in a room, by index into ERRAND_SPOTS. */
+  /** Which spot each walker holds in a room, by index into ROOM_SPOTS. */
   private readonly held = Object.fromEntries(
     ROOMS.map((room) => [room, new Map<string, number>()]),
-  ) as Record<ErrandRoomId, Map<string, number>>;
+  ) as Record<IsoRoomId, Map<string, number>>;
   /** Which spot beside Claude each reporting subagent holds. */
   private readonly reporting = new Map<string, number>();
   /** Subagents that rode away, kept out until the session lets them go. */
@@ -197,7 +203,7 @@ export class IsoPeople {
         bubbleHolder: holder,
         bubbleKey: "",
         thinkingSince: null,
-        walker: arriving ? arrivingWalker(ELEVATOR) : seatedWalker(seat),
+        walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
       });
@@ -232,6 +238,7 @@ export class IsoPeople {
         now,
         dt,
         leaving,
+        resting: placed.person.resting,
         reportSpot: () => this.reportSpot(id),
         elevator: ELEVATOR,
       });
@@ -340,6 +347,22 @@ export class IsoPeople {
     for (const [id, placed] of this.placed) this.remove(id, placed);
   }
 
+  /**
+   * Where a newcomer first appears: stepping out of the elevator, resting on
+   * the lounge sofa when its turn is already over, or in its seat.
+   */
+  private firstWalker(
+    person: IsoPerson,
+    arriving: boolean,
+    seat: IsoSpot,
+  ): IsoWalker {
+    if (arriving) return arrivingWalker(ELEVATOR);
+    if (person.resting && !person.activity) {
+      return seatedWalker(this.spotIn(person.id, "lounge"), "lounge");
+    }
+    return seatedWalker(seat);
+  }
+
   private freeSeat(kind: PersonKind): IsoSpot {
     if (kind === "me") return MY_SEAT;
     if (kind === "claude") return CLAUDE_SEAT;
@@ -363,8 +386,8 @@ export class IsoPeople {
   }
 
   /** The spot a walker holds in a room, taking the first free one. */
-  private spotIn(id: string, room: ErrandRoomId): IsoSpot {
-    const spots = ERRAND_SPOTS[room];
+  private spotIn(id: string, room: IsoRoomId): IsoSpot {
+    const spots = ROOM_SPOTS[room];
     const held = this.held[room];
     let index = held.get(id);
     if (index === undefined) {

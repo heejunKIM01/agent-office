@@ -6,8 +6,7 @@
  */
 
 import * as THREE from "three";
-import type { ErrandRoomId } from "@/constants/isoFloorPlan";
-import type { IsoPose } from "@/systems/isoErrands";
+import type { IsoPose, IsoRoomId } from "@/systems/isoErrands";
 import type { Outfit, PersonKind } from "@/systems/officePeople";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, cylinder, material } from "./isoFurniture";
@@ -228,10 +227,7 @@ const PONDER_ARMS: [number, number] = [-1.2, -2.1];
 const PHONE_ARM: [number, number] = [-2.5, -0.6];
 
 /** Arm angles (about x, forward is negative) while working in each room. */
-function workArms(
-  room: ErrandRoomId | null,
-  seconds: number,
-): [number, number] {
+function workArms(room: IsoRoomId | null, seconds: number): [number, number] {
   switch (room) {
     case "library":
       return [-1.0, -1.0]; // holding a book
@@ -268,7 +264,7 @@ function drip(sweat: THREE.Group, seconds: number): void {
 export function poseCharacter(
   rig: CharacterRig,
   pose: IsoPose | "phone",
-  room: ErrandRoomId | null,
+  room: IsoRoomId | null,
   seconds: number,
   stuck = false,
 ): void {
