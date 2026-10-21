@@ -5,6 +5,7 @@
  * 「화면 재설계」, after the video): a card per floor (project) top floor
  * first, the floor being viewed open with 「최근 세션 자동으로 따라가기」 and
  * its sessions, and the quiet floors folded under 「오래 쉰 층 N개 더 보기」.
+ * ``className`` places it: a column beside the office, or a sheet on phones.
  */
 
 import { formatDistance } from "date-fns";
@@ -47,11 +48,13 @@ export function IsoFloorGuide({
   sessionId,
   now,
   onSelectSession,
+  className,
 }: {
   floors: Floor[];
   sessionId: string;
   now: number;
   onSelectSession: (id: string) => void;
+  className: string;
 }): React.ReactNode {
   const { t, language } = useTranslation();
   const autoFollow = usePreferencesStore(selectAutoFollowNewSessions);
@@ -66,7 +69,7 @@ export function IsoFloorGuide({
     formatDistance(time, now, { addSuffix: true, locale });
 
   return (
-    <aside className="hidden w-[184px] shrink-0 flex-col gap-2 py-3 pl-3 lg:flex">
+    <aside className={className}>
       <header className="flex items-center justify-between gap-1 px-1">
         <h2 className="flex items-center gap-1 text-[13px] font-bold">
           <span aria-hidden="true">🏬</span>

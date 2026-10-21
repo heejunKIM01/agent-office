@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Gamepad2, LayoutGrid, Settings } from "lucide-react";
+import { Building2, Gamepad2, LayoutGrid, Settings } from "lucide-react";
 import { AgentLogo } from "@/components/iso/AgentLogo";
 import { IsoFloorGuide } from "@/components/iso/IsoFloorGuide";
 import { IsoOffice } from "@/components/iso/IsoOffice";
@@ -93,6 +93,17 @@ export default function IsoOfficePage(): React.ReactNode {
   // Settings open here; the Command Center (two or more sessions at work,
   // as in the 2D header) and the 2D office open at /classic.
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Below 1024px the floor guide column is hidden; a button opens it as a sheet.
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  useEffect(() => {
+    if (!isGuideOpen) return;
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") setIsGuideOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isGuideOpen]);
   const router = useRouter();
   const goToCommand = useNavigationStore((s) => s.goToCommand);
   const goToSingle = useNavigationStore((s) => s.goToSingle);
@@ -113,7 +124,33 @@ export default function IsoOfficePage(): React.ReactNode {
         sessionId={sessionId}
         now={now}
         onSelectSession={goToSession}
+        className="hidden w-[184px] shrink-0 flex-col gap-2 py-3 pl-3 lg:flex"
       />
+      {isGuideOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="floor guide"
+          className="fixed inset-0 z-40 flex lg:hidden"
+        >
+          <IsoFloorGuide
+            floors={floors}
+            sessionId={sessionId}
+            now={now}
+            onSelectSession={(id) => {
+              setIsGuideOpen(false);
+              goToSession(id);
+            }}
+            className="flex h-full w-[260px] max-w-[85vw] flex-col gap-2 bg-[#f5f7fa] p-3 shadow-xl"
+          />
+          <button
+            type="button"
+            aria-label="close floor guide"
+            onClick={() => setIsGuideOpen(false)}
+            className="flex-1 bg-slate-900/30"
+          />
+        </div>
+      )}
       <div className="relative min-w-0 flex-1">
         <IsoOffice />
 
@@ -121,7 +158,7 @@ export default function IsoOfficePage(): React.ReactNode {
           <div
             key={lamp.key}
             role="status"
-            className="pointer-events-none absolute left-1/2 top-5 -translate-x-1/2"
+            className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2 lg:top-5"
           >
             <div className="animate-elevator rounded-xl border-2 border-slate-700 bg-slate-900/95 px-5 py-2 font-mono text-2xl font-bold tracking-[0.2em] text-amber-300 shadow-lg [text-shadow:0_0_8px_rgba(252,211,77,0.7)] motion-reduce:animate-none">
               {lamp.text}
@@ -130,7 +167,7 @@ export default function IsoOfficePage(): React.ReactNode {
         )}
 
         {session && (
-          <header className="absolute left-4 top-4 flex max-w-[min(60%,calc(100%_-_13rem))] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-2 pr-4 shadow-sm">
+          <header className="absolute left-4 top-4 flex max-w-[min(60%,calc(100%_-_15rem))] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-2 pr-4 shadow-sm">
             <AgentLogo codingAgent={codingAgent ?? session.codingAgent} />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -149,6 +186,15 @@ export default function IsoOfficePage(): React.ReactNode {
         )}
 
         <div className="absolute right-4 top-4 flex items-center gap-1.5">
+          <button
+            type="button"
+            aria-label="floor guide"
+            title={t("iso.floor.title")}
+            onClick={() => setIsGuideOpen(true)}
+            className={`${toolButton} lg:hidden`}
+          >
+            <Building2 size={14} />
+          </button>
           <button
             type="button"
             aria-label="settings"
