@@ -15,7 +15,8 @@ from typing import Literal, cast
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from app.models.agents import BossState
+from app.models.agents import Activity, BossState, StuckReason
+from app.models.common import BubbleContent
 
 __all__ = [
     "OverviewBucket",
@@ -41,6 +42,12 @@ class OverviewEntry(BaseModel):
     todo_done: int = 0
     todo_total: int = 0
     subagent_count: int = 0
+    # What the boss is doing right now, so the office can walk another live
+    # session's boss to the same rooms as the session it shows.
+    activity: Activity | None = None
+    stuck: StuckReason | None = None
+    bubble: BubbleContent | None = None
+    turn_active: bool = False
 
 
 class OverviewState(BaseModel):
