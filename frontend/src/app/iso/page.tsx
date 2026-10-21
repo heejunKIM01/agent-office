@@ -5,11 +5,14 @@
  * while it is being built; the classic office stays at /.
  */
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AgentLogo } from "@/components/iso/AgentLogo";
+import { IsoFloorGuide } from "@/components/iso/IsoFloorGuide";
 import { IsoOffice } from "@/components/iso/IsoOffice";
 import { IsoSidePanel } from "@/components/iso/IsoSidePanel";
+import { useNow } from "@/hooks/useNow";
 import { useSessions } from "@/hooks/useSessions";
+import { useSessionSwitch } from "@/hooks/useSessionSwitch";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useWebSocketEvents } from "@/hooks/useWebSocketEvents";
 import {
@@ -19,14 +22,24 @@ import {
   useGameStore,
 } from "@/stores/gameStore";
 import { usePreferencesStore } from "@/stores/preferencesStore";
-import { buildFloors, floorOfSession } from "@/systems/floors";
+import { buildFloors, floorOfSession, sessionTitle } from "@/systems/floors";
 import { initApiKeyFromBrowser } from "@/utils/api";
+
+/** How long the 「▲ 3F」 lamp shows while the office changes floors (globals.css). */
+const ELEVATOR_LAMP_MS = 1600;
 
 export default function IsoOfficePage(): React.ReactNode {
   const { t } = useTranslation();
   // Status toasts are not shown on this page yet.
   const showStatus = useCallback(() => undefined, []);
-  const { sessions, sessionId } = useSessions(showStatus);
+  const { sessions, sessionId, setSessionId, fetchSessions } =
+    useSessions(showStatus);
+  const { handleSessionSelect } = useSessionSwitch({
+    sessionId,
+    setSessionId,
+    fetchSessions,
+    showStatus,
+  });
   useWebSocketEvents({ sessionId });
 
   const loadPreferences = usePreferencesStore((s) => s.loadPreferences);
@@ -39,12 +52,34 @@ export default function IsoOfficePage(): React.ReactNode {
   const codingAgent = useGameStore(selectCodingAgent);
   const boss = useGameStore(selectBoss);
   const session = sessions.find((s) => s.id === sessionId);
-  const floor = useMemo(
-    () => floorOfSession(buildFloors(sessions), sessionId),
-    [sessions, sessionId],
-  );
+  const now = useNow(15_000);
+  const floors = useMemo(() => buildFloors(sessions, now), [sessions, now]);
+  const floor = floorOfSession(floors, sessionId);
   const title =
-    session?.label || boss.currentTask || session?.id.slice(0, 8) || "";
+    (session && sessionTitle(session)) ||
+    boss.currentTask ||
+    session?.id.slice(0, 8) ||
+    "";
+
+  // Moving to another floor lights 「▲ 3F」 (「▼」 going down) for a moment.
+  const [lamp, setLamp] = useState<{ key: number; text: string } | null>(null);
+  const goToSession = (id: string): void => {
+    const from = floorOfSession(floors, sessionId);
+    const to = floorOfSession(floors, id);
+    if (from && to && from.number !== to.number) {
+      const arrow = to.number > from.number ? "▲" : "▼";
+      setLamp((previous) => ({
+        key: (previous?.key ?? 0) + 1,
+        text: `${arrow} ${to.number}F`,
+      }));
+    }
+    void handleSessionSelect(id);
+  };
+  useEffect(() => {
+    if (!lamp) return;
+    const timer = window.setTimeout(() => setLamp(null), ELEVATOR_LAMP_MS);
+    return () => window.clearTimeout(timer);
+  }, [lamp]);
 
   return (
     <main
@@ -54,8 +89,26 @@ export default function IsoOfficePage(): React.ReactNode {
           '"Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif',
       }}
     >
+      <IsoFloorGuide
+        floors={floors}
+        sessionId={sessionId}
+        now={now}
+        onSelectSession={goToSession}
+      />
       <div className="relative min-w-0 flex-1">
         <IsoOffice />
+
+        {lamp && (
+          <div
+            key={lamp.key}
+            role="status"
+            className="pointer-events-none absolute left-1/2 top-5 -translate-x-1/2"
+          >
+            <div className="animate-elevator rounded-xl border-2 border-slate-700 bg-slate-900/95 px-5 py-2 font-mono text-2xl font-bold tracking-[0.2em] text-amber-300 shadow-lg [text-shadow:0_0_8px_rgba(252,211,77,0.7)] motion-reduce:animate-none">
+              {lamp.text}
+            </div>
+          </div>
+        )}
 
         {session && (
           <header className="absolute left-4 top-4 flex max-w-[60%] items-center gap-3 rounded-xl border border-slate-200/80 bg-white/95 py-2 pl-2 pr-4 shadow-sm">

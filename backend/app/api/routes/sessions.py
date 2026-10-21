@@ -52,6 +52,7 @@ class SessionSummary(TypedDict):
 
     id: str
     label: str | None
+    title: str | None
     displayName: str | None
     projectName: str | None
     projectRoot: str | None
@@ -62,6 +63,43 @@ class SessionSummary(TypedDict):
     floorId: str | None
     roomId: str | None
     codingAgent: str | None
+
+
+_TITLE_MAX_CHARS = 80
+
+
+def _title_of(prompt: object) -> str | None:
+    """A session title from a prompt: its first line, whitespace collapsed."""
+    if not isinstance(prompt, str):
+        return None
+    line = next((ln for ln in prompt.splitlines() if ln.strip()), "")
+    title = " ".join(line.split())
+    if len(title) > _TITLE_MAX_CHARS:
+        title = title[: _TITLE_MAX_CHARS - 1].rstrip() + "…"
+    return title or None
+
+
+async def _first_prompt_titles(db: AsyncSession, session_ids: list[str]) -> dict[str, str]:
+    """Each session's title, taken from its first prompt as coding agents name sessions."""
+    if not session_ids:
+        return {}
+    first_prompts = (
+        select(func.min(EventRecord.id))
+        .where(
+            EventRecord.event_type == "user_prompt_submit",
+            EventRecord.session_id.in_(session_ids),
+        )
+        .group_by(EventRecord.session_id)
+    )
+    result = await db.execute(
+        select(EventRecord.session_id, EventRecord.data).where(EventRecord.id.in_(first_prompts))
+    )
+    titles: dict[str, str] = {}
+    for session_id, data in result.all():
+        title = _title_of(data.get("prompt"))
+        if title:
+            titles[session_id] = title
+    return titles
 
 
 class ReplayEvent(TypedDict):
@@ -147,6 +185,8 @@ async def list_sessions(
     start_result = await db.execute(sessions_with_start_stmt)
     sessions_with_start: set[str] = {row[0] for row in start_result.all()}
 
+    titles = await _first_prompt_titles(db, [row[0].id for row in rows])
+
     sessions: list[SessionSummary] = []
     for row in rows:
         rec = row[0]
@@ -172,6 +212,7 @@ async def list_sessions(
             {
                 "id": rec.id,
                 "label": rec.label,
+                "title": titles.get(rec.id),
                 "displayName": rec.display_name,
                 "projectName": rec.project_name,
                 "projectRoot": rec.project_root,

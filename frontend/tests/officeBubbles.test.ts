@@ -117,8 +117,24 @@ describe("pickBubble", () => {
     });
   });
 
+  it("keeps the prompt out of the agent's mouth after the session ends without a reply", () => {
+    const prompt = {
+      type: "speech" as const,
+      text: "Fix the login",
+      icon: "📞",
+    };
+    expect(
+      pickBubble({ ...base, bubble: prompt, bubbleAgeMs: 100 }),
+    ).toBeNull();
+  });
+
   it("shows the boss's reply at the end of a turn, which also carries the phone icon", () => {
-    const reply = { type: "speech" as const, text: "Fixed it.", icon: "📞" };
+    const reply = {
+      type: "speech" as const,
+      text: "Fixed it.",
+      icon: "📞",
+      persistent: true,
+    };
     expect(pickBubble({ ...base, bubble: reply, bubbleAgeMs: 500 })).toEqual({
       kind: "speech",
       text: "Fixed it.",
