@@ -1,8 +1,9 @@
 import hmac
 import re
-from urllib.parse import urlparse
 
 from fastapi import WebSocket
+
+from app.api.middleware import office_page_origins
 
 # ``ConnectionManager`` and the ``manager`` singleton live in the domain layer
 # (``app.core.connection_manager``) so that ``core/`` and ``services/`` need not
@@ -24,27 +25,6 @@ from app.core.connection_manager import (
 # Valid session/room IDs: alphanumeric, dashes, underscores only
 _VALID_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
 
-# Loopback hosts permitted for browser WebSocket handshakes. The allowlist is
-# derived from ``settings.BACKEND_CORS_ORIGINS`` at call time but filtered to
-# these hosts so a CORS-config change can never widen the WS trust boundary
-# beyond the local machine (QA-014).
-_LOCALHOST_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
-
-
-def _allowed_ws_origins() -> frozenset[str]:
-    """Origins permitted for WebSocket connections, derived from settings.
-
-    Filtered to loopback hosts so a CORS-config change can never open the
-    WebSocket stream to non-local origins.
-    """
-    from app.config import get_settings
-
-    return frozenset(
-        origin.rstrip("/")
-        for origin in get_settings().BACKEND_CORS_ORIGINS
-        if urlparse(origin).hostname in _LOCALHOST_HOSTS
-    )
-
 
 def validate_websocket_origin(websocket: WebSocket) -> bool:
     """Check the Origin header on a WebSocket handshake.
@@ -58,7 +38,7 @@ def validate_websocket_origin(websocket: WebSocket) -> bool:
     """
     origin = websocket.headers.get("origin")
     if origin is not None:
-        return origin.rstrip("/") in _allowed_ws_origins()
+        return origin.rstrip("/") in office_page_origins()
 
     # Non-browser clients (no Origin) — always require the effective API key
     from app.config import get_settings

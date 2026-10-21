@@ -171,6 +171,15 @@ class TestApiKeyMiddleware:
         finally:
             settings.CLAUDE_OFFICE_API_KEY = original_key
 
+    def test_refusals_carry_cors_headers(self) -> None:
+        """A 401 must reach the page as a 401, not as a CORS network error."""
+        from app.main import app
+
+        client = TestClient(app)
+        resp = client.delete("/api/v1/sessions", headers={"Origin": "http://localhost:4747"})
+        assert resp.status_code == 401
+        assert resp.headers.get("access-control-allow-origin") == "http://localhost:4747"
+
     def test_health_endpoint_skips_auth(self) -> None:
         """Health endpoint should not require an API key."""
         from app.config import get_settings
