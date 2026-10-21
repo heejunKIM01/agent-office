@@ -191,8 +191,8 @@ class TestSimulationEventTypes:
         )
         post_event(sid, "session_end")
 
-    def test_kanban_task_events(self) -> None:
-        sid = f"evt-kanban-{uuid4()}"
+    def test_team_task_events(self) -> None:
+        sid = f"evt-team-task-{uuid4()}"
         post_event(sid, "session_start")
         post_event(sid, "task_created", {"id": "task-01", "content": "[PROJ-1] Fix login timeout"})
         post_event(sid, "task_created", {"id": "task-02", "content": "[PROJ-2] Add rate limiting"})
@@ -265,7 +265,7 @@ class TestSimulationQuickScenario:
             {"prompt": "Fix login timeout bug and generate a report."},
         )
 
-        # Kanban tasks
+        # Team tasks
         for task_id, subject in [
             ("qt-01", "[PROJ-1] Fix login timeout for inactive sessions"),
             ("qt-02", "[PROJ-2] Add rate limiting to /api/v1/auth"),
@@ -324,7 +324,7 @@ class TestSimulationQuickScenario:
             {"tool_name": "Bash", "tool_input": {"command": "iptables -L"}, "agent_id": "main"},
         )
 
-        # Kanban completion
+        # Team task completion
         post_event(
             sid,
             "task_completed",
@@ -378,7 +378,7 @@ class TestSimulationQuickScenario:
                 },
             )
 
-        # Remaining kanban completions
+        # Remaining team task completions
         post_event(
             sid,
             "task_completed",

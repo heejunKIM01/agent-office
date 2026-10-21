@@ -81,13 +81,6 @@ async def handle_subagent_start(
     if agent_id in sm.agents:
         existing = {a.name for aid, a in sm.agents.items() if aid != agent_id and a.name}
         await enrich_agent_with_summaries(sm.agents[agent_id], event.data, existing)
-        # Propagate enriched short name to the lifespan record.
-        enriched_name = sm.agents[agent_id].name
-        if enriched_name:
-            for lifespan in sm.whiteboard.agent_lifespans:
-                if lifespan.agent_id == agent_id:
-                    lifespan.agent_name = enriched_name
-                    break
 
     await broadcast_state(event.session_id, sm)
 

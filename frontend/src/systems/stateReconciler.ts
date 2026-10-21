@@ -308,10 +308,6 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
   store.setTodos(state.todos ?? []);
   // Sync print report flag (triggers printer animation).
   store.setPrintReport(state.office.printReport ?? false);
-  // Sync whiteboard data for multi-mode display.
-  if (state.whiteboardData) {
-    store.setWhiteboardData(state.whiteboardData);
-  }
   // Sync conversation history (user prompts + Claude responses).
   if (state.conversation) {
     store.setConversation(state.conversation);

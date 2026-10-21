@@ -428,7 +428,6 @@ describe("reset variants", () => {
     useGameStore.getState().setSessionId("sess-123");
     useGameStore.getState().setDeskCount(16);
     useGameStore.getState().setDebugMode(true);
-    useGameStore.getState().setWhiteboardMode(5);
     useGameStore.getState().setReplaying(true);
     useGameStore.getState().setCodingAgent("opencode");
   }
@@ -450,11 +449,10 @@ describe("reset variants", () => {
       expect(useGameStore.getState().codingAgent).toBeNull();
     });
 
-    it("clears debugMode and whiteboardMode back to defaults", () => {
+    it("clears debugMode back to its default", () => {
       useGameStore.getState().reset();
       const s = useGameStore.getState();
       expect(s.debugMode).toBe(false);
-      expect(s.whiteboardMode).toBe(0);
     });
 
     it("leaves isReplaying false", () => {
@@ -499,11 +497,6 @@ describe("reset variants", () => {
       useGameStore.getState().resetForSessionSwitch();
       const s = useGameStore.getState();
       expect(s.debugMode).toBe(true);
-    });
-
-    it("PRESERVES whiteboardMode (user preference)", () => {
-      useGameStore.getState().resetForSessionSwitch();
-      expect(useGameStore.getState().whiteboardMode).toBe(5);
     });
 
     it("sets isReplaying=false so the WebSocket may reconnect", () => {

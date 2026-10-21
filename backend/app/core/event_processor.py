@@ -592,13 +592,6 @@ class EventProcessor:
         if not (event.data.source == "recovered" and sm_preexisting):
             sm.transition(event)
 
-        # Sync team fields from event data.
-        if event.data.team_name is not None:
-            sm.team_name = event.data.team_name
-        if event.data.teammate_name is not None:
-            sm.teammate_name = event.data.teammate_name
-            sm.is_lead = False
-
         agent_id = (
             sm.tool_character_id(event)
             if isinstance(event, ToolEvent)

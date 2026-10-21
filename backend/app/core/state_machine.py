@@ -1,5 +1,4 @@
 import logging
-import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -19,7 +18,6 @@ from app.core.path_utils import compress_path, compress_paths_in_text, truncate_
 from app.core.quotes import get_random_job_completion_quote
 from app.core.summary_service import get_summary_service
 from app.core.token_tracker import TokenTracker
-from app.core.whiteboard_tracker import WhiteboardTracker
 from app.models.agents import (
     Activity,
     Agent,
@@ -36,20 +34,15 @@ from app.models.events import (
     AgentEvent,
     AgentEventData,
     AnyEvent,
-    BackgroundTaskEvent,
     EventType,
     LifecycleEvent,
     PromptEvent,
-    TaskEvent,
     ToolEvent,
 )
 from app.models.sessions import (
-    BackgroundTask,
     ConversationEntry,
     GameState,
     HistoryEntry,
-    KanbanTask,
-    WhiteboardData,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,18 +68,8 @@ def _empty_todo_list() -> list[TodoItem]:
     return cast(list[TodoItem], [])
 
 
-def _empty_background_tasks() -> list[BackgroundTask]:
-    return cast(list[BackgroundTask], [])
-
-
 def _empty_conversation() -> list[ConversationEntry]:
     return cast(list[ConversationEntry], [])
-
-
-def _parse_linear_id(subject: str) -> str | None:
-    """Extract a Linear-style ID like REC-42 from a subject string."""
-    m = re.search(r"\[([A-Z]+-\d+)\]", subject)
-    return m.group(1) if m else None
 
 
 # ---------------------------------------------------------------------------
@@ -227,18 +210,11 @@ def _handle_session_start(sm: "StateMachine", event: AnyEvent) -> None:
     sm.phase = OfficePhase.STARTING
     sm.boss_state = BossState.IDLE
     sm.turn_active = False
-    sm.whiteboard.reset()
-    sm.whiteboard.add_news_item("session", "New session started - ready for work!")
 
 
 def _handle_context_compaction(sm: "StateMachine", event: AnyEvent) -> None:
-    """Handle CONTEXT_COMPACTION: reset tool counter and record compaction."""
+    """Handle CONTEXT_COMPACTION: reset the tool counter."""
     sm.tool_uses_since_compaction = 0
-    sm.whiteboard.record_compaction()
-    sm.whiteboard.add_news_item(
-        "coffee",
-        f"Coffee break #{sm.whiteboard.coffee_cups}! Context compacted.",
-    )
 
 
 def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
@@ -246,7 +222,6 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     assert isinstance(event, ToolEvent)
     tool_name = event.data.tool_name
     name = (tool_name or "").lower()
-    sm.whiteboard.remember_tool_input(event)
 
     if name in TODO_TOOLS:
         parsed = parse_todos_from_event(event)
@@ -353,7 +328,6 @@ def _handle_post_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
         sm.agents[agent_id].state = AgentState.WORKING
 
     sm.tool_uses_since_compaction += 1
-    sm.whiteboard.track_tool_use(event)
 
 
 def _handle_subagent_start(sm: "StateMachine", event: AnyEvent) -> None:
@@ -379,10 +353,6 @@ def _handle_subagent_start(sm: "StateMachine", event: AnyEvent) -> None:
 
     sm.agents[agent.id] = agent
     sm.phase = OfficePhase.BUSY
-
-    short_name = agent.name or f"Agent-{agent.id[-4:]}"
-    sm.whiteboard.record_agent_start(agent.id, short_name, agent.color)
-    sm.whiteboard.add_news_item("agent", f"{short_name} joins the team!")
 
 
 def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
@@ -415,10 +385,6 @@ def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
         # agent_handler.py — see ARC-003. Replay (which only calls
         # transition()) no longer credits the safety-sign counter; cosmetic
         # only, the counter is not persisted.
-        sm.whiteboard.record_agent_stop(agent_id)
-
-        agent_name = stopping_agent.name or f"Agent-{agent_id[-4:]}"
-        sm.whiteboard.add_news_item("agent", f"{agent_name} completed their task!")
 
 
 def _handle_cleanup(sm: "StateMachine", event: AnyEvent) -> None:
@@ -450,8 +416,6 @@ def _handle_stop(sm: "StateMachine", event: AnyEvent) -> None:
         persistent=True,
     )
 
-    sm.whiteboard.add_news_item("session", "Job completed! Great work everyone!")
-
 
 def _handle_session_end(sm: "StateMachine", event: AnyEvent) -> None:
     """Handle SESSION_END: mark session as ended."""
@@ -465,57 +429,6 @@ def _handle_session_end(sm: "StateMachine", event: AnyEvent) -> None:
     for agent in sm.agents.values():
         agent.activity = None
         agent.stuck = None
-
-
-def _handle_background_task_notification(sm: "StateMachine", event: AnyEvent) -> None:
-    """Handle BACKGROUND_TASK_NOTIFICATION: update background task status on whiteboard."""
-    assert isinstance(event, BackgroundTaskEvent)
-    task_id = event.data.background_task_id or "unknown"
-    status = event.data.background_task_status or "completed"
-    summary = event.data.background_task_summary
-
-    sm.whiteboard.update_background_task(task_id, status, summary)
-
-    status_emoji = "Completed" if status == "completed" else "Failed"
-    task_id_short = task_id[:8] if len(task_id) > 8 else task_id
-    summary_short = (summary[:30] + "...") if summary and len(summary) > 30 else summary
-    headline = f"{status_emoji} Task {task_id_short}: {summary_short or status}"
-    sm.whiteboard.add_news_item("agent", headline)
-
-
-def _handle_task_created(sm: "StateMachine", event: AnyEvent) -> None:
-    """Handle TASK_CREATED: create a KanbanTask entry for Agent Teams."""
-    assert isinstance(event, TaskEvent)
-    task_id = event.data.task_id
-    if not task_id:
-        return
-    subject = event.data.task_subject or ""
-    sm.kanban_tasks[task_id] = KanbanTask(
-        task_id=task_id,
-        subject=subject,
-        status="pending",
-        assignee=sm.teammate_name,
-        linear_id=_parse_linear_id(subject),
-    )
-
-
-def _handle_task_completed(sm: "StateMachine", event: AnyEvent) -> None:
-    """Handle TASK_COMPLETED: mark a KanbanTask as completed for Agent Teams."""
-    assert isinstance(event, TaskEvent)
-    task_id = event.data.task_id
-    if not task_id:
-        return
-    subject = event.data.task_subject or ""
-    if task_id in sm.kanban_tasks:
-        sm.kanban_tasks[task_id].status = "completed"
-    else:
-        sm.kanban_tasks[task_id] = KanbanTask(
-            task_id=task_id,
-            subject=subject,
-            status="completed",
-            assignee=sm.teammate_name,
-            linear_id=_parse_linear_id(subject),
-        )
 
 
 def _handle_teammate_idle(sm: "StateMachine", event: AnyEvent) -> None:
@@ -541,9 +454,6 @@ _DISPATCH_TABLE: dict[EventType, Callable[["StateMachine", AnyEvent], None]] = {
     EventType.CLEANUP: _handle_cleanup,
     EventType.STOP: _handle_stop,
     EventType.SESSION_END: _handle_session_end,
-    EventType.BACKGROUND_TASK_NOTIFICATION: _handle_background_task_notification,
-    EventType.TASK_CREATED: _handle_task_created,
-    EventType.TASK_COMPLETED: _handle_task_completed,
     EventType.TEAMMATE_IDLE: _handle_teammate_idle,
 }
 
@@ -650,23 +560,10 @@ class StateMachine:
     # session into the "done" bucket and back every tool cycle.
     turn_active: bool = False
     last_user_prompt: str | None = None
-    background_tasks: list[BackgroundTask] = field(default_factory=_empty_background_tasks)
     conversation: list[ConversationEntry] = field(default_factory=_empty_conversation)
 
     # Coding agent running the session (first event that names one wins)
     coding_agent: str | None = None
-
-    # Agent Teams context, synced from event data by EventProcessor.
-    # teammate_name becomes the assignee of the session's kanban tasks.
-    is_lead: bool = True
-    teammate_name: str | None = None
-    team_name: str | None = None
-    kanban_tasks: dict[str, KanbanTask] = field(
-        default_factory=lambda: cast(dict[str, KanbanTask], {})
-    )
-
-    # Whiteboard tracking delegated to WhiteboardTracker
-    whiteboard: WhiteboardTracker = field(default_factory=WhiteboardTracker)
 
     # Mapped tools in flight per character ("main" or agent id), which decide
     # where each character walks (archive / server room).
@@ -701,7 +598,7 @@ class StateMachine:
         """Convert current state to a GameState for frontend consumption.
 
         Builds a complete snapshot including boss, agents, office layout,
-        whiteboard data, queues, and conversation history.
+        queues, and conversation history.
 
         Args:
             session_id: The session identifier to include in the GameState.
@@ -740,27 +637,6 @@ class StateMachine:
             print_report=self.print_report,
         )
 
-        activity_level = min(1.0, self.tool_uses_since_compaction / 100.0)
-
-        whiteboard_data = WhiteboardData(
-            tool_usage=self.whiteboard.get_tool_usage_snapshot(),
-            task_completed_count=self.whiteboard.task_completed_count,
-            bug_fixed_count=self.whiteboard.bug_fixed_count,
-            coffee_break_count=self.whiteboard.coffee_break_count,
-            code_written_count=self.whiteboard.code_written_count,
-            recent_error_count=self.whiteboard.recent_error_count,
-            recent_success_count=self.whiteboard.recent_success_count,
-            activity_level=activity_level,
-            consecutive_successes=self.whiteboard.consecutive_successes,
-            last_incident_time=self.whiteboard.last_incident_time,
-            agent_lifespans=self.whiteboard.get_agent_lifespans_snapshot(),
-            news_items=self.whiteboard.get_news_items_snapshot(),
-            coffee_cups=self.whiteboard.coffee_cups,
-            file_edits=self.whiteboard.get_file_edits_snapshot(),
-            background_tasks=self.whiteboard.get_background_tasks_snapshot(),
-            kanban_tasks=list(self.kanban_tasks.values()),
-        )
-
         return GameState(
             session_id=session_id,
             boss=boss,
@@ -771,7 +647,6 @@ class StateMachine:
             todos=self.todos,
             arrival_queue=self.arrival_queue.copy(),
             departure_queue=self.handin_queue.copy(),
-            whiteboard_data=whiteboard_data,
             conversation=self.conversation.copy(),
             coding_agent=self.coding_agent,
         )

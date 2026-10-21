@@ -250,7 +250,7 @@ The backend processes the following event types from Claude Code hooks:
 | `session_start` | New Claude Code session begins | Initialize office, boss arrives |
 | `session_end` | Session terminates | Cleanup, boss leaves |
 | `pre_tool_use` | Tool execution starting | Boss/agent shows working state |
-| `post_tool_use` | Tool execution completed | Update tool usage stats, file edits |
+| `post_tool_use` | Tool execution completed | Boss/agent finishes the tool (stuck on failure) |
 | `user_prompt_submit` | User sends a prompt | Phone rings, boss receives task |
 | `permission_request` | Tool needs user approval | Show waiting state |
 | `notification` | System notification | Display notification |
@@ -259,7 +259,7 @@ The backend processes the following event types from Claude Code hooks:
 | `subagent_info` | Native agent ID available | Link agent to Claude's ID |
 | `subagent_stop` | Task agent completes | Agent returns work, departs |
 | `context_compaction` | Context window compacted | Coffee break animation |
-| `background_task_notification` | Background task completed | Update remote workers display |
+| `background_task_notification` | Background task completed | Logged in the event history |
 | `agent_update` | Token-usage update emitted by transcript poller | Refresh agent token/thinking display (synthetic, not from hooks) |
 | `reporting` | Agent reporting to boss | Show reporting animation (synthetic, persisted for replay) |
 | `walking_to_desk` | Agent walking to desk | Animate agent walking to desk (synthetic, persisted for replay) |
@@ -267,8 +267,8 @@ The backend processes the following event types from Claude Code hooks:
 | `leaving` | Agent leaving office | Trigger departure animation (synthetic, persisted for replay) |
 | `cleanup` | Logical removal of agent after departure | Remove agent from office; persisted so replay removes it correctly (synthetic) |
 | `error` | Error event | Logged and persisted for replay (synthetic) |
-| `task_created` | Agent Teams: new task assigned to the team | Create `KanbanTask` entry on the whiteboard |
-| `task_completed` | Agent Teams: team task completed | Update `KanbanTask` status to `completed` |
+| `task_created` | Agent Teams: new task assigned to the team | Logged in the event history |
+| `task_completed` | Agent Teams: team task completed | Logged in the event history |
 | `teammate_idle` | Agent Teams: teammate session went idle | Set the teammate's boss state to `IDLE` |
 
 ## Project Structure
@@ -304,8 +304,7 @@ backend/
 │   │   ├── task_file_poller.py # Claude task file monitoring
 │   │   ├── task_persistence.py # Task database persistence
 │   │   ├── token_tracker.py   # Token usage and tool-use tracking
-│   │   ├── transcript_poller.py # Token usage extraction
-│   │   └── whiteboard_tracker.py # Whiteboard state tracking
+│   │   └── transcript_poller.py # Token usage extraction
 │   ├── db/
 │   │   ├── database.py        # SQLAlchemy async setup
 │   │   └── models.py          # Database models

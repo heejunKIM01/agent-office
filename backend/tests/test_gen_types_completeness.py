@@ -53,14 +53,6 @@ EXCLUDED: dict[str, str] = {
     "LifecycleEvent": _FAMILY_EVENT_REASON,
     "TaskEvent": _FAMILY_EVENT_REASON,
     "BackgroundTaskEvent": _FAMILY_EVENT_REASON,
-    # Already emitted transitively: KanbanTask is a ``list[KanbanTask]`` field
-    # of ``WhiteboardData`` (which IS in MODELS), so ``models_json_schema``
-    # includes it as a ``$defs`` reference and ``json2ts`` emits it as an
-    # ``export interface KanbanTask`` in generated.ts. Adding it to MODELS
-    # would make it a top-level export and change generated.ts.
-    "KanbanTask": (
-        "transitive $defs reference of WhiteboardData; adding to MODELS changes generated.ts"
-    ),
 }
 
 # scripts/gen_types.py lives at the repo root, two parents above this test.

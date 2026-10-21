@@ -128,7 +128,7 @@ Unusual but valid sequences to verify error handling:
 - **Permission Requests**: Boss and agent both hit permission blocks
 - **Tool Errors**: Multiple tool failures incrementing error counter
 - **Orphan Cleanup**: Subagent removed via CLEANUP without proper stop
-- **Background Task Failure**: Failed task status in Remote Workers display
+- **Background Task Failure**: Failed task status in the event log
 - **Long Prompts**: Prompt truncation in speech bubbles
 
 ### Background Task Notifications

@@ -5,10 +5,12 @@ import asyncio
 from typing import Any
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.event_processor import EventProcessor
-from app.db.database import Base, override_engine
+from app.db.database import AsyncSessionLocal, Base, override_engine
+from app.db.models import SessionRecord
 from app.models.events import AnyEvent, EventAdapter, EventType
 
 
@@ -38,6 +40,12 @@ def _make_event(event_type: EventType, session_id: str = "s1", **kwargs: Any) ->
     )
 
 
+async def _session_record(session_id: str) -> SessionRecord:
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(SessionRecord).where(SessionRecord.id == session_id))
+        return result.scalar_one()
+
+
 class TestTeamDetection:
     @pytest.mark.asyncio
     async def test_lead_session_detected_when_no_teammate_name(self) -> None:
@@ -49,10 +57,9 @@ class TestTeamDetection:
             project_name="myapp",
         )
         await ep.process_event(event)
-        sm = ep.sessions.get("lead-sess")
-        assert sm is not None
-        assert sm.team_name == "squad"
-        assert sm.is_lead is True
+        record = await _session_record("lead-sess")
+        assert record.team_name == "squad"
+        assert record.is_lead is True
 
     @pytest.mark.asyncio
     async def test_teammate_session_detected_when_teammate_name_present(self) -> None:
@@ -65,8 +72,7 @@ class TestTeamDetection:
             project_name="myapp",
         )
         await ep.process_event(event)
-        sm = ep.sessions.get("tm-sess")
-        assert sm is not None
-        assert sm.team_name == "squad"
-        assert sm.teammate_name == "implementer"
-        assert sm.is_lead is False
+        record = await _session_record("tm-sess")
+        assert record.team_name == "squad"
+        assert record.teammate_name == "implementer"
+        assert record.is_lead is False

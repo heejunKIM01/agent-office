@@ -131,7 +131,6 @@ graph LR
 | `core/task_file_poller.py` | Polls external task files for todo list updates |
 | `core/beads_poller.py` | Polls beads issue tracker for task list integration |
 | `core/broadcast_service.py` | Service for broadcasting state updates to WebSocket clients |
-| `core/whiteboard_tracker.py` | Tracks whiteboard data (tool usage, agent lifespans, etc.) |
 | `core/overview.py` | Builds the cross-session overview sent on `/ws/overview` |
 | `core/token_tracker.py` | Token usage tracking from JSONL transcripts, tool-use counting, thinking-block extraction |
 | `core/handlers/team_handler.py` | Event handlers for Agent Teams (task_created, task_completed, teammate_idle) |
@@ -530,11 +529,11 @@ When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is enabled, Claude Code can run mu
 
 | Event Type | Description | State Machine Effect |
 |------------|-------------|---------------------|
-| `task_created` | A new task is assigned to the team | Creates a `KanbanTask` entry on the whiteboard |
-| `task_completed` | A team task is completed | Updates the `KanbanTask` status to `completed` |
+| `task_created` | A new task is assigned to the team | None (event history only) |
+| `task_completed` | A team task is completed | None (event history only) |
 | `teammate_idle` | A teammate session goes idle | Sets the teammate's boss state to `IDLE` |
 
-`EventProcessor` copies `team_name` and `teammate_name` from the event data onto the session's `StateMachine` and its `sessions` row; a session with a `team_name` and no `teammate_name` is the lead. A teammate's `teammate_name` becomes the assignee of the kanban tasks it creates. `backend/app/core/handlers/team_handler.py` logs the three events. `scripts/simulate_events.py teams` runs a lead and two teammates.
+`EventProcessor` copies `team_name` and `teammate_name` from the event data onto the session's `sessions` row; a session with a `team_name` and no `teammate_name` is the lead. `backend/app/core/handlers/team_handler.py` logs the three events. `scripts/simulate_events.py teams` runs a lead and two teammates.
 
 ## Configuration Reference
 

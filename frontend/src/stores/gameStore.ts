@@ -16,8 +16,6 @@ import type {
   WebSocketMessage,
   Agent as BackendAgent,
   GameState as BackendGameState,
-  WhiteboardData,
-  WhiteboardMode,
   ConversationEntry,
 } from "@/types";
 import { MIN_DESK_COUNT } from "@/constants/positions";
@@ -67,10 +65,6 @@ import {
 import { createBossSlice, initialBossSliceState } from "./slices/bossSlice";
 import { createBubbleSlice } from "./slices/bubbleSlice";
 import { createOfficeSlice, initialOfficeState } from "./slices/officeSlice";
-import {
-  createWhiteboardSlice,
-  initialWhiteboardState,
-} from "./slices/whiteboardSlice";
 import { createReplaySlice, initialReplayState } from "./slices/replaySlice";
 import { createDebugSlice, initialDebugState } from "./slices/debugSlice";
 import {
@@ -216,13 +210,6 @@ export interface GameStore {
   conversation: ConversationEntry[];
   setConversation: (conversation: ConversationEntry[]) => void;
 
-  // Whiteboard actions
-  whiteboardData: WhiteboardData;
-  whiteboardMode: WhiteboardMode;
-  setWhiteboardData: (data: WhiteboardData) => void;
-  setWhiteboardMode: (mode: WhiteboardMode) => void;
-  cycleWhiteboardMode: () => void;
-
   // ========== UI State ==========
   isConnected: boolean;
   isReplaying: boolean;
@@ -266,7 +253,6 @@ const initialState = {
   ...initialReservationState,
   ...initialBossSliceState,
   ...initialOfficeState,
-  ...initialWhiteboardState,
   ...initialReplayState,
   ...initialDebugState,
 };
@@ -286,7 +272,6 @@ export const useGameStore = create<GameStore>()(
     ...createBossSlice(set, get, api),
     ...createBubbleSlice(set, get, api),
     ...createOfficeSlice(set, get, api),
-    ...createWhiteboardSlice(set, get, api),
     ...createReplaySlice(set, get, api),
     ...createDebugSlice(set, get, api),
 
@@ -299,8 +284,6 @@ export const useGameStore = create<GameStore>()(
         ...initialState,
         agents: new Map(),
         boss: { ...initialBossState, bubble: createEmptyBubbleState() },
-        whiteboardData: { ...initialWhiteboardState.whiteboardData },
-        whiteboardMode: 0,
       }),
 
     resetForReplay: () =>
@@ -308,8 +291,6 @@ export const useGameStore = create<GameStore>()(
         ...initialState,
         agents: new Map(),
         boss: { ...initialBossState, bubble: createEmptyBubbleState() },
-        whiteboardData: { ...initialWhiteboardState.whiteboardData },
-        whiteboardMode: 0,
         isReplaying: true,
       }),
 
@@ -338,8 +319,6 @@ export const useGameStore = create<GameStore>()(
         todos: [],
         eventLog: [], // Clear event log for new session
         codingAgent: null,
-        whiteboardData: { ...initialWhiteboardState.whiteboardData },
-        // Keep whiteboardMode - user preference
         // Keep connection-related state
         isConnected: false,
         isReplaying: false, // Important: allow WebSocket to reconnect
@@ -397,35 +376,6 @@ export const useGameStore = create<GameStore>()(
         // Process bubbles from backend state
         // (These are enqueued separately via state machine events)
 
-        // Update whiteboard data if provided
-        const whiteboardData = backendState.whiteboardData
-          ? {
-              toolUsage: backendState.whiteboardData.toolUsage ?? {},
-              taskCompletedCount:
-                backendState.whiteboardData.taskCompletedCount ?? 0,
-              bugFixedCount: backendState.whiteboardData.bugFixedCount ?? 0,
-              coffeeBreakCount:
-                backendState.whiteboardData.coffeeBreakCount ?? 0,
-              codeWrittenCount:
-                backendState.whiteboardData.codeWrittenCount ?? 0,
-              recentErrorCount:
-                backendState.whiteboardData.recentErrorCount ?? 0,
-              recentSuccessCount:
-                backendState.whiteboardData.recentSuccessCount ?? 0,
-              activityLevel: backendState.whiteboardData.activityLevel ?? 0,
-              consecutiveSuccesses:
-                backendState.whiteboardData.consecutiveSuccesses ?? 0,
-              lastIncidentTime:
-                backendState.whiteboardData.lastIncidentTime ?? null,
-              agentLifespans: backendState.whiteboardData.agentLifespans ?? [],
-              newsItems: backendState.whiteboardData.newsItems ?? [],
-              coffeeCups: backendState.whiteboardData.coffeeCups ?? 0,
-              fileEdits: backendState.whiteboardData.fileEdits ?? {},
-              backgroundTasks:
-                backendState.whiteboardData.backgroundTasks ?? [],
-            }
-          : state.whiteboardData;
-
         return {
           agents: newAgents,
           arrivalQueue: newArrivalQueue,
@@ -441,7 +391,6 @@ export const useGameStore = create<GameStore>()(
             backendState.office.toolUsesSinceCompaction ?? 0,
           printReport: backendState.office.printReport ?? false,
           todos: backendState.todos,
-          whiteboardData,
           conversation: backendState.conversation ?? [],
         };
       }),
@@ -479,6 +428,4 @@ export const selectCodingAgent = (state: GameStore) => state.codingAgent;
 export const selectToolUsesSinceCompaction = (state: GameStore) =>
   state.toolUsesSinceCompaction;
 export const selectPrintReport = (state: GameStore) => state.printReport;
-export const selectWhiteboardData = (state: GameStore) => state.whiteboardData;
-export const selectWhiteboardMode = (state: GameStore) => state.whiteboardMode;
 export const selectConversation = (state: GameStore) => state.conversation;

@@ -39,13 +39,8 @@ from app.models.events import (  # noqa: E402  # type: ignore[import]
 )
 from app.models.overview import OverviewEntry, OverviewState  # noqa: E402  # type: ignore[import]
 from app.models.sessions import (  # noqa: E402  # type: ignore[import]
-    AgentLifespan,
-    BackgroundTask,
-    FileEdit,
     GameState,
-    NewsItem,
     Session,
-    WhiteboardData,
 )
 from pydantic.json_schema import models_json_schema  # noqa: E402
 
@@ -78,11 +73,6 @@ MODELS = [
     LifecycleEventData,
     TaskEventData,
     BackgroundTaskEventData,
-    AgentLifespan,
-    BackgroundTask,
-    FileEdit,
-    NewsItem,
-    WhiteboardData,
     Session,
     GameState,
     OverviewEntry,

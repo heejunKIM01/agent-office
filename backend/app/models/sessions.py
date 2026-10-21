@@ -9,12 +9,6 @@ from app.models.common import TodoItem
 
 __all__ = [
     "ConversationEntry",
-    "AgentLifespan",
-    "NewsItem",
-    "FileEdit",
-    "BackgroundTask",
-    "KanbanTask",
-    "WhiteboardData",
     "Session",
     "HistoryEntry",
     "GameState",
@@ -30,88 +24,6 @@ class ConversationEntry(TypedDict):
     text: str
     timestamp: str
     toolName: NotRequired[str]  # Only set for "tool" role entries
-
-
-class AgentLifespan(BaseModel):
-    """Timeline entry for agent lifespan tracking."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    agent_id: str
-    agent_name: str
-    color: str
-    start_time: str
-    end_time: str | None = None  # None = still active
-
-
-class NewsItem(BaseModel):
-    """News ticker item for the whiteboard."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    category: str
-    headline: str
-    timestamp: str
-
-
-class FileEdit(BaseModel):
-    """File edit tracking for heat map display."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    file_path: str
-    edit_count: int
-
-
-class BackgroundTask(BaseModel):
-    """Background task tracking for remote workers display."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    task_id: str
-    status: str  # "completed" | "failed" | "running"
-    summary: str | None = None
-    started_at: str | None = None
-    completed_at: str | None = None
-
-
-class KanbanTask(BaseModel):
-    """A single kanban board task."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    task_id: str
-    subject: str
-    status: str  # "pending" | "in_progress" | "completed"
-    assignee: str | None = None
-    linear_id: str | None = None  # parsed from subject, e.g. "REC-42"
-
-
-class WhiteboardData(BaseModel):
-    """Data for whiteboard display modes."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    tool_usage: dict[str, int] = Field(default_factory=dict)
-    kanban_tasks: list[KanbanTask] = Field(default_factory=lambda: cast(list[KanbanTask], []))
-    task_completed_count: int = 0
-    bug_fixed_count: int = 0
-    coffee_break_count: int = 0
-    code_written_count: int = 0
-    recent_error_count: int = 0
-    recent_success_count: int = 0
-    activity_level: float = 0.0
-    consecutive_successes: int = 0
-    last_incident_time: str | None = None
-    agent_lifespans: list[AgentLifespan] = Field(
-        default_factory=lambda: cast(list[AgentLifespan], [])
-    )
-    news_items: list[NewsItem] = Field(default_factory=lambda: cast(list[NewsItem], []))
-    coffee_cups: int = 0
-    file_edits: dict[str, int] = Field(default_factory=dict)
-    background_tasks: list[BackgroundTask] = Field(
-        default_factory=lambda: cast(list[BackgroundTask], [])
-    )
 
 
 class Session(BaseModel):
@@ -150,7 +62,6 @@ class GameState(BaseModel):
     todos: list[TodoItem] = Field(default_factory=lambda: cast(list[TodoItem], []))
     arrival_queue: list[str] = Field(default_factory=lambda: cast(list[str], []))
     departure_queue: list[str] = Field(default_factory=lambda: cast(list[str], []))
-    whiteboard_data: WhiteboardData = Field(default_factory=WhiteboardData)
     conversation: list[ConversationEntry] = Field(
         default_factory=lambda: cast(list[ConversationEntry], [])
     )
