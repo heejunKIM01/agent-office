@@ -120,7 +120,7 @@ const en = {
   "settings.connect.afterGemini":
     "Gemini CLI sessions you open from now on show up in the office.",
   "settings.connect.needToken":
-    "To connect, open this page from the address on the 「Open the UI with this URL」 line in the backend's terminal (…/?token=…).",
+    "To connect, open this page from the 「Agent Office: http://localhost:4747/?token=…」 line in the backend's terminal.",
   "settings.connect.notLocal":
     "This backend is reachable from other machines (Docker, for example), so it can't connect agents. Run make hooks-install in a terminal instead.",
   "settings.connect.cannotRun":

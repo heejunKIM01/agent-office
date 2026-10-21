@@ -121,7 +121,7 @@ const ko: Record<TranslationKey, string> = {
   "settings.connect.afterGemini":
     "지금부터 여는 Gemini CLI 세션이 사무실에 나타나요.",
   "settings.connect.needToken":
-    "연결하려면 백엔드 터미널의 「Open the UI with this URL」 줄에 있는 주소(…/?token=…)로 이 화면을 열어 주세요.",
+    "연결하려면 백엔드 터미널에 찍힌 「Agent Office: http://localhost:4747/?token=…」 주소로 이 화면을 열어 주세요.",
   "settings.connect.notLocal":
     "이 백엔드는 다른 컴퓨터에서도 접속할 수 있게 떠 있어서(Docker 등) 연결할 수 없어요. 터미널에서 make hooks-install 을 실행해 주세요.",
   "settings.connect.cannotRun":

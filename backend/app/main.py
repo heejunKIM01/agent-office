@@ -65,6 +65,12 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
             settings.effective_api_key,
             settings.effective_api_key,
         )
+        # RichHandler folds the long URL across lines, so a terminal click
+        # opens a cut token. Print the dev URL once more on a line of its own.
+        print(
+            f"\n  Agent Office: http://localhost:4747/?token={settings.effective_api_key}\n",
+            flush=True,
+        )
 
     if not settings.LOCALHOST_ONLY:
         logger.warning(

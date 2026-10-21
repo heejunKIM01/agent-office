@@ -122,7 +122,7 @@ const es: Record<TranslationKey, string> = {
   "settings.connect.afterGemini":
     "Las sesiones de Gemini CLI que abras a partir de ahora aparecerán en la oficina.",
   "settings.connect.needToken":
-    "Para conectar, abre esta página desde la dirección de la línea 「Open the UI with this URL」 en la terminal del backend (…/?token=…).",
+    "Para conectar, abre esta página desde la línea 「Agent Office: http://localhost:4747/?token=…」 de la terminal del backend.",
   "settings.connect.notLocal":
     "Este backend es accesible desde otros equipos (por ejemplo, Docker), así que no puede conectar agentes. Ejecuta make hooks-install en una terminal.",
   "settings.connect.cannotRun":
