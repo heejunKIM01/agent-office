@@ -30,7 +30,7 @@ The scripts directory contains testing and development utilities:
 | Python 3.13+ | Runtime |
 | uv | Package management |
 | Backend running | Event receiver at `localhost:8000` |
-| Frontend running | Visualization at `localhost:3000` |
+| Frontend running | Visualization at `localhost:4747` |
 
 ## Available Scripts
 

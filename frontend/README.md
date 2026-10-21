@@ -97,7 +97,7 @@ Or directly:
 bun run dev
 ```
 
-The application runs at [http://localhost:3000](http://localhost:3000).
+The application runs at [http://localhost:4747](http://localhost:4747).
 
 > **Note:** The backend must be running at `localhost:8000` for WebSocket connectivity.
 
