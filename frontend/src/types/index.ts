@@ -135,11 +135,3 @@ export interface WebSocketMessage {
   session_id?: string;
   message?: string;
 }
-
-// ============================================================================
-// NAVIGATION TYPES — re-exported from ./navigation
-// ============================================================================
-
-export type { ViewMode, TransitionDirection } from "./navigation";
-
-export type { RoomConfig, FloorConfig, BuildingConfig } from "./navigation";

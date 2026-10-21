@@ -5,7 +5,7 @@
  * to React and dispatches incoming messages to the appropriate domain module:
  *   - `state_update` → {@link reconcileState} (agent diff, spawn policy, office sync)
  *   - `pre/post_tool_use` → {@link TypingTracker} (min-duration typing timer)
- *   - `event` / `git_status` / `reload` / `session_deleted` / `error` → handled inline
+ *   - `event` / `git_status` / `reload` / `session_deleted` → handled inline
  *
  * All heavy logic has been extracted so this file is just plumbing: refs that
  * persist across renders, a controller instance, and a `useEffect` that opens
@@ -17,15 +17,12 @@
 import { WS_BASE } from "@/utils/api";
 import { useCallback, useEffect, useRef } from "react";
 import { useGameStore } from "@/stores/gameStore";
-import { useAttentionStore } from "@/stores/attentionStore";
-import { usePreferencesStore } from "@/stores/preferencesStore";
 import { agentMachineService } from "@/machines/agentMachineService";
 import { resetSpawnIndex } from "@/systems/queuePositions";
 import { TypingTracker } from "@/systems/typingTracker";
 import { reconcileState } from "@/systems/stateReconciler";
-import { shouldShowToast } from "@/systems/toastFilter";
 import { WebSocketController } from "@/systems/webSocketController";
-import type { EventType, WebSocketMessage } from "@/types";
+import type { WebSocketMessage } from "@/types";
 
 // ============================================================================
 // TYPES
@@ -142,25 +139,6 @@ export function useWebSocketEvents({
               if (message.event.type === "context_compaction") {
                 useGameStore.getState().triggerCompaction();
               }
-
-              // Attention toasts — wire event processing into attention store.
-              // `shouldShowToast` (pure) owns the type + preference gate.
-              if (
-                shouldShowToast(
-                  message.event.type as EventType,
-                  usePreferencesStore.getState(),
-                )
-              ) {
-                useAttentionStore.getState().processEvent({
-                  type: message.event.type as EventType,
-                  agentId: message.event.agentId ?? null,
-                  agentName: message.event.detail?.agentName ?? null,
-                  taskDescription:
-                    message.event.detail?.taskDescription ?? null,
-                  errorType: message.event.detail?.errorType ?? null,
-                  message: message.event.detail?.message ?? null,
-                });
-              }
             }
             break;
 
@@ -182,17 +160,6 @@ export function useWebSocketEvents({
                 detail: { sessionId: message.session_id },
               }),
             );
-            break;
-
-          case "error":
-            useAttentionStore.getState().processEvent({
-              type: "error",
-              agentId: null,
-              agentName: null,
-              taskDescription: null,
-              errorType: null,
-              message: message.message ?? null,
-            });
             break;
         }
       } catch (error) {
