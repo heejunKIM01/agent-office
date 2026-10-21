@@ -2,7 +2,7 @@
  * Office slice (ARC-005).
  *
  * Session/scalar office state: compaction animation phase, todos, event log,
- * conversation. Self-contained apart from the @/types shapes it carries.
+ * coding agent. Self-contained apart from the @/types shapes it carries.
  */
 import type { StateCreator } from "zustand";
 import type { GameStore } from "../gameStore";
@@ -12,7 +12,6 @@ import type {
   TodoItem,
   HistoryEntry,
   WebSocketMessage,
-  ConversationEntry,
 } from "@/types";
 import type { EventLogEntry, CompactionAnimationPhase } from "./types";
 
@@ -39,7 +38,6 @@ export type OfficeSlice = {
   todos: TodoItem[];
   eventLog: EventLogEntry[];
   codingAgent: string | null;
-  conversation: ConversationEntry[];
 
   setSessionId: (id: string) => void;
   triggerCompaction: () => void;
@@ -49,7 +47,6 @@ export type OfficeSlice = {
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
-  setConversation: (conversation: ConversationEntry[]) => void;
 };
 
 export const initialOfficeState = {
@@ -59,7 +56,6 @@ export const initialOfficeState = {
   todos: [] as TodoItem[],
   eventLog: [] as EventLogEntry[],
   codingAgent: null as string | null,
-  conversation: [] as ConversationEntry[],
 };
 
 export const createOfficeSlice: StateCreator<GameStore, [], [], OfficeSlice> = (
@@ -118,6 +114,4 @@ export const createOfficeSlice: StateCreator<GameStore, [], [], OfficeSlice> = (
     }),
 
   setCodingAgent: (codingAgent) => set({ codingAgent }),
-
-  setConversation: (conversation) => set({ conversation }),
 });

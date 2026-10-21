@@ -35,11 +35,7 @@ from app.models.events import (
     PromptEvent,
     ToolEvent,
 )
-from app.models.sessions import (
-    ConversationEntry,
-    GameState,
-    HistoryEntry,
-)
+from app.models.sessions import GameState, HistoryEntry
 
 logger = logging.getLogger(__name__)
 
@@ -62,10 +58,6 @@ def _empty_history_list() -> list[HistoryEntry]:
 
 def _empty_todo_list() -> list[TodoItem]:
     return cast(list[TodoItem], [])
-
-
-def _empty_conversation() -> list[ConversationEntry]:
-    return cast(list[ConversationEntry], [])
 
 
 # ---------------------------------------------------------------------------
@@ -510,7 +502,6 @@ class StateMachine:
 
     MAX_AGENTS = 8
     MAX_CONTEXT_TOKENS = 200_000
-    MAX_CONVERSATION_ENTRIES = 500
     # Desk grid row width — keep in sync with frontend/src/constants/positions.ts
     # (DESKS_PER_ROW), where the agent machine lays out desks and queues. Agents
     # get desk numbers 1..N (Agent.desk); the backend itself does not read this.
@@ -532,7 +523,6 @@ class StateMachine:
     # *between* tool calls as "still working" instead of flickering the
     # session into the "done" bucket and back every tool cycle.
     turn_active: bool = False
-    conversation: list[ConversationEntry] = field(default_factory=_empty_conversation)
 
     # Coding agent running the session (first event that names one wins)
     coding_agent: str | None = None
@@ -552,25 +542,11 @@ class StateMachine:
     # Core methods
     # ---------------------------------------------------------------------------
 
-    def append_capped(
-        self,
-        entry: ConversationEntry,
-        max_len: int = MAX_CONVERSATION_ENTRIES,
-    ) -> None:
-        """Append a conversation entry, capping history to *max_len* entries.
-
-        Keeps the most recent ``max_len`` entries so the conversation list does
-        not grow without bound during long-running or restored sessions.
-        """
-        self.conversation.append(entry)
-        if len(self.conversation) > max_len:
-            self.conversation = self.conversation[-max_len:]
-
     def to_game_state(self, session_id: str) -> GameState:
         """Convert current state to a GameState for frontend consumption.
 
-        Builds a complete snapshot including boss, agents, history, todos,
-        queues, and conversation history.
+        Builds a complete snapshot including boss, agents, history, todos
+        and queues.
 
         Args:
             session_id: The session identifier to include in the GameState.
@@ -598,7 +574,6 @@ class StateMachine:
             todos=self.todos,
             arrival_queue=self.arrival_queue.copy(),
             departure_queue=self.handin_queue.copy(),
-            conversation=self.conversation.copy(),
             coding_agent=self.coding_agent,
         )
 

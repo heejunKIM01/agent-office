@@ -286,10 +286,6 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
     ctx.initialQueueSyncDone.current = state.sessionId;
   }
   store.setTodos(state.todos ?? []);
-  // Sync conversation history (user prompts + Claude responses).
-  if (state.conversation) {
-    store.setConversation(state.conversation);
-  }
   store.setCodingAgent(state.codingAgent ?? null);
   // Fill the event log from recent history: live `event` messages only cover
   // events that happen while this page is connected.

@@ -118,9 +118,8 @@ graph LR
 | `core/state_machine.py` | Transforms CLI events into game state; manages agent lifecycle, desk assignments, animations |
 | `core/event_processor.py` | Routes incoming events to state machine, persists to DB |
 | `core/handlers/agent_handler.py` | Agent-specific event handling logic |
-| `core/handlers/conversation_handler.py` | Conversation history management |
+| `core/handlers/conversation_handler.py` | Prompt summary and the boss's reply on stop |
 | `core/handlers/session_handler.py` | Session lifecycle event handling |
-| `core/handlers/tool_handler.py` | Tool use event handling |
 | `core/summary_service.py` | AI-powered summarization for agent tasks and prompts |
 | `core/transcript_poller.py` | Polls subagent JSONL transcript files for their tool calls |
 | `core/jsonl_parser.py` | Parses Claude Code JSONL transcript format |

@@ -13,7 +13,6 @@ import type {
   HistoryEntry,
   WebSocketMessage,
   Agent as BackendAgent,
-  ConversationEntry,
 } from "@/types";
 
 // ============================================================================
@@ -191,8 +190,6 @@ export interface GameStore {
   addEventLog: (event: NonNullable<WebSocketMessage["event"]>) => void;
   mergeEventHistory: (history: HistoryEntry[]) => void;
   setCodingAgent: (codingAgent: string | null) => void;
-  conversation: ConversationEntry[];
-  setConversation: (conversation: ConversationEntry[]) => void;
 
   // ========== UI State ==========
   isConnected: boolean;
@@ -302,7 +299,6 @@ export const useGameStore = create<GameStore>()(
         isReplaying: false, // Important: allow WebSocket to reconnect
         replayEvents: [],
         currentReplayIndex: -1,
-        conversation: [], // Clear conversation for new session
         // Debug settings are preserved (not reset)
       }),
   })),
@@ -333,4 +329,3 @@ export const selectCompactionPhase = (state: GameStore) =>
 export const selectTodos = (state: GameStore) => state.todos;
 export const selectEventLog = (state: GameStore) => state.eventLog;
 export const selectCodingAgent = (state: GameStore) => state.codingAgent;
-export const selectConversation = (state: GameStore) => state.conversation;

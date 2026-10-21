@@ -29,7 +29,6 @@ export type {
   // Sessions
   GameState,
   Session,
-  ConversationEntry,
   HistoryEntry,
   // Events (backend models)
   EventType,

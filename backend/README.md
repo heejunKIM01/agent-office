@@ -285,10 +285,9 @@ backend/
 │   ├── core/
 │   │   ├── handlers/          # Event type handlers
 │   │   │   ├── agent_handler.py       # Subagent lifecycle events
-│   │   │   ├── conversation_handler.py # User conversation events
+│   │   │   ├── conversation_handler.py # Prompt summary and the boss's reply on stop
 │   │   │   ├── session_handler.py     # Session start/end events
-│   │   │   ├── team_handler.py        # Agent Teams events (task_created/completed, teammate_idle)
-│   │   │   └── tool_handler.py        # Tool use events
+│   │   │   └── team_handler.py        # Agent Teams events (task_created/completed, teammate_idle)
 │   │   ├── beads_poller.py     # Beads issue tracker polling
 │   │   ├── broadcast_service.py   # State broadcast orchestration
 │   │   ├── constants.py       # Shared constants

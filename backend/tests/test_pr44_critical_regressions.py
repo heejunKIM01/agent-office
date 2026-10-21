@@ -89,7 +89,7 @@ async def test_concurrent_events_share_one_state_machine() -> None:
 
     Before the ``_sessions_lock`` guard, two events racing on a brand-new
     session could each create a fresh StateMachine, the second clobbering the
-    first and discarding the first event's conversation entry.
+    first and discarding the first event's history entry.
 
     Persistence is stubbed so the restore path stays empty — this isolates the
     in-memory create-under-lock logic from DB replay, which is what the lock
@@ -117,7 +117,8 @@ async def test_concurrent_events_share_one_state_machine() -> None:
     assert sm is not None
     # Every prompt must be recorded on the single shared StateMachine — none
     # lost to a clobbered/recreated instance.
-    assert len(sm.conversation) == count
+    prompts = [e for e in sm.history if e["type"] == "user_prompt_submit"]
+    assert len(prompts) == count
 
 
 # ---------------------------------------------------------------------------

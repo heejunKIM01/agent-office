@@ -4,7 +4,6 @@ Each sub-module is responsible for a cohesive group of event types:
 
 - ``session_handler``    -- SESSION_START, SESSION_END
 - ``agent_handler``      -- SUBAGENT_START, SUBAGENT_INFO, SUBAGENT_STOP, AGENT_UPDATE
-- ``tool_handler``       -- PRE_TOOL_USE, POST_TOOL_USE
 - ``conversation_handler`` -- USER_PROMPT_SUBMIT, STOP
 - ``team_handler``       -- TASK_CREATED, TASK_COMPLETED, TEAMMATE_IDLE
 """
@@ -34,7 +33,6 @@ from app.core.handlers.team_handler import (
     handle_task_created,
     handle_teammate_idle,
 )
-from app.core.handlers.tool_handler import handle_pre_tool_use
 
 __all__ = [
     # session
@@ -50,8 +48,6 @@ __all__ = [
     "enrich_agent_with_summaries",
     "enrich_agent_from_transcript",
     "extract_and_set_agent_speech",
-    # tool
-    "handle_pre_tool_use",
     # conversation
     "handle_user_prompt_submit",
     "handle_stop",

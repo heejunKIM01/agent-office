@@ -661,33 +661,32 @@ class TestReplayPagination:
     the StateMachine's prefix — the state snapshot at entry N must reflect
     every prior event, not just the windowed slice.
 
-    The full GameState dump carries volatile timestamps (``lastUpdated``,
-    ``newsItems[].timestamp`` stamped by ``datetime.now()`` during
-    reconstruction), so cross-request state equality is not stable. Instead we
-    assert event identity (windowing) and conversation/history length (proof
-    the SM transitioned through the full prefix — a broken SQL-level offset
-    would leave the conversation shorter at the first paginated entry).
+    The full GameState dump carries a volatile ``lastUpdated`` stamped by
+    ``datetime.now()`` during reconstruction, so cross-request state equality
+    is not stable. Instead we assert event identity (windowing) and the
+    subagents in the office (proof the SM transitioned through the full
+    prefix — a broken SQL-level offset would leave fewer subagents at the
+    first paginated entry).
     """
 
-    def _seed(self, prompt_count: int) -> str:
+    def _seed(self, agent_count: int) -> str:
         sid = f"replay-page-{uuid4()}"
         post_event(sid, "session_start", {"project_name": "ReplayTest"})
-        for i in range(prompt_count):
-            post_event(sid, "user_prompt_submit", {"prompt": f"prompt {i}"})
+        for i in range(agent_count):
+            post_event(sid, "subagent_start", {"agent_id": f"agent_{i}"})
         return sid
 
     @staticmethod
-    def _prefix_proof(entry: dict[str, Any]) -> tuple[int, int]:
-        """Return (conversation length, history length) — deterministic
-        indicators of how many events the StateMachine has transitioned through."""
-        state = entry["state"]
-        return (len(state.get("conversation", [])), len(state.get("history", [])))
+    def _prefix_proof(entry: dict[str, Any]) -> list[str]:
+        """Return the subagent ids in the office — a deterministic indicator of
+        how many events the StateMachine has transitioned through."""
+        return [agent["id"] for agent in entry["state"].get("agents", [])]
 
     def test_replay_without_pagination_returns_all(self) -> None:
         sid = self._seed(8)
         resp = client.get(f"/api/v1/sessions/{sid}/replay")
         assert resp.status_code == 200
-        # session_start + 8 prompts = 9 entries.
+        # session_start + 8 subagents = 9 entries.
         assert len(resp.json()) == 9
 
     def test_replay_offset_skips_first_n(self) -> None:
@@ -698,8 +697,8 @@ class TestReplayPagination:
         for i, entry in enumerate(paged):
             # Event identity matches the corresponding full entry (windowing).
             assert entry["event"] == full[5 + i]["event"]
-            # Conversation/history length matches — proving the SM replayed
-            # the full prefix rather than starting from the offset.
+            # The subagents match — proving the SM replayed the full prefix
+            # rather than starting from the offset.
             assert self._prefix_proof(entry) == self._prefix_proof(full[5 + i])
 
     def test_replay_limit_caps_response(self) -> None:

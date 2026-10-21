@@ -2,7 +2,6 @@
 
 Responsibilities:
 - Summarising user prompts and storing them on the StateMachine.
-- Capturing conversation history entries for user, assistant, and thinking roles.
 - Extracting boss speech from transcripts on STOP.
 """
 
@@ -16,7 +15,6 @@ from app.core.state_machine import StateMachine
 from app.core.summary_service import get_summary_service
 from app.models.common import BubbleContent, BubbleType
 from app.models.events import LifecycleEvent, PromptEvent
-from app.models.sessions import ConversationEntry
 
 __all__ = [
     "handle_user_prompt_submit",
@@ -28,20 +26,14 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-async def handle_user_prompt_submit(
-    sm: StateMachine,
-    event: PromptEvent,
-    agent_id: str,
-) -> None:
+async def handle_user_prompt_submit(sm: StateMachine, event: PromptEvent) -> None:
     """Handle a USER_PROMPT_SUBMIT event.
 
-    Summarises the user prompt, stores it as the boss's current task, and
-    captures the prompt in the conversation history.
+    Summarises the user prompt and stores it as the boss's current task.
 
     Args:
         sm: The StateMachine for this session.
         event: The USER_PROMPT_SUBMIT event.
-        agent_id: The resolved agent ID (``"main"`` for the boss).
     """
     if not event.data.prompt:
         return
@@ -50,34 +42,18 @@ async def handle_user_prompt_submit(
     sm.boss_current_task = await summary_service.summarize_user_prompt(event.data.prompt)
     logger.debug(f"Boss current task set to: {sm.boss_current_task}")
 
-    # Skip task-notification messages from the conversation history.
-    if "<task-notification>" not in event.data.prompt:
-        conv_entry: ConversationEntry = {
-            "id": str(event.timestamp.timestamp()),
-            "role": "user",
-            "agentId": agent_id or "main",
-            "text": event.data.prompt,
-            "timestamp": event.timestamp.isoformat(),
-        }
-        sm.append_capped(conv_entry)
-
     await broadcast_state(event.session_id, sm)
 
 
-async def handle_stop(
-    sm: StateMachine,
-    event: LifecycleEvent,
-    agent_id: str,
-) -> None:
+async def handle_stop(sm: StateMachine, event: LifecycleEvent) -> None:
     """Handle a STOP event.
 
-    Extracts the assistant's last response from the transcript, sets the boss
-    speech bubble, and captures the response in conversation history.
+    Extracts the assistant's last response from the transcript and shows its
+    summary as the boss speech bubble.
 
     Args:
         sm: The StateMachine for this session.
         event: The STOP event.
-        agent_id: The resolved agent ID (``"main"`` for the boss).
     """
     logger.info(
         f"STOP event: boss_bubble before extract = "
@@ -89,22 +65,12 @@ async def handle_stop(
     # reply itself as the boss's speech.
     reply = event.data.speech_content.boss if event.data.speech_content else None
     if full_response is None and reply:
-        full_response = await set_boss_speech(sm, reply)
+        await set_boss_speech(sm, reply)
 
     logger.info(
         f"STOP event: boss_bubble after extract = "
         f"{sm.boss_bubble.text[:50] if sm.boss_bubble else 'None'}..."
     )
-
-    if full_response:
-        assistant_entry: ConversationEntry = {
-            "id": str(event.timestamp.timestamp()),
-            "role": "assistant",
-            "agentId": agent_id or "main",
-            "text": full_response,
-            "timestamp": event.timestamp.isoformat(),
-        }
-        sm.append_capped(assistant_entry)
 
     await broadcast_state(event.session_id, sm)
 

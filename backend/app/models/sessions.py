@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import NotRequired, TypedDict, cast
+from typing import TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -8,22 +8,10 @@ from app.models.agents import Agent, Boss
 from app.models.common import TodoItem
 
 __all__ = [
-    "ConversationEntry",
     "Session",
     "HistoryEntry",
     "GameState",
 ]
-
-
-class ConversationEntry(TypedDict):
-    """A single turn in the conversation history."""
-
-    id: str
-    role: str  # "user" | "assistant" | "thinking" | "tool"
-    agentId: str
-    text: str
-    timestamp: str
-    toolName: NotRequired[str]  # Only set for "tool" role entries
 
 
 class Session(BaseModel):
@@ -61,7 +49,4 @@ class GameState(BaseModel):
     todos: list[TodoItem] = Field(default_factory=lambda: cast(list[TodoItem], []))
     arrival_queue: list[str] = Field(default_factory=lambda: cast(list[str], []))
     departure_queue: list[str] = Field(default_factory=lambda: cast(list[str], []))
-    conversation: list[ConversationEntry] = Field(
-        default_factory=lambda: cast(list[ConversationEntry], [])
-    )
     coding_agent: str | None = None

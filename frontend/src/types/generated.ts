@@ -134,12 +134,6 @@ export type BossState =
   | "completing";
 export type Currenttask1 = string | null;
 export type Turnactive = boolean;
-export type Id1 = string;
-export type Role = string;
-export type Agentid = string;
-export type Text1 = string;
-export type Timestamp = string;
-export type Toolname = string;
 /**
  * Types of events sent from Claude Code hooks.
  *
@@ -171,7 +165,7 @@ export type EventType =
   | "task_completed"
   | "teammate_idle";
 export type SessionId = string;
-export type Timestamp1 = string;
+export type Timestamp = string;
 export type ProjectName2 = string | null;
 export type ProjectDir2 = string | null;
 export type WorkingDir2 = string | null;
@@ -232,11 +226,11 @@ export type CacheCreationTokens3 = number | null;
 export type Sessionid = string;
 export type Agents = Agent[];
 export type Lastupdated = string;
-export type Id2 = string;
+export type Id1 = string;
 export type Type = string;
-export type Agentid1 = string;
+export type Agentid = string;
 export type Summary4 = string;
-export type Timestamp2 = string;
+export type Timestamp1 = string;
 export type History = HistoryEntry[];
 export type TaskId1 = string;
 export type Content = string;
@@ -258,7 +252,6 @@ export type Metadata = {
 export type Todos = TodoItem[];
 export type Arrivalqueue = string[];
 export type Departurequeue = string[];
-export type Conversation = ConversationEntry[];
 export type Codingagent = string | null;
 export type ProjectName4 = string | null;
 export type ProjectDir4 = string | null;
@@ -309,7 +302,7 @@ export type OutputTokens5 = number | null;
 export type CacheReadTokens5 = number | null;
 export type CacheCreationTokens5 = number | null;
 export type Prompt1 = string | null;
-export type Id3 = string;
+export type Id2 = string;
 export type CreatedAt = string;
 export type UpdatedAt = string;
 export type Status = string;
@@ -530,21 +523,6 @@ export interface Position1 {
   [k: string]: number;
 }
 /**
- * A single turn in the conversation history.
- *
- * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
- * via the `definition` "ConversationEntry".
- */
-export interface ConversationEntry {
-  id: Id1;
-  role: Role;
-  agentId: Agentid;
-  text: Text1;
-  timestamp: Timestamp;
-  toolName?: Toolname;
-  [k: string]: unknown;
-}
-/**
  * An event from Claude Code hooks.
  *
  * Deprecated (ARC-014): the backend's ingestion route, replay, dispatch
@@ -560,7 +538,7 @@ export interface ConversationEntry {
 export interface Event {
   event_type: EventType;
   session_id: SessionId;
-  timestamp?: Timestamp1;
+  timestamp?: Timestamp;
   data: EventData;
   [k: string]: unknown;
 }
@@ -663,7 +641,6 @@ export interface GameState {
   todos?: Todos;
   arrivalQueue?: Arrivalqueue;
   departureQueue?: Departurequeue;
-  conversation?: Conversation;
   codingAgent?: Codingagent;
   [k: string]: unknown;
 }
@@ -674,11 +651,11 @@ export interface GameState {
  * via the `definition` "HistoryEntry".
  */
 export interface HistoryEntry {
-  id: Id2;
+  id: Id1;
   type: Type;
-  agentId: Agentid1;
+  agentId: Agentid;
   summary: Summary4;
-  timestamp: Timestamp2;
+  timestamp: Timestamp1;
   detail: Detail;
   [k: string]: unknown;
 }
@@ -802,7 +779,7 @@ export interface PromptEventData {
  * via the `definition` "Session".
  */
 export interface Session {
-  id: Id3;
+  id: Id2;
   created_at: CreatedAt;
   updated_at: UpdatedAt;
   status: Status;

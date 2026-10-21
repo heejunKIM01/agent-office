@@ -44,7 +44,7 @@ from app.models.sessions import (  # noqa: E402  # type: ignore[import]
 from pydantic.json_schema import models_json_schema  # noqa: E402
 
 # All Pydantic BaseModel subclasses to generate types for
-# (TypedDict classes like ConversationEntry and HistoryEntry are not BaseModel
+# (TypedDict classes like HistoryEntry are not BaseModel
 # subclasses so they cannot be used with models_json_schema; they are handled
 # manually in index.ts)
 MODELS = [
