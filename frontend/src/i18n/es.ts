@@ -13,6 +13,9 @@ const es: Record<TranslationKey, string> = {
   "settings.autoFollow": "Seguir nuevas sesiones automáticamente",
   "settings.autoFollowDesc":
     "Cambiar automáticamente a nuevas sesiones en el proyecto actual",
+  "settings.floorTogether": "Ver las otras sesiones del piso",
+  "settings.floorTogetherDesc":
+    "El Claude de otras sesiones que trabajan en el mismo piso entra en la oficina. Desactivado, solo se ve la sesión elegida.",
   "settings.language": "Idioma",
   "settings.tabs.general": "General",
   "settings.tabs.connect": "Conectar",
@@ -99,6 +102,7 @@ const es: Record<TranslationKey, string> = {
   "iso.floor.sessions_other": "{count} sesiones",
   "iso.floor.activeNow": "Activo ahora",
   "iso.floor.follow": "Seguir la sesión más reciente",
+  "iso.floor.together": "Ver las otras sesiones del piso",
   "iso.floor.untitled": "Sesión sin título · {id}",
   "iso.floor.moreIdle": "{count} pisos tranquilos más",
   "iso.floor.moreIdle_one": "{count} piso tranquilo más",
