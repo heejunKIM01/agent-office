@@ -12,23 +12,19 @@ import { textTexture } from "./isoTextures";
 
 const materials = new Map<string, THREE.MeshLambertMaterial>();
 
-/**
- * Glows that keep the walls, the plate's sides and the boards light by day.
- * The dark theme turns them down; screens and rack LEDs keep their glow.
- */
-const SURFACE_GLOWS: ReadonlySet<string> = new Set([
-  C.plateGlow,
-  C.wallGlow,
-  C.wallCap,
-  C.boardGlow,
-]);
-let surfaceGlow = 1;
+/** What the windows show at night: the sky and the towers turn dark. */
+const NIGHT_COLORS: Readonly<Record<string, string>> = {
+  [C.window]: C.nightWindow,
+  [C.skyline]: C.nightSkyline,
+};
+let night = false;
 
-/** Scale every surface glow (1 by day); materials made later take it too. */
-export function setSurfaceGlow(intensity: number): void {
-  surfaceGlow = intensity;
-  for (const found of materials.values()) {
-    if (found.userData.surfaceGlow) found.emissiveIntensity = intensity;
+/** Switch the view out of the windows; materials made later follow it too. */
+export function setNightView(isNight: boolean): void {
+  night = isNight;
+  for (const [key, found] of materials) {
+    const day = key.split("|")[0];
+    if (day in NIGHT_COLORS) found.color.set(night ? NIGHT_COLORS[day] : day);
   }
 }
 
@@ -47,10 +43,7 @@ export function material(
       depthWrite: options.opacity === undefined || options.opacity >= 1,
       emissive: options.emissive ?? "#000000",
     });
-    if (options.emissive && SURFACE_GLOWS.has(options.emissive)) {
-      found.userData.surfaceGlow = true;
-      found.emissiveIntensity = surfaceGlow;
-    }
+    if (night && color in NIGHT_COLORS) found.color.set(NIGHT_COLORS[color]);
     materials.set(key, found);
   }
   return found;
