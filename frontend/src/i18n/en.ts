@@ -68,6 +68,7 @@ const en = {
   "iso.panel.working": "Working",
   "iso.panel.tools": "{count} tools · {seconds}s",
   "iso.panel.tools_one": "{count} tool · {seconds}s",
+  "iso.panel.colleague": "Another session on this floor · {seconds}s",
   "iso.panel.tools_other": "{count} tools · {seconds}s",
   "iso.panel.log": "Activity log",
   "iso.panel.logTime": "{h}:{m}:{s}",

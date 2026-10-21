@@ -22,6 +22,7 @@ import {
 } from "@/systems/queuePositions";
 import type { Agent, GameState, Position } from "@/types";
 import { MIN_DESK_COUNT } from "@/constants/positions";
+import { isQuietTurn } from "@/systems/officePeople";
 
 // ============================================================================
 // SPAWN-POLICY (pure) — the 4-way branch extracted from handleStateUpdate.
@@ -253,11 +254,7 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
   // Quiet spell: mid-turn, no tool running, not stuck. Kept from its first
   // snapshot so a long think can be told from a short pause (bossErrands).
   const turnActive = state.boss.turnActive ?? false;
-  const isQuiet =
-    turnActive &&
-    !state.boss.activity &&
-    !state.boss.stuck &&
-    (state.boss.state === "idle" || state.boss.state === "receiving");
+  const isQuiet = isQuietTurn(state.boss);
   store.updateBossTurn({
     stuck: state.boss.stuck ?? null,
     turnActive,

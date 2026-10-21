@@ -10,6 +10,11 @@ import type { Session } from "@/hooks/useSessions";
 export const ACTIVE_NOW_MS = 2 * 60 * 1000;
 /** Floors quiet for longer than this fold under 「오래 쉰 층 N개 더 보기」. */
 export const IDLE_FLOOR_MS = 60 * 60 * 1000;
+/**
+ * At most this many other sessions send their lead agent into the office:
+ * the dev room has eleven free chairs and subagents need the rest.
+ */
+export const MAX_COLLEAGUES = 5;
 
 export interface Floor {
   /** 1-based floor number; 1F is the project whose first session is oldest. */
@@ -75,6 +80,21 @@ export function buildFloors(sessions: Session[], now = Date.now()): Floor[] {
       };
     })
     .reverse();
+}
+
+/**
+ * The other sessions on a floor that are working now, newest first: their
+ * lead agents work in the office beside the session shown.
+ */
+export function floorColleagues(
+  floor: Floor | undefined,
+  sessionId: string | null,
+  now: number,
+): Session[] {
+  if (!floor) return [];
+  return floor.sessions
+    .filter((session) => session.id !== sessionId && isActiveNow(session, now))
+    .slice(0, MAX_COLLEAGUES);
 }
 
 /** The floor a session belongs to. */

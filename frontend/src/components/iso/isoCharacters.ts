@@ -25,6 +25,8 @@ const LOOKS: Record<PersonKind, Look> = {
   claude: { shirt: C.claudeShirt, hair: C.claudeHair, pants: C.pants },
   me: { shirt: C.myShirt, hair: C.darkHair, pants: C.myPants },
   subagent: { shirt: C.subagentShirt, hair: C.darkHair, pants: C.pants },
+  // Another session's lead agent is a Claude too; its chip tells them apart.
+  colleague: { shirt: C.claudeShirt, hair: C.claudeHair, pants: C.pants },
 };
 
 /** Explore comes in green with a cap, Plan in purple with glasses (작성자 댓글). */

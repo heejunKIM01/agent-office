@@ -10,6 +10,10 @@
  * A subagent the backend has just made comes by elevator; one whose work
  * is done stays listed as leaving, so it can report and go home. Explore
  * wears green and Plan purple (작성자 댓글).
+ *
+ * Other sessions working on the same floor send their lead agent in as a
+ * colleague: it takes a free dev chair and walks to the rooms its own
+ * session works in.
  */
 
 import type { Activity, BubbleContent, StuckReason } from "@/types";
@@ -19,7 +23,7 @@ import type {
   BubbleState,
 } from "@/stores/slices/types";
 
-export type PersonKind = "claude" | "me" | "subagent";
+export type PersonKind = "claude" | "me" | "subagent" | "colleague";
 
 /** What a subagent wears, by its type. */
 export type Outfit = "general" | "explore" | "plan";
@@ -45,6 +49,38 @@ export interface IsoPerson {
   /** A subagent whose work is done: it reports to Claude and goes home. */
   leaving: boolean;
   outfit: Outfit;
+}
+
+/** Another session's lead agent on this floor, as `/ws/overview` reports it. */
+export interface Colleague {
+  sessionId: string;
+  /** Its lead agent's name and its session's title, for the chip. */
+  agentName: string;
+  title: string;
+  activity: Activity | null;
+  stuck: StuckReason | null;
+  bubble: BubbleContent | null;
+  /** When its bubble last changed (Date.now ms). */
+  bubbleAt: number | null;
+  thinking: boolean;
+}
+
+/**
+ * Mid-turn with no tool running and not stuck: the lead agent is thinking
+ * (a long think is told from a short pause by how long this lasts).
+ */
+export function isQuietTurn(boss: {
+  state: string;
+  activity?: Activity | null;
+  stuck?: StuckReason | null;
+  turnActive?: boolean;
+}): boolean {
+  return (
+    (boss.turnActive ?? false) &&
+    !boss.activity &&
+    !boss.stuck &&
+    (boss.state === "idle" || boss.state === "receiving")
+  );
 }
 
 /** Words the chips need, already translated. */
@@ -123,7 +159,7 @@ const said = (bubble: BubbleState): Pick<IsoPerson, "bubble" | "bubbleAt"> => ({
   bubbleAt: bubble.displayStartTime,
 });
 
-/** Everyone to show, Claude and me first. */
+/** Everyone to show: Claude and me first, then subagents, then colleagues. */
 export function officePeople(
   state: {
     boss: {
@@ -136,6 +172,7 @@ export function officePeople(
     agents: Map<string, AgentAnimationState>;
   },
   words: PeopleWords,
+  colleagues: Colleague[] = [],
 ): IsoPerson[] {
   const people: IsoPerson[] = [
     {
@@ -184,6 +221,22 @@ export function officePeople(
       arriving: ARRIVING_STATES.has(agent.backendState),
       leaving,
       outfit: outfitOf(agent.agentType),
+    });
+  }
+  for (const colleague of colleagues) {
+    people.push({
+      id: `colleague:${colleague.sessionId}`,
+      kind: "colleague",
+      label: `${colleague.agentName} · ${colleague.title}`,
+      title: colleague.title,
+      typeLabel: colleague.agentName,
+      ...doing(colleague.activity, colleague.stuck),
+      bubble: colleague.bubble,
+      bubbleAt: colleague.bubbleAt,
+      thinking: colleague.thinking,
+      arriving: false,
+      leaving: false,
+      outfit: "general",
     });
   }
   return people;
