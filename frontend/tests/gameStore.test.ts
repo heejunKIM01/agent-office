@@ -396,7 +396,6 @@ describe("reset variants", () => {
     addAgent("A");
     useGameStore.getState().enqueueArrival("A");
     useGameStore.getState().setSessionId("sess-123");
-    useGameStore.getState().setDebugMode(true);
     useGameStore.getState().setReplaying(true);
     useGameStore.getState().setCodingAgent("opencode");
   }
@@ -415,12 +414,6 @@ describe("reset variants", () => {
     it("forgets the coding agent", () => {
       useGameStore.getState().reset();
       expect(useGameStore.getState().codingAgent).toBeNull();
-    });
-
-    it("clears debugMode back to its default", () => {
-      useGameStore.getState().reset();
-      const s = useGameStore.getState();
-      expect(s.debugMode).toBe(false);
     });
 
     it("leaves isReplaying false", () => {
@@ -457,12 +450,6 @@ describe("reset variants", () => {
     it("forgets the previous session's coding agent", () => {
       useGameStore.getState().resetForSessionSwitch();
       expect(useGameStore.getState().codingAgent).toBeNull();
-    });
-
-    it("PRESERVES debugMode and debug overlay toggles (user preference)", () => {
-      useGameStore.getState().resetForSessionSwitch();
-      const s = useGameStore.getState();
-      expect(s.debugMode).toBe(true);
     });
 
     it("sets isReplaying=false so the WebSocket may reconnect", () => {

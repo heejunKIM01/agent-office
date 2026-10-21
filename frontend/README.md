@@ -179,7 +179,7 @@ The unified store (`stores/gameStore.ts`) contains:
 | Agents   | `agents`, `arrivalQueue`, `departureQueue`      |
 | Boss     | `boss`, `bossErrand`                            |
 | Office   | `sessionId`, `todos`, `eventLog`, `codingAgent` |
-| UI       | `isConnected`, `isReplaying`, `debugMode`       |
+| UI       | `isConnected`, `isReplaying`                    |
 
 ### Selectors
 

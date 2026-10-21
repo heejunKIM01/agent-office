@@ -59,7 +59,6 @@ import { createBossSlice, initialBossSliceState } from "./slices/bossSlice";
 import { createBubbleSlice } from "./slices/bubbleSlice";
 import { createOfficeSlice, initialOfficeState } from "./slices/officeSlice";
 import { createReplaySlice, initialReplayState } from "./slices/replaySlice";
-import { createDebugSlice, initialDebugState } from "./slices/debugSlice";
 import {
   createEmptyBubbleState,
   initialBossErrandState,
@@ -187,24 +186,12 @@ export interface GameStore {
   replayEvents: ReplayFrame[];
   currentReplayIndex: number;
 
-  // Debug state
-  debugMode: boolean;
-  showPaths: boolean;
-  showQueueSlots: boolean;
-  showPhaseLabels: boolean;
-  showObstacles: boolean;
-
   // UI actions
   setConnected: (connected: boolean) => void;
   setReplaying: (replaying: boolean) => void;
   setReplaySpeed: (speed: number) => void;
   setReplayEvents: (events: ReplayFrame[]) => void;
   setReplayIndex: (index: number) => void;
-  setDebugMode: (enabled: boolean) => void;
-  toggleDebugOverlay: (
-    overlay: "paths" | "queueSlots" | "phaseLabels" | "obstacles",
-  ) => void;
-  loadPersistedDebugSettings: () => void;
 
   // ========== Top-level Actions ==========
   reset: () => void;
@@ -223,7 +210,6 @@ const initialState = {
   ...initialBossSliceState,
   ...initialOfficeState,
   ...initialReplayState,
-  ...initialDebugState,
 };
 
 // ============================================================================
@@ -242,7 +228,6 @@ export const useGameStore = create<GameStore>()(
     ...createBubbleSlice(set, get, api),
     ...createOfficeSlice(set, get, api),
     ...createReplaySlice(set, get, api),
-    ...createDebugSlice(set, get, api),
 
     // ========================================================================
     // TOP-LEVEL ACTIONS (cross-cutting: reset variants reconcile every slice)
@@ -286,7 +271,6 @@ export const useGameStore = create<GameStore>()(
         isReplaying: false, // Important: allow WebSocket to reconnect
         replayEvents: [],
         currentReplayIndex: -1,
-        // Debug settings are preserved (not reset)
       }),
   })),
 );
@@ -303,13 +287,7 @@ export const selectArrivalQueue = (state: GameStore) => state.arrivalQueue;
 export const selectDepartureQueue = (state: GameStore) => state.departureQueue;
 export const selectIsConnected = (state: GameStore) => state.isConnected;
 export const selectIsReplaying = (state: GameStore) => state.isReplaying;
-export const selectDebugMode = (state: GameStore) => state.debugMode;
 export const selectSessionId = (state: GameStore) => state.sessionId;
-export const selectShowPaths = (state: GameStore) => state.showPaths;
-export const selectShowQueueSlots = (state: GameStore) => state.showQueueSlots;
-export const selectShowPhaseLabels = (state: GameStore) =>
-  state.showPhaseLabels;
-export const selectShowObstacles = (state: GameStore) => state.showObstacles;
 export const selectTodos = (state: GameStore) => state.todos;
 export const selectEventLog = (state: GameStore) => state.eventLog;
 export const selectCodingAgent = (state: GameStore) => state.codingAgent;
