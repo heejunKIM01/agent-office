@@ -62,3 +62,32 @@ export function globeSpeed(
   const step = GLOBE_EASE * dt;
   return current + Math.max(-step, Math.min(step, target - current));
 }
+
+/** Books a reader piles up beside it in the library, at most. */
+export const MAX_PILE = 6;
+
+/** A reader's pile of books in the library, and the bubble that added the last one. */
+export interface BookPile {
+  count: number;
+  /** When the tool bubble that added the newest book appeared. */
+  lastBubbleAt: number | null;
+}
+
+export const NO_PILE: BookPile = { count: 0, lastBubbleAt: null };
+
+/**
+ * Each new reading tool (a new tool bubble) while it works in the library
+ * adds a book to its pile, up to MAX_PILE; leaving the library clears it.
+ */
+export function bookPile(
+  pile: BookPile,
+  inLibrary: boolean,
+  reading: boolean,
+  bubbleAt: number | null,
+): BookPile {
+  if (!inLibrary) return pile.count === 0 ? pile : NO_PILE;
+  if (!reading || bubbleAt === null || bubbleAt === pile.lastBubbleAt) {
+    return pile;
+  }
+  return { count: Math.min(MAX_PILE, pile.count + 1), lastBubbleAt: bubbleAt };
+}

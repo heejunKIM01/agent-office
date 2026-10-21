@@ -43,7 +43,12 @@ import {
 } from "@/systems/isoErrands";
 import { findFloorPath } from "@/systems/isoNavGrid";
 import { loungeAct } from "@/systems/loungeActs";
-import { watchesTheClock } from "@/systems/roomGimmicks";
+import {
+  NO_PILE,
+  bookPile,
+  watchesTheClock,
+  type BookPile,
+} from "@/systems/roomGimmicks";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import {
@@ -121,6 +126,8 @@ interface Placed {
   loungeSince: number | null;
   /** When its command started (performance.now ms), while one runs. */
   runningSince: number | null;
+  /** The books it has piled up reading in the library. */
+  pile: BookPile;
   walker: IsoWalker;
   seat: IsoSpot;
   /** What it tells Claude when its work is done, read when it gets there. */
@@ -224,6 +231,7 @@ export class IsoPeople {
         thinkingSince: null,
         loungeSince: null,
         runningSince: null,
+        pile: NO_PILE,
         walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
@@ -308,6 +316,7 @@ export class IsoPeople {
         act,
       );
       if (activity === "running") inUse.serverBusy = true;
+      this.stackBooks(placed);
       if (act === "tv") inUse.tvOn = true;
       if (activity === "browsing") inUse.browsing = true;
       if (walker.pose === "type") inUse.editingSeats.push(placed.seat);
@@ -409,6 +418,22 @@ export class IsoPeople {
       return watchesTheClock(running) ? "watch" : null;
     }
     return null;
+  }
+
+  /** Pile a book beside a reader for each new thing it reads in the library. */
+  private stackBooks(placed: Placed): void {
+    const { walker, person } = placed;
+    const pile = bookPile(
+      placed.pile,
+      walker.goal === "library" && !walker.path && walker.pose === "work",
+      person.activity === "reading",
+      person.bubbleAt,
+    );
+    if (pile === placed.pile) return;
+    placed.pile = pile;
+    placed.rig.pile.children.forEach((book, i) => {
+      book.visible = i < pile.count;
+    });
   }
 
   /** Take everyone off the floor; the next `sync` places them afresh. */
