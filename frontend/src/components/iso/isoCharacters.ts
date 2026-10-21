@@ -7,6 +7,7 @@
 
 import * as THREE from "three";
 import type { IsoPose, IsoRoomId } from "@/systems/isoErrands";
+import type { LoungeAct } from "@/systems/loungeActs";
 import type { Outfit, PersonKind } from "@/systems/officePeople";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, cylinder, material } from "./isoFurniture";
@@ -52,8 +53,10 @@ export interface CharacterRig {
   legs: [THREE.Group, THREE.Group];
   arms: [THREE.Group, THREE.Group];
   book: THREE.Object3D;
-  /** A mug in the right hand while having a coffee at the cafe. */
+  /** A mug in the right hand while having a coffee (cafe, lounge). */
   cup: THREE.Object3D;
+  /** A phone held in both hands, looked at on the lounge sofa. */
+  handset: THREE.Object3D;
   /** A handset at the ear while Claude calls a subagent in. */
   phone: THREE.Object3D;
   /** Cold sweat beside the head while a failed tool keeps it stuck. */
@@ -194,6 +197,12 @@ export function buildCharacter(
   cup.visible = false;
   arms[1].add(cup);
 
+  // Held low in both hands in front, screen up.
+  const handset = box(0.22, 0.04, 0.36, C.phone, 0, 0.3, 0.62);
+  handset.rotation.x = 0.5;
+  handset.visible = false;
+  hips.add(handset);
+
   // Held at the left ear, where the raised left hand meets it: seated at
   // its desk, Claude shows its left side to the camera.
   const phone = box(0.22, 0.56, 0.16, C.phone, -0.84, 1, 0.25);
@@ -222,7 +231,18 @@ export function buildCharacter(
   chipAnchor.position.set(0, 2.2, 0);
   hips.add(chipAnchor);
 
-  return { root, hips, legs, arms, book, cup, phone, sweat, chipAnchor };
+  return {
+    root,
+    hips,
+    legs,
+    arms,
+    book,
+    cup,
+    handset,
+    phone,
+    sweat,
+    chipAnchor,
+  };
 }
 
 /** Where the sweat drops start, beside the head (x, y, z in the hips' frame). */
@@ -258,6 +278,32 @@ function workArms(room: IsoRoomId | null, seconds: number): [number, number] {
   }
 }
 
+/** Arm angles (about x) for each lounge pastime, seated on the sofa. */
+function loungeArms(act: LoungeAct, seconds: number): [number, number] {
+  switch (act) {
+    case "coffee":
+      // the mug in the right hand, raised to the mouth now and then
+      return [-0.35, -0.9 - 1.1 * Math.max(0, Math.sin(seconds * 1.6)) ** 4];
+    case "phone": {
+      const thumb = 0.04 * Math.sin(seconds * 7);
+      return [-1.05 + thumb, -1.05 - thumb];
+    }
+    case "book":
+      return [-1.0, -1.0];
+    case "tv":
+      return [-0.35, -0.35];
+    case "doze":
+      return [-0.25, -0.25];
+  }
+}
+
+/** Leaning back to watch TV, slumped and nodding while dozing (about x). */
+function loungeLean(act: LoungeAct, seconds: number): number {
+  if (act === "tv") return -0.12;
+  if (act === "doze") return 0.2 + 0.07 * Math.sin(seconds * 1.3);
+  return 0;
+}
+
 /** Sweat drops slide down and start again, each on its own beat. */
 function drip(sweat: THREE.Group, seconds: number): void {
   sweat.children.forEach((drop, i) => {
@@ -273,7 +319,8 @@ function drip(sweat: THREE.Group, seconds: number): void {
  * talking at my desk. A stuck person (a failed tool) props its chin on a
  * hand and sweats (spec R3). Standing to report it talks with a hand, waving
  * it raises its left arm, and on the phone (seated) it holds a handset to
- * its ear. ``seconds`` drives the motion.
+ * its ear. Seated in the lounge it keeps busy with ``act`` (a coffee, its
+ * phone, a book, the TV, a doze). ``seconds`` drives the motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
@@ -281,12 +328,18 @@ export function poseCharacter(
   room: IsoRoomId | null,
   seconds: number,
   stuck = false,
+  act: LoungeAct | null = null,
 ): void {
   const [legL, legR] = rig.legs;
   const [armL, armR] = rig.arms;
-  rig.book.visible = pose === "work" && room === "library" && !stuck;
-  rig.cup.visible = pose === "work" && room === "cafe" && !stuck;
+  const pastime = pose === "sit" && !stuck ? act : null;
+  rig.book.visible =
+    (pose === "work" && room === "library" && !stuck) || pastime === "book";
+  rig.cup.visible =
+    (pose === "work" && room === "cafe" && !stuck) || pastime === "coffee";
+  rig.handset.visible = pastime === "phone";
   rig.phone.visible = pose === "phone";
+  rig.hips.rotation.x = pastime ? loungeLean(pastime, seconds) : 0;
   rig.sweat.visible = stuck;
   if (stuck) drip(rig.sweat, seconds);
   // Only waving and the phone swing an arm out sideways.
@@ -312,6 +365,9 @@ export function poseCharacter(
     if (pose === "phone") {
       armL.rotation.x = PHONE_ARM[0];
       armL.rotation.z = PHONE_ARM[1];
+    }
+    if (pastime) {
+      [armL.rotation.x, armR.rotation.x] = loungeArms(pastime, seconds);
     }
     rig.hips.position.y = SEATED_HIP_HEIGHT;
     return;

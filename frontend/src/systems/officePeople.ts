@@ -55,6 +55,8 @@ export interface IsoPerson {
    * conversation is compacted, in the lounge with its turn over.
    */
   breakRoom: BreakRoomId | null;
+  /** Resting in the lounge: when the last event came (Date.now ms), for its pastimes. */
+  idleSince: number | null;
   outfit: Outfit;
 }
 
@@ -204,6 +206,7 @@ export function officePeople(
   colleagues: Colleague[] = [],
 ): IsoPerson[] {
   const compacting = isCompacting(state.eventLog);
+  const claudeBreak = breakRoomOf(compacting, state.boss.turnActive);
   const people: IsoPerson[] = [
     {
       id: "claude",
@@ -217,7 +220,11 @@ export function officePeople(
       thinking: state.boss.quietSince !== null && !compacting,
       arriving: false,
       leaving: false,
-      breakRoom: breakRoomOf(compacting, state.boss.turnActive),
+      breakRoom: claudeBreak,
+      idleSince:
+        claudeBreak === "lounge"
+          ? (state.eventLog[0]?.timestamp.getTime() ?? null)
+          : null,
       outfit: "general",
     },
     {
@@ -234,6 +241,7 @@ export function officePeople(
       arriving: false,
       leaving: false,
       breakRoom: null,
+      idleSince: null,
       outfit: "general",
     },
   ];
@@ -254,6 +262,7 @@ export function officePeople(
       arriving: ARRIVING_STATES.has(agent.backendState),
       leaving,
       breakRoom: null,
+      idleSince: null,
       outfit: outfitOf(agent.agentType),
     });
   }
@@ -271,6 +280,7 @@ export function officePeople(
       arriving: false,
       leaving: false,
       breakRoom: null,
+      idleSince: null,
       outfit: "general",
     });
   }

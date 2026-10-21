@@ -242,6 +242,24 @@ describe("officePeople — breaks", () => {
     expect(idle.breakRoom).toBe("cafe");
   });
 
+  it("dates Claude's rest in the lounge from the last event", () => {
+    const stop = { ...compaction("stop"), timestamp: new Date(42_000) };
+    const [idle] = officePeople(
+      {
+        boss: boss({ turnActive: false }),
+        agents: new Map(),
+        eventLog: [stop],
+      },
+      WORDS,
+    );
+    expect(idle).toMatchObject({ breakRoom: "lounge", idleSince: 42_000 });
+    const [busy] = officePeople(
+      { boss: boss(), agents: new Map(), eventLog: [stop] },
+      WORDS,
+    );
+    expect(busy.idleSince).toBeNull();
+  });
+
   it("ends the coffee with the next event", () => {
     expect(isCompacting([])).toBe(false);
     expect(isCompacting([compaction("context_compaction")])).toBe(true);
