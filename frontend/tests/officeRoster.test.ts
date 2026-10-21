@@ -36,7 +36,7 @@ function person(fields: Partial<IsoPerson>): IsoPerson {
     thinking: false,
     arriving: false,
     leaving: false,
-    resting: false,
+    breakRoom: null,
     outfit: "general",
     ...fields,
   };

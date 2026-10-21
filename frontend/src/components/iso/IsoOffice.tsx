@@ -103,6 +103,7 @@ export function IsoOffice({
       thinkingFor: (seconds) => t("iso.bubble.thinkingFor", { seconds }),
       looking: t("iso.bubble.looking"),
       bye: t("iso.bubble.bye"),
+      compacting: t("iso.bubble.compacting"),
     }),
     [t],
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Activity } from "@/types";
-import type { IsoSpot } from "@/constants/isoFloorPlan";
+import type { BreakRoomId, IsoSpot } from "@/constants/isoFloorPlan";
 import { ERRAND_LINGER_MS } from "@/systems/bossErrands";
 import {
   BYE_MS,
@@ -41,7 +41,7 @@ function run(
   stuck = false,
   leaving = false,
   onStep?: (walker: IsoWalker, now: number) => void,
-  resting = false,
+  breakRoom: BreakRoomId | null = null,
 ): { walker: IsoWalker; now: number } {
   let w = walker;
   let now = start;
@@ -56,7 +56,7 @@ function run(
       now,
       dt: 0.1,
       leaving,
-      resting,
+      breakRoom,
       reportSpot: () => REPORT,
       elevator: ELEVATOR,
     });
@@ -355,7 +355,7 @@ describe("iso errands", () => {
 
 describe("stepIsoWalker — resting in the lounge", () => {
   const rest = (walker: IsoWalker, seconds: number, start = 0) =>
-    run(walker, null, seconds, start, false, false, undefined, true);
+    run(walker, null, seconds, start, false, false, undefined, "lounge");
   const walkTo = (from: IsoSpot, to: IsoSpot): number =>
     Math.hypot(to.x - from.x, to.z - from.z) / 3.2;
 
@@ -412,8 +412,45 @@ describe("stepIsoWalker — resting in the lounge", () => {
       false,
       false,
       undefined,
-      true,
+      "lounge",
     );
     expect(walker.goal).toBe("library");
+  });
+});
+
+describe("stepIsoWalker — coffee while compacting", () => {
+  const sip = (walker: IsoWalker, seconds: number, start = 0) =>
+    run(walker, null, seconds, start, false, false, undefined, "cafe");
+  const walkTo = (from: IsoSpot, to: IsoSpot): number =>
+    Math.hypot(to.x - from.x, to.z - from.z) / 3.2;
+
+  it("goes from its seat to the cafe and stands there with a coffee", () => {
+    const there = sip(
+      seatedWalker(SEAT),
+      ERRAND_LINGER_MS / 1000 + walkTo(SEAT, SPOTS.cafe) + 0.3,
+    );
+    expect(there.walker).toMatchObject({
+      goal: "cafe",
+      x: SPOTS.cafe.x,
+      z: SPOTS.cafe.z,
+      pose: "work",
+      path: null,
+    });
+  });
+
+  it("leaves the sofa for the cafe at once when compacting starts", () => {
+    const sofa = seatedWalker(SPOTS.lounge, "lounge");
+    expect(sip(sofa, 0.1).walker).toMatchObject({ goal: "cafe", pose: "walk" });
+  });
+
+  it("goes back at once when the compaction ends", () => {
+    const cafe = seatedWalker(SPOTS.cafe, "cafe");
+    expect(run(cafe, null, 0.1).walker).toMatchObject({
+      goal: "seat",
+      pose: "walk",
+    });
+    const idle = run(cafe, null, 0.1, 0, false, false, undefined, "lounge");
+    expect(idle.walker.goal).toBe("lounge");
+    expect(run(cafe, "reading", 0.1).walker.goal).toBe("library");
   });
 });
