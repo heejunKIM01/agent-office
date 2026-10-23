@@ -152,6 +152,8 @@ interface Placed {
   report: string | null;
   /** How far its chip and bubble are lifted clear of a nearer person's (px). */
   lift: number;
+  /** Its bubble is left out: a crowd leaves no room for it. */
+  hush: boolean;
 }
 
 function nameChip(color: string): {
@@ -282,6 +284,7 @@ export class IsoPeople {
         seat,
         report: null,
         lift: 0,
+        hush: false,
       });
     }
     this.fresh = false;
@@ -398,28 +401,35 @@ export class IsoPeople {
     for (const [id, placed] of this.placed) {
       if (!placed.chip.visible) continue;
       placed.chip.getWorldPosition(this.onScreen).project(camera);
-      const x = ((this.onScreen.x + 1) * width) / 2;
-      const y = ((1 - this.onScreen.y) * height) / 2;
       const chip = placed.chip.element;
       const said = placed.bubbleHolder.firstElementChild as HTMLElement | null;
-      const half = Math.max(chip.offsetWidth, said?.offsetWidth ?? 0) / 2;
-      const tall = said ? placed.bubbleHolder.offsetHeight : chip.offsetHeight;
       boxes.push({
         id,
-        left: x - half,
-        right: x + half,
-        top: y - tall,
-        bottom: y,
+        x: ((this.onScreen.x + 1) * width) / 2,
+        y: ((1 - this.onScreen.y) * height) / 2,
+        chip: { width: chip.offsetWidth, height: chip.offsetHeight },
+        bubble: said
+          ? {
+              width: said.offsetWidth,
+              height: placed.bubbleHolder.offsetHeight,
+            }
+          : null,
       });
     }
     const lifts = liftLabels(boxes);
     for (const [id, placed] of this.placed) {
-      const lift = lifts.get(id) ?? 0;
-      if (lift === placed.lift) continue;
-      placed.lift = lift;
-      const translate = lift ? `0 ${-lift}px` : "";
-      placed.chip.element.style.translate = translate;
-      placed.bubbleHolder.style.translate = translate;
+      const { by, hush } = lifts.get(id) ?? { by: 0, hush: false };
+      if (by !== placed.lift) {
+        placed.lift = by;
+        const translate = by ? `0 ${-by}px` : "";
+        placed.chip.element.style.translate = translate;
+        placed.bubbleHolder.style.translate = translate;
+      }
+      if (hush !== placed.hush) {
+        placed.hush = hush;
+        // Hidden, not removed: it is still measured next frame.
+        placed.bubbleHolder.style.visibility = hush ? "hidden" : "";
+      }
     }
   }
 
