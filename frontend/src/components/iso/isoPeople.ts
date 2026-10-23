@@ -55,10 +55,12 @@ import {
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import {
-  chooseSeat,
-  rememberSeat,
-  rememberedSeats,
-} from "@/systems/seatMemory";
+  choosePlace,
+  placeKey,
+  rememberPlace,
+  rememberedPlaces,
+  remembersAnything,
+} from "@/systems/placeMemory";
 import {
   bubbleHolder,
   bubbleKey,
@@ -179,8 +181,8 @@ export class IsoPeople {
   private callPending = false;
   /** The next sync places a snapshot: everyone starts where they are. */
   private fresh = true;
-  /** The dev room chair each person last sat in, by index into SUBAGENT_SEATS. */
-  private readonly seatOf = rememberedSeats();
+  /** The chair and room spots each person last had, kept for the tab. */
+  private readonly placeOf = rememberedPlaces();
   private callUntil = 0;
 
   private words: BubbleWords = {
@@ -227,10 +229,12 @@ export class IsoPeople {
       }
       newcomers.push(person);
     }
-    // Those who sat here before take their chairs back before anyone new
+    // Those who were here before take their places back before anyone new
     // takes the first free one.
     newcomers.sort(
-      (a, b) => Number(!this.seatOf.has(a.id)) - Number(!this.seatOf.has(b.id)),
+      (a, b) =>
+        Number(!remembersAnything(this.placeOf, a.id)) -
+        Number(!remembersAnything(this.placeOf, b.id)),
     );
     for (const person of newcomers) {
       const seat = this.freeSeat(person);
@@ -541,12 +545,14 @@ export class IsoPeople {
     const taken = new Set(
       [...this.placed.values()].map(({ seat }) => SUBAGENT_SEATS.indexOf(seat)),
     );
-    const index = chooseSeat(
+    const key = placeKey(person.id);
+    const free = choosePlace(
       SUBAGENT_SEATS.length,
       taken,
-      this.seatOf.get(person.id),
+      this.placeOf.get(key),
     );
-    rememberSeat(this.seatOf, person.id, index);
+    const index = free >= 0 ? free : SUBAGENT_SEATS.length - 1;
+    rememberPlace(this.placeOf, key, index);
     return SUBAGENT_SEATS[index];
   }
 
@@ -562,16 +568,24 @@ export class IsoPeople {
     return REPORT_SPOTS[index];
   }
 
-  /** The spot a walker holds in a room, taking the first free one. */
+  /**
+   * The spot a walker holds in a room: the one it last had there while that
+   * is free, else the first free one.
+   */
   private spotIn(id: string, room: IsoRoomId): IsoSpot {
     const spots = ROOM_SPOTS[room];
     const held = this.held[room];
     let index = held.get(id);
     if (index === undefined) {
-      const taken = new Set(held.values());
-      const free = spots.findIndex((_, i) => !taken.has(i));
+      const key = placeKey(id, room);
+      const free = choosePlace(
+        spots.length,
+        new Set(held.values()),
+        this.placeOf.get(key),
+      );
       index = free >= 0 ? free : held.size % spots.length;
       held.set(id, index);
+      rememberPlace(this.placeOf, key, index);
     }
     return spots[index];
   }
