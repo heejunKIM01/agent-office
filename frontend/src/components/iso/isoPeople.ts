@@ -391,10 +391,14 @@ export class IsoPeople {
     act: PoseAct | null,
   ): void {
     const { person } = placed;
-    // From its latest event, so seeing it afresh (another session shown, a
-    // reload) does not start the count again.
+    // From its latest event (a Date.now time, moved onto this frame clock),
+    // so seeing it afresh (another session shown, a reload) does not start
+    // the count again.
     if (person.thinking)
-      placed.thinkingSince = person.since ?? placed.thinkingSince ?? now;
+      placed.thinkingSince =
+        person.since === null
+          ? (placed.thinkingSince ?? now)
+          : now - (Date.now() - person.since);
     else placed.thinkingSince = null;
     const onTrip = quiet ? null : this.tripBubble(placed);
     // Over coffee while compacting it says so instead of thinking aloud;
