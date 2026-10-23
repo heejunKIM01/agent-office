@@ -56,6 +56,7 @@ from app.db.models import EventRecord, SessionRecord
 from app.models.agents import AgentState
 from app.models.common import TodoItem
 from app.models.events import (
+    CONTINUING_SOURCES,
     AgentEvent,
     AnyEvent,
     BackgroundTaskEvent,
@@ -68,6 +69,7 @@ from app.models.events import (
     SessionEventData,
     TaskEvent,
     ToolEvent,
+    session_start_source,
 )
 from app.models.overview import OverviewState
 from app.models.sessions import GameState, HistoryEntry
@@ -83,6 +85,18 @@ MAX_HISTORY_ENTRIES = 500
 # Tool events remembered per session for duplicate detection; far more than
 # can overlap between the hook copy and the transcript-poller copy.
 MAX_SEEN_TOOL_EVENTS = 500
+
+
+def _wipes_stored_events(event: AnyEvent) -> bool:
+    """Whether *event* starts its session afresh, dropping its stored events.
+
+    A session that starts again under its own id by resume or compact carries
+    on the stored conversation, and a recovered start stands in for one that
+    never arrived: neither wipes.
+    """
+    if event.event_type != EventType.SESSION_START or event.data.source == "recovered":
+        return False
+    return session_start_source(event.data.source, event.data.summary) not in CONTINUING_SOURCES
 
 
 def _todos_unchanged(old_todos: list[TodoItem], new_todos: list[TodoItem]) -> bool:
@@ -531,7 +545,7 @@ class EventProcessor:
         # (office started late, backend restarted with a wiped DB). The first
         # event of such a session gets a synthetic SESSION_START carrying
         # source="recovered", which ``_persist_event`` stores WITHOUT the
-        # destructive history wipe a real session_start performs. OpenCode
+        # history wipe a new conversation's session_start performs. OpenCode
         # child @agent sessions are excluded: they also start without a
         # session_start by design, so their producer tags them "opencode".
         # A session heard of only as it ends has nothing to show: Claude Code
@@ -552,16 +566,15 @@ class EventProcessor:
 
         # Rebuild a session that is not in memory from its stored events BEFORE
         # this event is stored, so the replay holds only earlier events and this
-        # one is applied once, below. A real session_start wipes the stored
-        # events, so it starts from a fresh machine instead.
+        # one is applied once, below. A session_start that opens a new
+        # conversation wipes the stored events, so it starts from a fresh
+        # machine instead.
         # Replay from DB *before* acquiring the lock: the restore is async I/O
         # that can take hundreds of ms for a long session, and holding the lock
         # across it stalls the debounced overview broadcast and /ws/overview
         # connects. Only the dict insertion below needs the lock.
         sm_preexisting = event.session_id in self.sessions
-        wipes_stored_events = (
-            event.event_type == EventType.SESSION_START and event.data.source != "recovered"
-        )
+        wipes_stored_events = _wipes_stored_events(event)
         restored: StateMachine | None = None
         if not sm_preexisting and not wipes_stored_events:
             restored = await self._build_restored_state_machine(event.session_id)
@@ -966,7 +979,7 @@ class EventProcessor:
                 session_rec.is_lead = True
 
             if is_session_start:
-                if event.data.source != "recovered":
+                if _wipes_stored_events(event):
                     await db.execute(
                         delete(EventRecord).where(EventRecord.session_id == event.session_id)
                     )

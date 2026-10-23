@@ -25,7 +25,7 @@ def _auth_headers() -> dict[str, str]:
     return {"X-API-Key": get_settings().effective_api_key}
 
 
-def _seed_session(session_id: str | None = None) -> str:
+def _seed_session(session_id: str | None = None, **data: str) -> str:
     """Create a session via the event pipeline and return its ID."""
     sid = session_id or f"test-{uuid4()}"
     event = EventAdapter.validate_python(
@@ -33,7 +33,7 @@ def _seed_session(session_id: str | None = None) -> str:
             "event_type": EventType.SESSION_START,
             "session_id": sid,
             "timestamp": datetime.now(UTC),
-            "data": {},
+            "data": data,
         }
     )
     asyncio.run(event_processor.process_event(event))
@@ -197,11 +197,28 @@ def test_session_list_leaves_out_sessions_ended_by_clear():
 
 def test_resumed_cleared_session_is_listed_again():
     cleared = _seed_session()
+    _seed_prompts(cleared, "Fix the login timeout")
     _end_session(cleared, "clear")
-    _seed_session(cleared)  # `claude --resume` starts it again
+    _seed_session(cleared, source="resume")  # `claude --resume` starts it again
 
-    listed = {s["id"] for s in client.get("/api/v1/sessions").json()}
+    listed = {s["id"]: s for s in client.get("/api/v1/sessions").json()}
     assert cleared in listed
+    assert listed[cleared]["title"] == "Fix the login timeout"
+
+    _end_session(cleared, "prompt_input_exit")
+    assert cleared in {s["id"] for s in client.get("/api/v1/sessions").json()}
+
+    _seed_session(cleared, source="resume")
+    _end_session(cleared, "clear")
+    assert cleared not in {s["id"] for s in client.get("/api/v1/sessions").json()}
+
+
+def test_session_that_carried_on_a_conversation_is_listed_once_ended():
+    """A compacted session whose events an earlier backend wiped still had a talk."""
+    compacted = _seed_session(summary="Session started (compact)")
+    _end_session(compacted, "other")
+
+    assert compacted in {s["id"] for s in client.get("/api/v1/sessions").json()}
 
 
 def test_session_list_leaves_out_ended_sessions_nothing_happened_in():
