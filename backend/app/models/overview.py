@@ -48,6 +48,9 @@ class OverviewEntry(BaseModel):
     stuck: StuckReason | None = None
     bubble: BubbleContent | None = None
     turn_active: bool = False
+    # When the session's latest event came: the office counts how long its
+    # lead has been at what it does from here, not from when a page saw it.
+    last_event_at: datetime | None = None
 
 
 class OverviewState(BaseModel):

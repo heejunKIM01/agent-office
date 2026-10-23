@@ -1,5 +1,7 @@
 """Tests for build_overview: one boss snapshot per live session for /ws/overview."""
 
+from datetime import UTC, datetime
+
 from app.core.overview import build_overview
 from app.core.state_machine import StateMachine
 from app.models.agents import Activity, Agent, AgentState, BossState, StuckReason
@@ -34,6 +36,13 @@ class TestBuildOverview:
         assert entry.turn_active
         dumped = entry.model_dump(mode="json", by_alias=True)
         assert dumped["activity"] == "reading" and dumped["turnActive"] is True
+
+    def test_says_when_the_latest_event_came(self) -> None:
+        # The office counts a colleague's thinking from here, not from when it saw it.
+        sm = StateMachine()
+        sm.last_event_at = datetime(2026, 10, 23, 5, 0, tzinfo=UTC)
+        dumped = build_overview({"s": sm}).entries[0].model_dump(mode="json", by_alias=True)
+        assert dumped["lastEventAt"] == "2026-10-23T05:00:00Z"
 
     def test_bucket_mapping(self) -> None:
         cases = {
