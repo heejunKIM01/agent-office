@@ -52,6 +52,7 @@ import {
   watchesTheClock,
   type BookPile,
 } from "@/systems/roomGimmicks";
+import { liftLabels, type LabelBox } from "@/systems/labelLift";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import {
@@ -149,6 +150,8 @@ interface Placed {
   seat: IsoSpot;
   /** What it tells Claude when its work is done, read when it gets there. */
   report: string | null;
+  /** How far its chip and bubble are lifted clear of a nearer person's (px). */
+  lift: number;
 }
 
 function nameChip(color: string): {
@@ -157,7 +160,7 @@ function nameChip(color: string): {
 } {
   const element = document.createElement("div");
   element.className =
-    "flex max-w-[150px] items-center gap-1 whitespace-nowrap rounded-full border border-slate-200/90 bg-white/95 px-2 py-0.5 text-[11px] font-semibold leading-4 text-slate-700 shadow-sm dark:border-slate-700/90 dark:bg-slate-900/90 dark:text-slate-200";
+    "flex max-w-[150px] items-center gap-1 whitespace-nowrap rounded-full transition-[translate] duration-150 ease-out border border-slate-200/90 bg-white/95 px-2 py-0.5 text-[11px] font-semibold leading-4 text-slate-700 shadow-sm dark:border-slate-700/90 dark:bg-slate-900/90 dark:text-slate-200";
   const dot = document.createElement("span");
   dot.className = "h-1.5 w-1.5 shrink-0 rounded-full";
   dot.style.backgroundColor = color;
@@ -184,6 +187,8 @@ export class IsoPeople {
   /** The chair and room spots each person last had, kept for the tab. */
   private readonly placeOf = rememberedPlaces();
   private callUntil = 0;
+  /** Where a chip is on the screen, worked out each frame. */
+  private readonly onScreen = new THREE.Vector3();
 
   private words: BubbleWords = {
     thinking: "",
@@ -276,6 +281,7 @@ export class IsoPeople {
         walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
+        lift: 0,
       });
     }
     this.fresh = false;
@@ -380,6 +386,41 @@ export class IsoPeople {
       this.onLeft(id);
     }
     return inUse;
+  }
+
+  /**
+   * Lift the chips and bubbles that would cover a nearer person's (see
+   * systems/labelLift.ts). Call once the labels are drawn for the frame, on
+   * a ``width`` × ``height`` px view.
+   */
+  liftCrowdedLabels(camera: THREE.Camera, width: number, height: number): void {
+    const boxes: LabelBox[] = [];
+    for (const [id, placed] of this.placed) {
+      if (!placed.chip.visible) continue;
+      placed.chip.getWorldPosition(this.onScreen).project(camera);
+      const x = ((this.onScreen.x + 1) * width) / 2;
+      const y = ((1 - this.onScreen.y) * height) / 2;
+      const chip = placed.chip.element;
+      const said = placed.bubbleHolder.firstElementChild as HTMLElement | null;
+      const half = Math.max(chip.offsetWidth, said?.offsetWidth ?? 0) / 2;
+      const tall = said ? placed.bubbleHolder.offsetHeight : chip.offsetHeight;
+      boxes.push({
+        id,
+        left: x - half,
+        right: x + half,
+        top: y - tall,
+        bottom: y,
+      });
+    }
+    const lifts = liftLabels(boxes);
+    for (const [id, placed] of this.placed) {
+      const lift = lifts.get(id) ?? 0;
+      if (lift === placed.lift) continue;
+      placed.lift = lift;
+      const translate = lift ? `0 ${-lift}px` : "";
+      placed.chip.element.style.translate = translate;
+      placed.bubbleHolder.style.translate = translate;
+    }
   }
 
   /**

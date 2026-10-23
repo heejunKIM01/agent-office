@@ -38,7 +38,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
 export function bubbleHolder(): HTMLDivElement {
   return el(
     "div",
-    `pointer-events-none flex flex-col items-center ${ABOVE_CHIP}`,
+    `pointer-events-none flex flex-col items-center transition-[translate] duration-150 ease-out ${ABOVE_CHIP}`,
   );
 }
 
