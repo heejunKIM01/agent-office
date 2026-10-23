@@ -88,7 +88,7 @@ def build_overview(sessions: dict[str, StateMachine]) -> OverviewState:
                 stuck=sm.boss_stuck,
                 bubble=sm.boss_bubble,
                 turn_active=sm.turn_active,
-                last_event_at=sm.last_event_at,
+                last_event_at=sm.lead_event_at,
             )
         )
     return OverviewState(entries=entries, last_updated=datetime.now(UTC))

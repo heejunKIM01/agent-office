@@ -508,9 +508,13 @@ class StateMachine:
     # for this session (ARC-015). Used by ``EventProcessor.evict_idle_sessions``
     # to drop in-memory state that has not seen activity for a while; the DB
     # remains the source of truth, so an evicted session replays on next access.
-    # Not part of ``to_game_state`` output; the overview carries it so the
-    # office can tell how long another session's lead has been at its work.
+    # Not part of ``to_game_state`` output — internal eviction metadata only.
     last_event_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    # When the lead agent's latest event happened (the hook's time, as the
+    # history line shows it). The overview carries it so the office counts
+    # another session's lead from the same moment as when that session is shown.
+    lead_event_at: datetime | None = None
 
     # ---------------------------------------------------------------------------
     # Core methods

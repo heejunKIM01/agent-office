@@ -648,6 +648,8 @@ class EventProcessor:
             else event.data.agent_id or "main"
         )
 
+        if agent_id == "main":
+            sm.lead_event_at = event.timestamp
         event_dict: HistoryEntry = {
             "id": str(event.timestamp.timestamp()),
             "type": str(event.event_type),
@@ -856,6 +858,8 @@ class EventProcessor:
                         if isinstance(evt, ToolEvent)
                         else evt.data.agent_id or "main"
                     )
+                    if agent_id == "main":
+                        sm.lead_event_at = evt.timestamp
                     history_entry: HistoryEntry = {
                         "id": str(evt.timestamp.timestamp()),
                         "type": str(evt.event_type),

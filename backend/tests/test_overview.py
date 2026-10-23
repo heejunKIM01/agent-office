@@ -37,10 +37,10 @@ class TestBuildOverview:
         dumped = entry.model_dump(mode="json", by_alias=True)
         assert dumped["activity"] == "reading" and dumped["turnActive"] is True
 
-    def test_says_when_the_latest_event_came(self) -> None:
+    def test_says_when_the_lead_last_did_something(self) -> None:
         # The office counts a colleague's thinking from here, not from when it saw it.
         sm = StateMachine()
-        sm.last_event_at = datetime(2026, 10, 23, 5, 0, tzinfo=UTC)
+        sm.lead_event_at = datetime(2026, 10, 23, 5, 0, tzinfo=UTC)
         dumped = build_overview({"s": sm}).entries[0].model_dump(mode="json", by_alias=True)
         assert dumped["lastEventAt"] == "2026-10-23T05:00:00Z"
 
