@@ -22,6 +22,7 @@ from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
+from app.config import get_settings
 from app.core.activity import tool_subject
 from app.core.beads_poller import get_beads_poller, has_beads, init_beads_poller
 from app.core.broadcast_service import (
@@ -47,6 +48,7 @@ from app.core.handlers import (
     handle_teammate_idle,
     handle_user_prompt_submit,
 )
+from app.core.path_utils import is_safe_transcript_path
 from app.core.state_machine import StateMachine
 from app.core.task_file_poller import init_task_file_poller
 from app.core.task_persistence import load_tasks, save_tasks
@@ -541,6 +543,13 @@ class EventProcessor:
         Args:
             event: The incoming hook event.
         """
+        if self._is_unannounced_subagent_stop(event):
+            logger.debug(
+                f"Dropping SubagentStop of unannounced agent {event.data.native_agent_id} "
+                f"in session {event.session_id}"
+            )
+            return
+
         # Recover sessions whose real session_start never reached the backend
         # (office started late, backend restarted with a wiped DB). The first
         # event of such a session gets a synthetic SESSION_START carrying
@@ -1026,6 +1035,35 @@ class EventProcessor:
                 .limit(1)
             )
             return result.first() is not None
+
+    def _is_unannounced_subagent_stop(self, event: AnyEvent) -> bool:
+        """Whether *event* is a SubagentStop for an agent the office never had.
+
+        Claude Code also reports SubagentStop for helper agents it runs on its
+        own: no PreToolUse or SubagentStart comes before it and no transcript
+        is written. Nothing in the office stands for such an agent, and letting
+        its stop through could send home a real employee not linked yet. It is
+        told apart by its transcript missing while the session's is there, so
+        a backend that cannot see the transcripts at all drops nothing.
+        """
+        if event.event_type != EventType.SUBAGENT_STOP or event.data.agent_id:
+            return False
+        native_id = event.data.native_agent_id
+        agent_path = event.data.agent_transcript_path
+        session_path = event.data.transcript_path
+        if not (native_id and agent_path and session_path):
+            return False
+        sm = self.sessions.get(event.session_id)
+        if sm and any(agent.native_id == native_id for agent in sm.agents.values()):
+            return False
+        settings = get_settings()
+        agent_file = Path(settings.translate_path(agent_path))
+        session_file = Path(settings.translate_path(session_path))
+        return (
+            is_safe_transcript_path(agent_file)
+            and session_file.exists()
+            and not agent_file.exists()
+        )
 
     def _build_recovered_start(self, event: AnyEvent) -> SessionEvent:
         """Build a synthetic SESSION_START carrying over the event's session context."""
