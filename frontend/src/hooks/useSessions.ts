@@ -8,6 +8,7 @@ import {
   usePreferencesStore,
   selectAutoFollowNewSessions,
 } from "@/stores/preferencesStore";
+import { keepShownSession } from "@/systems/floors";
 import { apiFetch } from "@/utils/api";
 
 // ============================================================================
@@ -62,10 +63,13 @@ export function useSessions(
 
   // Track known session IDs for auto-follow detection
   const knownSessionIds = useRef<Set<string>>(new Set());
-  // The project the shown session belongs to, kept after `/clear` drops the
-  // session from the list so its successor is still followed.
-  const followedProjectRoot = useRef<string | null>(null);
   const hasAutoSelected = useRef(false);
+  // Read by fetchSessions, which is created once, to keep the shown session listed.
+  const shownSessionId = useRef("");
+  const listedSessions = useRef<Session[]>([]);
+  useEffect(() => {
+    shownSessionId.current = sessionId;
+  }, [sessionId]);
 
   // Fetch sessions list
   const fetchSessions = useCallback(async (): Promise<Session[] | null> => {
@@ -73,7 +77,12 @@ export function useSessions(
     try {
       const res = await apiFetch("/api/v1/sessions");
       if (res.ok) {
-        const data = (await res.json()) as Session[];
+        const data = keepShownSession(
+          (await res.json()) as Session[],
+          listedSessions.current,
+          shownSessionId.current,
+        );
+        listedSessions.current = data;
         setSessions(data);
         return data;
       }
@@ -102,6 +111,10 @@ export function useSessions(
     const handleSessionDeleted = async (e: Event) => {
       const customEvent = e as CustomEvent<{ sessionId: string }>;
       const deletedSessionId = customEvent.detail.sessionId;
+      // A deleted session is gone, not just left out of the list.
+      listedSessions.current = listedSessions.current.filter(
+        (s) => s.id !== deletedSessionId,
+      );
 
       // Refetch sessions to update the list
       const updatedSessions = await fetchSessions();
@@ -171,9 +184,7 @@ export function useSessions(
 
     // Get current session's project root
     const currentSession = sessions.find((s) => s.id === sessionId);
-    if (currentSession)
-      followedProjectRoot.current = currentSession.projectRoot;
-    const currentProjectRoot = followedProjectRoot.current;
+    const currentProjectRoot = currentSession?.projectRoot;
 
     // Find new sessions that weren't in our known set
     const newSessions = sessions.filter(
