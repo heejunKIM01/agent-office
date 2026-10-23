@@ -534,6 +534,9 @@ class EventProcessor:
         # destructive history wipe a real session_start performs. OpenCode
         # child @agent sessions are excluded: they also start without a
         # session_start by design, so their producer tags them "opencode".
+        # A session heard of only as it ends has nothing to show: Claude Code
+        # sends a lone session_end for processes that never held a
+        # conversation, so it is dropped instead of becoming an empty session.
         if (
             event.event_type != EventType.SESSION_START
             and event.data.source not in ("recovered", "opencode")
@@ -542,6 +545,9 @@ class EventProcessor:
         ):
             self._recovery_checked.add(event.session_id)
             if not await self._session_has_start_record(event.session_id):
+                if event.event_type == EventType.SESSION_END:
+                    logger.debug(f"Dropping session_end of unknown session {event.session_id}")
+                    return
                 await self._process_event_internal(self._build_recovered_start(event))
 
         # Rebuild a session that is not in memory from its stored events BEFORE

@@ -73,6 +73,27 @@ async def test_missing_session_start_is_recovered() -> None:
 
 
 @pytest.mark.asyncio
+async def test_session_heard_of_only_as_it_ends_is_dropped() -> None:
+    """A lone session_end makes no session: nothing was said in it."""
+    ep = EventProcessor()
+    sid = "rec-test-lone-end"
+    await _wipe(sid)
+    try:
+        await ep.process_event(
+            SessionEvent(
+                event_type=EventType.SESSION_END,
+                session_id=sid,
+                data=SessionEventData(reason="other"),
+            )
+        )
+        assert await _record_count(sid) == 0
+        async with AsyncSessionLocal() as db:
+            assert await db.get(SessionRecord, sid) is None
+    finally:
+        await _wipe(sid)
+
+
+@pytest.mark.asyncio
 async def test_known_session_is_not_re_recovered() -> None:
     """A session whose session_start WAS delivered gets no synthetic replay."""
     ep = EventProcessor()
