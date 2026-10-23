@@ -88,33 +88,40 @@ export function useFloorColleagues(
       stopped = true;
       if (retry) clearTimeout(retry);
       socket?.close();
+      // What the closed socket last said goes stale: a colleague shown again
+      // later waits for the next overview instead of starting from it.
+      setLeads(new Map());
     };
   }, [wanted]);
 
   return useMemo(
     () =>
-      sessions.map((session): Colleague => {
-        const lead = leads.get(session.id);
-        const boss = lead?.entry;
-        return {
-          sessionId: session.id,
-          agentName: codingAgentName(session.codingAgent) ?? fallbackName,
-          title: sessionTitle(session) ?? session.id.slice(0, 8),
-          activity: boss?.activity ?? null,
-          stuck: boss?.stuck ?? null,
-          bubble: boss?.bubble ?? null,
-          bubbleAt: lead?.bubbleAt ?? null,
-          since: boss?.lastEventAt ? Date.parse(boss.lastEventAt) : null,
-          thinking: boss
-            ? isQuietTurn({
-                state: boss.state,
-                activity: boss.activity,
-                stuck: boss.stuck,
-                turnActive: boss.turnActive,
-              })
-            : false,
-        };
-      }),
+      sessions
+        // A colleague waits for its lead's overview: drawn before it, it would
+        // sit idle at a desk and then walk to the room it is working in.
+        .filter((session) => leads.has(session.id))
+        .map((session): Colleague => {
+          const lead = leads.get(session.id);
+          const boss = lead?.entry;
+          return {
+            sessionId: session.id,
+            agentName: codingAgentName(session.codingAgent) ?? fallbackName,
+            title: sessionTitle(session) ?? session.id.slice(0, 8),
+            activity: boss?.activity ?? null,
+            stuck: boss?.stuck ?? null,
+            bubble: boss?.bubble ?? null,
+            bubbleAt: lead?.bubbleAt ?? null,
+            since: boss?.lastEventAt ? Date.parse(boss.lastEventAt) : null,
+            thinking: boss
+              ? isQuietTurn({
+                  state: boss.state,
+                  activity: boss.activity,
+                  stuck: boss.stuck,
+                  turnActive: boss.turnActive,
+                })
+              : false,
+          };
+        }),
     [sessions, leads, fallbackName],
   );
 }
