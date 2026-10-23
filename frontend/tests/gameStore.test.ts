@@ -11,7 +11,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { useGameStore } from "@/stores/gameStore";
+import { selectShownSessionId, useGameStore } from "@/stores/gameStore";
 import type {
   Agent,
   BubbleContent,
@@ -597,5 +597,23 @@ describe("event log", () => {
     expect(log).toHaveLength(500);
     expect(log[0]).toBe("event 519");
     expect(log[499]).toBe("event 20");
+  });
+});
+
+describe("selectShownSessionId", () => {
+  it("is null until the session's snapshot is in, and again after a switch", () => {
+    const store = useGameStore.getState();
+    expect(selectShownSessionId(useGameStore.getState())).toBeNull();
+
+    store.setSessionId("s1");
+    expect(selectShownSessionId(useGameStore.getState())).toBeNull();
+    store.markSnapshot("s1");
+    expect(selectShownSessionId(useGameStore.getState())).toBe("s1");
+
+    store.resetForSessionSwitch();
+    store.setSessionId("s2");
+    expect(selectShownSessionId(useGameStore.getState())).toBeNull();
+    store.markSnapshot("s2");
+    expect(selectShownSessionId(useGameStore.getState())).toBe("s2");
   });
 });
