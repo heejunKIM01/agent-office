@@ -252,3 +252,14 @@ class TestCodingAgent:
         result = map_event("session_start", raw, SESSION_ID)
         assert result is not None
         assert result["data"]["coding_agent"] == "claude-code"
+
+
+class TestSessionStart:
+    """A session start says why it started."""
+
+    def test_source_is_sent(self) -> None:
+        raw = {"session_id": SESSION_ID, "source": "compact", "cwd": "/tmp/p"}
+        result = map_event("session_start", raw, SESSION_ID)
+        assert result is not None
+        assert result["data"]["source"] == "compact"
+        assert result["data"]["summary"] == "Session started (compact)"

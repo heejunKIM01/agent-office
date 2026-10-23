@@ -91,8 +91,14 @@ def _build_agent_transcript_path(main_transcript: str | None, native_agent_id: s
 
 
 def _handle_session_start(raw_data: dict[str, Any], data: dict[str, Any]) -> None:
-    """Populate *data* for a session_start event."""
+    """Populate *data* for a session_start event.
+
+    ``source`` says why it started (startup, resume, clear or compact): the
+    backend keeps a session's stored events when it starts again by resume or
+    compact.
+    """
     source = raw_data.get("source", "unknown")
+    data["source"] = source
     data["summary"] = f"Session started ({source})"
 
 
