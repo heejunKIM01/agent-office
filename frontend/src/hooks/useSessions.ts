@@ -62,6 +62,9 @@ export function useSessions(
 
   // Track known session IDs for auto-follow detection
   const knownSessionIds = useRef<Set<string>>(new Set());
+  // The project the shown session belongs to, kept after `/clear` drops the
+  // session from the list so its successor is still followed.
+  const followedProjectRoot = useRef<string | null>(null);
   const hasAutoSelected = useRef(false);
 
   // Fetch sessions list
@@ -168,7 +171,9 @@ export function useSessions(
 
     // Get current session's project root
     const currentSession = sessions.find((s) => s.id === sessionId);
-    const currentProjectRoot = currentSession?.projectRoot;
+    if (currentSession)
+      followedProjectRoot.current = currentSession.projectRoot;
+    const currentProjectRoot = followedProjectRoot.current;
 
     // Find new sessions that weren't in our known set
     const newSessions = sessions.filter(
