@@ -29,6 +29,8 @@ export interface RosterRow {
   status: RosterStatus;
   /** What it is doing now, e.g. 「📖 자료실 · src/auth.py」. */
   doing: string;
+  /** ``doing`` with the tool's whole target, for hovering (bubbles cut it short). */
+  doingInFull: string;
   /** Tools it has used this session. */
   tools: number;
   /** When its latest event came (ms); null when the page cannot tell. */
@@ -60,6 +62,23 @@ export function startedTasks(entries: EventLogEntry[]): Map<string, string> {
   return tasks;
 }
 
+/**
+ * The whole target of each character's latest tool, from the event log
+ * (newest first): its bubble carries the target cut short.
+ */
+export function toolTargets(entries: EventLogEntry[]): Map<string, string> {
+  const targets = new Map<string, string>();
+  for (const entry of entries) {
+    if (entry.type !== "pre_tool_use" || targets.has(entry.agentId)) continue;
+    targets.set(entry.agentId, toolTarget(entry.detail?.toolInput));
+  }
+  return targets;
+}
+
+/** Whether ``text`` is ``whole`` with parts cut out and marked "...". */
+const isCutFrom = (text: string, whole: string): boolean =>
+  text.split("...").every((piece) => whole.includes(piece.trim()));
+
 /** The event-log id of a person: the lead agent logs as "main". */
 const logId = (person: IsoPerson): string =>
   person.kind === "claude" ? "main" : person.id;
@@ -69,12 +88,14 @@ export function rosterRows(
   people: IsoPerson[],
   counts: Map<string, number>,
   words: RosterWords,
+  targets: Map<string, string> = new Map(),
 ): RosterRow[] {
   return people
     .filter((person) => person.kind !== "me")
     .map((person): RosterRow => {
       let status: RosterStatus = null;
       let doing = "";
+      let doingInFull: string | null = null;
       if (person.stuck) {
         status = "thinking";
         doing = `❗ ${person.bubble?.text ?? ""}`.trim();
@@ -83,6 +104,11 @@ export function rosterRows(
         const room = words.rooms[ROOM_FOR_ACTIVITY[person.activity]];
         const tool = person.bubble?.type === "thought" ? person.bubble : null;
         doing = tool ? `${tool.icon ?? "⚙️"} ${room} · ${tool.text}` : room;
+        // Only when the bubble is that target cut short, not an older tool's.
+        const target = targets.get(logId(person));
+        if (tool && target && isCutFrom(tool.text, target)) {
+          doingInFull = `${tool.icon ?? "⚙️"} ${room} · ${target}`;
+        }
       } else if (person.thinking) {
         status = "thinking";
         doing = `💭 ${words.thinking}...`;
@@ -95,6 +121,7 @@ export function rosterRows(
         typeLabel: person.typeLabel,
         status,
         doing,
+        doingInFull: doingInFull ?? doing,
         tools: counts.get(logId(person)) ?? 0,
         since: person.since,
       };
