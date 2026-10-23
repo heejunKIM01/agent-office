@@ -108,10 +108,13 @@ export interface IsoWalkerInput {
   elevator: IsoElevator;
 }
 
-/** A walker settled in its seat, or in a break room when ``goal`` is one. */
+/**
+ * A walker settled in its seat, or in a room when ``goal`` is one (its first
+ * step stands it up to work there).
+ */
 export function seatedWalker(
   seat: IsoSpot,
-  goal: "seat" | BreakRoomId = "seat",
+  goal: "seat" | IsoRoomId = "seat",
 ): IsoWalker {
   return {
     x: seat.x,
