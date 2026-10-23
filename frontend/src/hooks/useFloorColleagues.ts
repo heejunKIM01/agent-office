@@ -88,6 +88,9 @@ export function useFloorColleagues(
       stopped = true;
       if (retry) clearTimeout(retry);
       socket?.close();
+      // What the closed socket last said goes stale: a colleague shown again
+      // later waits for the next overview instead of starting from it.
+      setLeads(new Map());
     };
   }, [wanted]);
 
