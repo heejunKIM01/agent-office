@@ -5,6 +5,7 @@ import {
   floorColleagues,
   floorOfSession,
   isActiveNow,
+  keepShownSession,
   MAX_COLLEAGUES,
   sessionTitle,
   splitFloors,
@@ -164,5 +165,35 @@ describe("splitFloors", () => {
     const { awake, idle } = splitFloors(floors, "/work/current", now);
     expect(awake.map((f) => f.name)).toEqual(["busy", "recent", "current"]);
     expect(idle.map((f) => f.name)).toEqual(["old"]);
+  });
+});
+
+describe("keepShownSession", () => {
+  const shown = session(
+    "s1",
+    "app",
+    "2026-10-01T00:00:00Z",
+    "2026-10-10T11:59:00Z",
+    "active",
+  );
+  const other = session(
+    "s2",
+    "app",
+    "2026-10-02T00:00:00Z",
+    "2026-10-10T12:00:00Z",
+  );
+
+  it("keeps the shown session, as ended, when the list leaves it out", () => {
+    const listed = keepShownSession([other], [shown, other], "s1");
+    expect(listed.map((s) => s.id)).toEqual(["s2", "s1"]);
+    expect(listed[1].status).toBe("completed");
+  });
+
+  it("drops a session left out once it is no longer shown", () => {
+    expect(keepShownSession([other], [shown, other], "s2")).toEqual([other]);
+  });
+
+  it("adds nothing it never saw", () => {
+    expect(keepShownSession([other], [], "s1")).toEqual([other]);
   });
 });

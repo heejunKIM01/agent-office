@@ -53,6 +53,21 @@ function projectName(session: Session): string {
   return session.id.slice(0, 8);
 }
 
+/**
+ * The listed sessions plus the one being shown when the list leaves it out:
+ * the backend drops sessions ended by `/clear` or ended with nothing in them,
+ * and the floor guide still shows the session the office is on, as ended.
+ */
+export function keepShownSession(
+  listed: Session[],
+  previous: Session[],
+  shownId: string,
+): Session[] {
+  if (!shownId || listed.some((s) => s.id === shownId)) return listed;
+  const shown = previous.find((s) => s.id === shownId);
+  return shown ? [...listed, { ...shown, status: "completed" }] : listed;
+}
+
 /** Group sessions into floors, listed top floor first like a building directory. */
 export function buildFloors(sessions: Session[], now = Date.now()): Floor[] {
   const byProject = new Map<string, Session[]>();
