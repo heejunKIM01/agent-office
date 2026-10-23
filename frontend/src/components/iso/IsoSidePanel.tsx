@@ -20,6 +20,7 @@ import {
   rosterRows,
   startedTasks,
   toolCounts,
+  toolTargets,
   type RosterRow,
   type RosterWords,
 } from "@/systems/officeRoster";
@@ -154,7 +155,8 @@ export function IsoSidePanel({
     [shown, boss, agents, eventLog, agentName, t, colleagues],
   );
   const rows = useMemo(
-    () => rosterRows(people, toolCounts(eventLog), words),
+    () =>
+      rosterRows(people, toolCounts(eventLog), words, toolTargets(eventLog)),
     [people, eventLog, words],
   );
   const seconds = useSecondsInState(rows);
@@ -236,7 +238,7 @@ export function IsoSidePanel({
                 {row.doing && (
                   <p
                     className="truncate text-[11px] text-slate-600 dark:text-slate-300"
-                    title={row.doing}
+                    title={row.doingInFull}
                   >
                     {row.doing}
                   </p>

@@ -6,6 +6,7 @@ import {
   rosterRows,
   startedTasks,
   toolCounts,
+  toolTargets,
   type RosterWords,
 } from "@/systems/officeRoster";
 
@@ -135,6 +136,53 @@ describe("rosterRows", () => {
       ["main", 2],
       ["sa1", 1],
     ]);
+  });
+});
+
+describe("toolTargets", () => {
+  it("keeps the whole target of each one's latest tool", () => {
+    const targets = toolTargets(
+      [
+        entry("1", "pre_tool_use", "main", {
+          toolName: "Read",
+          toolInput: { file_path: "/repo/old.py" },
+        }),
+        entry("2", "pre_tool_use", "sa1", { toolName: "Bash" }),
+        entry("3", "pre_tool_use", "main", {
+          toolName: "Read",
+          toolInput: { file_path: "/repo/src/a/long/path/auth.py" },
+        }),
+      ].reverse(),
+    );
+    expect([...targets]).toEqual([
+      ["main", "/repo/src/a/long/path/auth.py"],
+      ["sa1", ""],
+    ]);
+  });
+
+  it("shows the whole target on hover only when the bubble is it cut short", () => {
+    const reading = (text: string) =>
+      person({
+        activity: "reading",
+        bubble: { type: "thought", text, icon: "📖", persistent: false },
+      });
+    const targets = new Map([["main", "/repo/src/a/long/path/auth.py"]]);
+    const [cut] = rosterRows(
+      [reading("...a/long/path/auth.py")],
+      new Map(),
+      WORDS,
+      targets,
+    );
+    expect(cut.doing).toBe("📖 자료실 · ...a/long/path/auth.py");
+    expect(cut.doingInFull).toBe("📖 자료실 · /repo/src/a/long/path/auth.py");
+    // A bubble from another tool keeps its own words.
+    const [other] = rosterRows(
+      [reading("...other.py")],
+      new Map(),
+      WORDS,
+      targets,
+    );
+    expect(other.doingInFull).toBe("📖 자료실 · ...other.py");
   });
 });
 
