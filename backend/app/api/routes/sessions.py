@@ -161,6 +161,10 @@ async def list_sessions(
     — they start directly with ``user_prompt_submit`` / ``pre_tool_use`` events —
     so filtering on this event type keeps them out of the sidebar.
 
+    Sessions ended by ``/clear`` are left out too: the same terminal goes on as
+    a new session, so each ``/clear`` would otherwise add a row. Resuming one
+    starts it afresh, which drops the clearing ``session_end`` and lists it again.
+
     Args:
         db: Database session dependency.
         status: Optional filter by session status (``active``, ``completed``).
@@ -181,12 +185,18 @@ async def list_sessions(
         .subquery()
     )
 
+    cleared_subq = select(EventRecord.session_id).where(
+        EventRecord.event_type == "session_end",
+        func.json_extract(EventRecord.data, "$.reason") == "clear",
+    )
+
     stmt = (
         select(
             SessionRecord,
             func.coalesce(event_count_subq.c.event_count, 0).label("event_count"),
         )
         .outerjoin(event_count_subq, SessionRecord.id == event_count_subq.c.session_id)
+        .where(SessionRecord.id.not_in(cleared_subq))
         .order_by(SessionRecord.updated_at.desc())
     )
 
