@@ -170,6 +170,38 @@ def test_session_list_includes_label_field():
     assert "label" in session
 
 
+def _end_session(session_id: str, reason: str) -> None:
+    event = EventAdapter.validate_python(
+        {
+            "event_type": EventType.SESSION_END,
+            "session_id": session_id,
+            "timestamp": datetime.now(UTC),
+            "data": {"reason": reason},
+        }
+    )
+    asyncio.run(event_processor.process_event(event))
+
+
+def test_session_list_leaves_out_sessions_ended_by_clear():
+    """/clear goes on as a new session, so the session it ended leaves the list."""
+    cleared, exited = _seed_session(), _seed_session()
+    _end_session(cleared, "clear")
+    _end_session(exited, "prompt_input_exit")
+
+    listed = {s["id"] for s in client.get("/api/v1/sessions").json()}
+    assert cleared not in listed
+    assert exited in listed
+
+
+def test_resumed_cleared_session_is_listed_again():
+    cleared = _seed_session()
+    _end_session(cleared, "clear")
+    _seed_session(cleared)  # `claude --resume` starts it again
+
+    listed = {s["id"] for s in client.get("/api/v1/sessions").json()}
+    assert cleared in listed
+
+
 def _seed_prompts(session_id: str, *prompts: str) -> None:
     for prompt in prompts:
         event = EventAdapter.validate_python(
