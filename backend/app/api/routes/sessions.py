@@ -164,6 +164,8 @@ async def list_sessions(
     Sessions ended by ``/clear`` are left out too: the same terminal goes on as
     a new session, so each ``/clear`` would otherwise add a row. Resuming one
     starts it afresh, which drops the clearing ``session_end`` and lists it again.
+    So are ended sessions with nothing in them but opening, waiting and closing,
+    unless a title or a label names them.
 
     Args:
         db: Database session dependency.
@@ -215,6 +217,15 @@ async def list_sessions(
     start_result = await db.execute(sessions_with_start_stmt)
     sessions_with_start: set[str] = {row[0] for row in start_result.all()}
 
+    # Sessions where something happened beyond opening, waiting and closing.
+    sessions_with_work_stmt = (
+        select(EventRecord.session_id)
+        .where(EventRecord.event_type.not_in(("session_start", "session_end", "notification")))
+        .distinct()
+    )
+    work_result = await db.execute(sessions_with_work_stmt)
+    sessions_with_work: set[str] = {row[0] for row in work_result.all()}
+
     titles = await _session_titles(db, [row[0].id for row in rows])
 
     sessions: list[SessionSummary] = []
@@ -225,6 +236,15 @@ async def list_sessions(
         # Skip child sessions (no session_start event) unless it's the special
         # simulation session which also lacks one but is always valid.
         if rec.id not in sessions_with_start and not rec.id.startswith("sim_"):
+            continue
+        # An ended session that nothing happened in and that has no name was
+        # opened and closed, or left by /resume before a prompt.
+        if (
+            rec.status == "completed"
+            and rec.id not in sessions_with_work
+            and rec.id not in titles
+            and not rec.label
+        ):
             continue
 
         created_utc = (

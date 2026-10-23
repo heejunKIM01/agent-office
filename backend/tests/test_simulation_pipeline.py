@@ -642,6 +642,7 @@ class TestSessionsAPISmoke:
     def test_list_sessions_after_events(self) -> None:
         sid = f"api-smoke-{uuid4()}"
         post_event(sid, "session_start", {"project_name": "SmokeProj"})
+        post_event(sid, "user_prompt_submit", {"prompt": "hello"})
         post_event(sid, "session_end")
 
         resp = client.get("/api/v1/sessions")

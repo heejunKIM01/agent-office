@@ -185,6 +185,8 @@ def _end_session(session_id: str, reason: str) -> None:
 def test_session_list_leaves_out_sessions_ended_by_clear():
     """/clear goes on as a new session, so the session it ended leaves the list."""
     cleared, exited = _seed_session(), _seed_session()
+    _seed_prompts(cleared, "Fix the login timeout")
+    _seed_prompts(exited, "Fix the login timeout")
     _end_session(cleared, "clear")
     _end_session(exited, "prompt_input_exit")
 
@@ -200,6 +202,34 @@ def test_resumed_cleared_session_is_listed_again():
 
     listed = {s["id"] for s in client.get("/api/v1/sessions").json()}
     assert cleared in listed
+
+
+def test_session_list_leaves_out_ended_sessions_nothing_happened_in():
+    """Opened, waited on and closed without a name: nothing to show."""
+    silent, talked, worked, labelled, open_ = (_seed_session() for _ in range(5))
+    _seed_prompts(talked, "Fix the login timeout")
+    client.patch(
+        f"/api/v1/sessions/{labelled}/label", json={"label": "Spare"}, headers=_auth_headers()
+    )
+    for session_id, event_type in (
+        (silent, EventType.NOTIFICATION),
+        (worked, EventType.PRE_TOOL_USE),
+    ):
+        event = EventAdapter.validate_python(
+            {
+                "event_type": event_type,
+                "session_id": session_id,
+                "timestamp": datetime.now(UTC),
+                "data": {"tool_name": "Read"},
+            }
+        )
+        asyncio.run(event_processor.process_event(event))
+    for session_id in (silent, talked, worked, labelled):
+        _end_session(session_id, "other")
+
+    listed = {s["id"] for s in client.get("/api/v1/sessions").json()}
+    assert silent not in listed
+    assert {talked, worked, labelled, open_} <= listed
 
 
 def _seed_prompts(session_id: str, *prompts: str) -> None:
