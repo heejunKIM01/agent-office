@@ -61,7 +61,8 @@ class SessionSummary(TypedDict):
     status: str
     eventCount: int
     codingAgent: str | None
-    # Its last turn has ended and it waits for the next prompt.
+    # Its last turn has ended, no subagent is at work, and it waits for the
+    # next prompt.
     idle: bool
 
 
@@ -142,7 +143,8 @@ async def _idle_sessions(db: AsyncSession, session_ids: list[str]) -> set[str]:
     """Sessions whose last turn has ended, from their newest event.
 
     Notifications are left out: Claude Code says it is waiting for input a
-    minute after a turn ends, and that is no work.
+    minute after a turn ends, and that is no work. A session whose office
+    still holds a subagent is at work, though its lead has stopped.
     """
     if not session_ids:
         return set()
@@ -157,8 +159,12 @@ async def _idle_sessions(db: AsyncSession, session_ids: list[str]) -> set[str]:
     result = await db.execute(
         select(EventRecord.session_id, EventRecord.event_type).where(EventRecord.id.in_(newest))
     )
+    sessions = get_event_processor().sessions
     return {
-        session_id for session_id, event_type in result.all() if event_type in _TURN_ENDING_EVENTS
+        session_id
+        for session_id, event_type in result.all()
+        if event_type in _TURN_ENDING_EVENTS
+        and not (session_id in sessions and sessions[session_id].agents)
     }
 
 
