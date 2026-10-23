@@ -29,10 +29,11 @@ export interface Floor {
   updatedAt: number;
 }
 
-/** Whether a session is open and has just sent events. */
+/** Whether a session is open, in the middle of a turn and has just sent events. */
 export function isActiveNow(session: Session, now: number): boolean {
   return (
     session.status === "active" &&
+    !session.idle &&
     now - Date.parse(session.updatedAt) < ACTIVE_NOW_MS
   );
 }

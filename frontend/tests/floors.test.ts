@@ -30,6 +30,7 @@ function session(
     status,
     eventCount: 1,
     codingAgent: null,
+    idle: false,
   };
 }
 
@@ -124,6 +125,12 @@ describe("isActiveNow", () => {
     expect(isActiveNow(open, at("2026-10-03T05:05:00Z"))).toBe(false);
     expect(
       isActiveNow({ ...open, status: "completed" }, at("2026-10-03T05:00:30Z")),
+    ).toBe(false);
+  });
+
+  it("is not a session whose turn has ended, however recent", () => {
+    expect(
+      isActiveNow({ ...open, idle: true }, at("2026-10-03T05:00:30Z")),
     ).toBe(false);
   });
 });

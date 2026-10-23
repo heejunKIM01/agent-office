@@ -249,6 +249,41 @@ def test_session_list_leaves_out_ended_sessions_nothing_happened_in():
     assert {talked, worked, labelled, open_} <= listed
 
 
+def _send(session_id: str, event_type: EventType, **data: object) -> None:
+    event = EventAdapter.validate_python(
+        {
+            "event_type": event_type,
+            "session_id": session_id,
+            "timestamp": datetime.now(UTC),
+            "data": data,
+        }
+    )
+    asyncio.run(event_processor.process_event(event))
+
+
+def test_session_list_says_which_sessions_wait_for_the_next_prompt():
+    """A turn that ended waits, even after Claude Code says it waits for input."""
+    working, stopped, fresh, finishing, delegating = (_seed_session() for _ in range(5))
+    for session_id in (working, stopped, finishing, delegating):
+        _seed_prompts(session_id, "Fix the login timeout")
+    _send(working, EventType.PRE_TOOL_USE, tool_name="Read", tool_use_id="t1")
+    _send(stopped, EventType.STOP)
+    _send(stopped, EventType.NOTIFICATION, message="Claude is waiting for your input")
+    # A background agent still at work after the lead's turn ended.
+    _send(finishing, EventType.STOP)
+    _send(finishing, EventType.PRE_TOOL_USE, tool_name="Read", tool_use_id="t2", agent_id="bg1")
+    # The lead stops again while an agent it sent is still in the office.
+    _send(delegating, EventType.SUBAGENT_START, agent_id="bg2", task_description="Map the docs")
+    _send(delegating, EventType.STOP)
+
+    idle = {s["id"]: s["idle"] for s in client.get("/api/v1/sessions").json()}
+    assert idle[working] is False
+    assert idle[stopped] is True
+    assert idle[fresh] is True
+    assert idle[finishing] is False
+    assert idle[delegating] is False
+
+
 def _seed_prompts(session_id: str, *prompts: str) -> None:
     for prompt in prompts:
         event = EventAdapter.validate_python(

@@ -61,9 +61,16 @@ class SessionSummary(TypedDict):
     status: str
     eventCount: int
     codingAgent: str | None
+    # Its last turn has ended, no subagent is at work, and it waits for the
+    # next prompt.
+    idle: bool
 
 
 _TITLE_MAX_CHARS = 80
+
+# Events after which a session waits for the user: the main agent's stop, and
+# a session starting or ending before any prompt.
+_TURN_ENDING_EVENTS = ("stop", "session_start", "session_end")
 
 
 def _title_of(prompt: object) -> str | None:
@@ -130,6 +137,35 @@ async def _session_titles(db: AsyncSession, session_ids: list[str]) -> dict[str,
         if title:
             titles[session_id] = title
     return titles
+
+
+async def _idle_sessions(db: AsyncSession, session_ids: list[str]) -> set[str]:
+    """Sessions whose last turn has ended, from their newest event.
+
+    Notifications are left out: Claude Code says it is waiting for input a
+    minute after a turn ends, and that is no work. A session whose office
+    still holds a subagent is at work, though its lead has stopped.
+    """
+    if not session_ids:
+        return set()
+    newest = (
+        select(func.max(EventRecord.id))
+        .where(
+            EventRecord.session_id.in_(session_ids),
+            EventRecord.event_type != "notification",
+        )
+        .group_by(EventRecord.session_id)
+    )
+    result = await db.execute(
+        select(EventRecord.session_id, EventRecord.event_type).where(EventRecord.id.in_(newest))
+    )
+    sessions = get_event_processor().sessions
+    return {
+        session_id
+        for session_id, event_type in result.all()
+        if event_type in _TURN_ENDING_EVENTS
+        and not (session_id in sessions and sessions[session_id].agents)
+    }
 
 
 class ReplayEvent(TypedDict):
@@ -244,6 +280,7 @@ async def list_sessions(
     sessions_with_work: set[str] = {row[0] for row in work_result.all()}
 
     titles = await _session_titles(db, [row[0].id for row in rows])
+    idle = await _idle_sessions(db, [row[0].id for row in rows])
 
     sessions: list[SessionSummary] = []
     for row in rows:
@@ -288,6 +325,7 @@ async def list_sessions(
                 "updatedAt": updated_utc.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                 "status": rec.status,
                 "eventCount": count,
+                "idle": rec.id in idle,
                 "codingAgent": rec.coding_agent,
             }
         )

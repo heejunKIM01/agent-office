@@ -28,6 +28,8 @@ export interface Session {
   status: string;
   eventCount: number;
   codingAgent: string | null;
+  /** Its last turn has ended and it waits for the next prompt. */
+  idle: boolean;
 }
 
 // ============================================================================
