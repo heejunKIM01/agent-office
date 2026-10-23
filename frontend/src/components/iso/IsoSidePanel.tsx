@@ -179,11 +179,18 @@ export function IsoSidePanel({
         className={`${card} grid grid-cols-[3.5em_1fr] gap-x-2 gap-y-0.5 text-[11px]`}
       >
         <span className="text-slate-400">{t("iso.panel.project")}</span>
-        <span className="truncate font-mono text-slate-700 dark:text-slate-300">
+        {/* Cut-off text shows in full on hover. */}
+        <span
+          className="truncate font-mono text-slate-700 dark:text-slate-300"
+          title={session?.projectRoot || session?.projectName || undefined}
+        >
           {session?.projectRoot || session?.projectName || "—"}
         </span>
         <span className="text-slate-400">{t("iso.panel.session")}</span>
-        <span className="truncate font-mono text-slate-700 dark:text-slate-300">
+        <span
+          className="truncate font-mono text-slate-700 dark:text-slate-300"
+          title={session?.id}
+        >
           {session?.id.slice(0, 8) ?? "—"}
         </span>
       </section>
@@ -201,7 +208,10 @@ export function IsoSidePanel({
               <Avatar row={row} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1">
-                  <span className="truncate text-[12px] font-semibold">
+                  <span
+                    className="truncate text-[12px] font-semibold"
+                    title={row.title}
+                  >
                     {row.title}
                   </span>
                   {row.typeLabel && row.typeLabel !== row.title && (
@@ -224,7 +234,10 @@ export function IsoSidePanel({
                   )}
                 </div>
                 {row.doing && (
-                  <p className="truncate text-[11px] text-slate-600 dark:text-slate-300">
+                  <p
+                    className="truncate text-[11px] text-slate-600 dark:text-slate-300"
+                    title={row.doing}
+                  >
                     {row.doing}
                   </p>
                 )}
@@ -260,8 +273,13 @@ export function IsoSidePanel({
                   s: String(line.time.getSeconds()).padStart(2, "0"),
                 })}
               </span>
-              <span className="truncate font-semibold">{line.who}</span>
-              <span className="line-clamp-4 break-words text-slate-600 dark:text-slate-300">
+              <span className="truncate font-semibold" title={line.who}>
+                {line.who}
+              </span>
+              <span
+                className="line-clamp-4 break-words text-slate-600 dark:text-slate-300"
+                title={line.what}
+              >
                 {line.what}
               </span>
             </li>
