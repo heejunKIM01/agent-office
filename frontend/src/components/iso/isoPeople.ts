@@ -33,6 +33,7 @@ import {
   type IsoSpot,
 } from "@/constants/isoFloorPlan";
 import {
+  ROOM_FOR_ACTIVITY,
   arrivingWalker,
   seatedWalker,
   stepIsoWalker,
@@ -53,6 +54,11 @@ import {
 } from "@/systems/roomGimmicks";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
+import {
+  chooseSeat,
+  rememberSeat,
+  rememberedSeats,
+} from "@/systems/seatMemory";
 import {
   bubbleHolder,
   bubbleKey,
@@ -173,6 +179,8 @@ export class IsoPeople {
   private callPending = false;
   /** The next sync places a snapshot: everyone starts where they are. */
   private fresh = true;
+  /** The dev room chair each person last sat in, by index into SUBAGENT_SEATS. */
+  private readonly seatOf = rememberedSeats();
   private callUntil = 0;
 
   private words: BubbleWords = {
@@ -204,6 +212,7 @@ export class IsoPeople {
     for (const id of this.departed) {
       if (!ids.has(id)) this.departed.delete(id);
     }
+    const newcomers: IsoPerson[] = [];
     for (const person of people) {
       const placed = this.placed.get(person.id);
       if (placed) {
@@ -216,7 +225,15 @@ export class IsoPeople {
         if (person.leaving) continue;
         this.departed.delete(person.id);
       }
-      const seat = this.freeSeat(person.kind);
+      newcomers.push(person);
+    }
+    // Those who sat here before take their chairs back before anyone new
+    // takes the first free one.
+    newcomers.sort(
+      (a, b) => Number(!this.seatOf.has(a.id)) - Number(!this.seatOf.has(b.id)),
+    );
+    for (const person of newcomers) {
+      const seat = this.freeSeat(person);
       // A snapshot places everyone where they are: only a subagent made while
       // the office watches walks in from the elevator.
       const arriving =
@@ -499,7 +516,8 @@ export class IsoPeople {
 
   /**
    * Where a newcomer first appears: stepping out of the elevator, already on
-   * its break (the lounge sofa, the cafe) when it is on one, or in its seat.
+   * its break (the lounge sofa, the cafe) when it is on one, in the room its
+   * tool sends it to when the office is seen afresh, or in its seat.
    */
   private firstWalker(
     person: IsoPerson,
@@ -507,21 +525,29 @@ export class IsoPeople {
     seat: IsoSpot,
   ): IsoWalker {
     if (arriving) return arrivingWalker(ELEVATOR);
-    const { breakRoom } = person;
-    if (breakRoom && !person.activity) {
+    const { activity, breakRoom } = person;
+    if (breakRoom && !activity) {
       return seatedWalker(this.spotIn(person.id, breakRoom), breakRoom);
     }
-    return seatedWalker(seat);
+    const room = this.fresh && activity ? ROOM_FOR_ACTIVITY[activity] : "seat";
+    return room === "seat"
+      ? seatedWalker(seat)
+      : seatedWalker(this.spotIn(person.id, room), room);
   }
 
-  private freeSeat(kind: PersonKind): IsoSpot {
-    if (kind === "me") return MY_SEAT;
-    if (kind === "claude") return CLAUDE_SEAT;
-    const taken = new Set([...this.placed.values()].map((p) => p.seat));
-    return (
-      SUBAGENT_SEATS.find((seat) => !taken.has(seat)) ??
-      SUBAGENT_SEATS[SUBAGENT_SEATS.length - 1]
+  private freeSeat(person: IsoPerson): IsoSpot {
+    if (person.kind === "me") return MY_SEAT;
+    if (person.kind === "claude") return CLAUDE_SEAT;
+    const taken = new Set(
+      [...this.placed.values()].map(({ seat }) => SUBAGENT_SEATS.indexOf(seat)),
     );
+    const index = chooseSeat(
+      SUBAGENT_SEATS.length,
+      taken,
+      this.seatOf.get(person.id),
+    );
+    rememberSeat(this.seatOf, person.id, index);
+    return SUBAGENT_SEATS[index];
   }
 
   /** The spot beside Claude a reporting subagent holds, taking the first free one. */

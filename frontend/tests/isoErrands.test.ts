@@ -207,6 +207,21 @@ describe("iso errands", () => {
     });
   });
 
+  it("seen afresh in a room it works there at once, without a walk", () => {
+    const steps: IsoWalker[] = [];
+    run(
+      seatedWalker(SPOTS.library, "library"),
+      "reading",
+      1,
+      0,
+      false,
+      false,
+      (w) => steps.push(w),
+    );
+    expect(steps.every((w) => w.path === null && w.x === 6.4)).toBe(true);
+    expect(steps[0]).toMatchObject({ goal: "library", pose: "work" });
+  });
+
   it("sits still with nothing to do", () => {
     const { walker } = run(seatedWalker(SEAT), null, 2);
     expect(walker).toEqual(seatedWalker(SEAT));
