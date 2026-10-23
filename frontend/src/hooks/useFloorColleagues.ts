@@ -104,6 +104,7 @@ export function useFloorColleagues(
           stuck: boss?.stuck ?? null,
           bubble: boss?.bubble ?? null,
           bubbleAt: lead?.bubbleAt ?? null,
+          since: boss?.lastEventAt ? Date.parse(boss.lastEventAt) : null,
           thinking: boss
             ? isQuietTurn({
                 state: boss.state,

@@ -60,6 +60,11 @@ export interface IsoPerson {
   idleSince: number | null;
   /** Me: when I last sent a question (Date.now ms), to type it out. */
   typedAt: number | null;
+  /**
+   * When its latest event came (Date.now ms): what it is doing now began
+   * then, however late the page saw it. Null when the page cannot tell.
+   */
+  since: number | null;
   /** The log id of its latest test command when it passed, to cheer a new one. */
   passedTest: string | null;
   outfit: Outfit;
@@ -77,6 +82,8 @@ export interface Colleague {
   /** When its bubble last changed (Date.now ms). */
   bubbleAt: number | null;
   thinking: boolean;
+  /** When its session's latest event came (Date.now ms). */
+  since: number | null;
 }
 
 /**
@@ -183,6 +190,15 @@ const said = (bubble: BubbleState): Pick<IsoPerson, "bubble" | "bubbleAt"> => ({
 });
 
 /** When I last sent a question, from the log (newest first). */
+/** When a character's latest event came (ms); the lead agent logs as "main". */
+function lastEventAt(
+  eventLog: readonly EventLogEntry[],
+  agentId: string,
+): number | null {
+  const entry = eventLog.find((logged) => logged.agentId === agentId);
+  return entry ? entry.timestamp.getTime() : null;
+}
+
 function lastPromptAt(eventLog: readonly EventLogEntry[]): number | null {
   const prompt = eventLog.find((entry) => entry.type === "user_prompt_submit");
   return prompt ? prompt.timestamp.getTime() : null;
@@ -237,6 +253,7 @@ export function officePeople(
           ? (state.eventLog[0]?.timestamp.getTime() ?? null)
           : null,
       typedAt: null,
+      since: lastEventAt(state.eventLog, "main"),
       passedTest: lastPassedTestId(state.eventLog, "main"),
       outfit: "general",
     },
@@ -256,6 +273,7 @@ export function officePeople(
       breakRoom: null,
       idleSince: null,
       typedAt: lastPromptAt(state.eventLog),
+      since: null,
       passedTest: null,
       outfit: "general",
     },
@@ -279,6 +297,7 @@ export function officePeople(
       breakRoom: null,
       idleSince: null,
       typedAt: null,
+      since: lastEventAt(state.eventLog, agent.id),
       passedTest: lastPassedTestId(state.eventLog, agent.id),
       outfit: outfitOf(agent.agentType),
     });
@@ -299,6 +318,7 @@ export function officePeople(
       breakRoom: null,
       idleSince: null,
       typedAt: null,
+      since: colleague.since,
       passedTest: null,
       outfit: "general",
     });
