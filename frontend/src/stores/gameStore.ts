@@ -260,5 +260,16 @@ export const useGameStore = create<GameStore>()(
 // ============================================================================
 
 export const selectBoss = (state: GameStore) => state.boss;
+/**
+ * The session whose snapshot the page shows, or null while it waits for one
+ * (before the first one, and just after a switch or reconnect clears the
+ * store): until then the office and its panel show nobody, not the reset
+ * store's lone, idle lead.
+ */
+export const selectShownSessionId = (state: GameStore): string | null =>
+  state.snapshotSessionId !== null &&
+  state.snapshotSessionId === state.sessionId
+    ? state.snapshotSessionId
+    : null;
 export const selectIsConnected = (state: GameStore) => state.isConnected;
 export const selectCodingAgent = (state: GameStore) => state.codingAgent;

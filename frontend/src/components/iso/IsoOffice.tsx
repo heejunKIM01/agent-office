@@ -5,7 +5,7 @@ import { Minus, Plus, RotateCcw } from "lucide-react";
 import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
 import { agentMachineService } from "@/machines/agentMachineService";
-import { useGameStore } from "@/stores/gameStore";
+import { selectShownSessionId, useGameStore } from "@/stores/gameStore";
 import { selectTheme, usePreferencesStore } from "@/stores/preferencesStore";
 import type { AgentPhase } from "@/stores/slices/types";
 import {
@@ -132,21 +132,17 @@ export function IsoOffice({
     const show = (): void => {
       // Moving bubbles up changes the store and calls back in here.
       if (showing) return;
-      // A chosen session's people wait for its snapshot, and a new snapshot
-      // places everyone afresh: they start where it puts them (at work, on
-      // the sofa, in the cafe) instead of walking there from where the empty
-      // office or the last session had them.
-      const store = useGameStore.getState();
-      if (
-        store.sessionId !== "None" &&
-        store.snapshotSessionId !== store.sessionId
-      ) {
-        return;
-      }
-      if (store.snapshotSessionId !== placedForRef.current) {
-        placedForRef.current = store.snapshotSessionId;
+      // Nobody is placed until the shown session's snapshot is in: the office
+      // stays empty instead of showing the last session's people or the
+      // reset store's lone, idle Claude. A new snapshot places everyone
+      // afresh: they start where it puts them (at work, on the sofa, in the
+      // cafe) instead of walking there.
+      const shown = selectShownSessionId(useGameStore.getState());
+      if (shown !== placedForRef.current) {
+        placedForRef.current = shown;
         viewRef.current?.clearPeople();
       }
+      if (shown === null) return;
       showing = true;
       seatNewcomers();
       takeLatestBubbles();

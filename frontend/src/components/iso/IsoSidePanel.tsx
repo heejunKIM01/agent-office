@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@/hooks/useSessions";
 import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useGameStore } from "@/stores/gameStore";
+import { selectShownSessionId, useGameStore } from "@/stores/gameStore";
 import { officePeople, type Colleague } from "@/systems/officePeople";
 import { OUTFIT_COLORS } from "./isoPalette";
 import {
@@ -120,6 +120,7 @@ export function IsoSidePanel({
   const boss = useGameStore((s) => s.boss);
   const agents = useGameStore((s) => s.agents);
   const eventLog = useGameStore((s) => s.eventLog);
+  const shown = useGameStore(selectShownSessionId);
 
   const words = useMemo<RosterWords>(
     () => ({
@@ -138,16 +139,19 @@ export function IsoSidePanel({
   );
   const people = useMemo(
     () =>
-      officePeople(
-        { boss, agents, eventLog },
-        {
-          agentName,
-          me: t("iso.me"),
-          generalType: t("iso.agentType.general"),
-        },
-        colleagues,
-      ),
-    [boss, agents, eventLog, agentName, t, colleagues],
+      // Nobody until the shown session's snapshot is in, as in the office.
+      shown === null
+        ? []
+        : officePeople(
+            { boss, agents, eventLog },
+            {
+              agentName,
+              me: t("iso.me"),
+              generalType: t("iso.agentType.general"),
+            },
+            colleagues,
+          ),
+    [shown, boss, agents, eventLog, agentName, t, colleagues],
   );
   const rows = useMemo(
     () => rosterRows(people, toolCounts(eventLog), words),
