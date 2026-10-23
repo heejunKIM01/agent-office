@@ -37,6 +37,8 @@ __all__ = [
     "BackgroundTaskEvent",
     "AnyEvent",
     "EventAdapter",
+    "CONTINUING_SOURCES",
+    "session_start_source",
 ]
 
 
@@ -190,7 +192,9 @@ class EventDataBase(BaseModel):
     # Producer tag: "recovered" marks a synthetic SESSION_START the backend
     # builds when the real one never arrived (see EventProcessor._process_event_internal);
     # "opencode" marks plugin events, whose child @agent sessions must stay
-    # excluded from that recovery. Old producers omit it (extra="ignore").
+    # excluded from that recovery. On a coding agent's SESSION_START it says
+    # why the session started (see session_start_source). Old producers omit
+    # it (extra="ignore").
     source: str | None = None
     # Coding agent that produced the event: "claude-code", "opencode",
     # "gemini-cli" or "codex" (see app.core.coding_agent).
@@ -222,6 +226,24 @@ class SessionEventData(EventDataBase):
     """Payload for SESSION_START, SESSION_END."""
 
     reason: str | None = None
+
+
+# Why a session starts again under its own id: it carries on the conversation
+# its stored events belong to. Claude Code, Codex and Gemini CLI use the same
+# words; the others are startup and clear.
+CONTINUING_SOURCES = ("compact", "resume")
+
+
+def session_start_source(source: str | None, summary: str | None) -> str | None:
+    """Why a session started, from a SESSION_START's ``source`` and ``summary``.
+
+    Claude Code hooks installed before they sent ``source`` name it only in the
+    summary, ``Session started (compact)``.
+    """
+    if source:
+        return source
+    match = re.fullmatch(r"Session started \((\w+)\)", summary or "")
+    return match.group(1) if match else None
 
 
 class ToolEventData(EventDataBase):

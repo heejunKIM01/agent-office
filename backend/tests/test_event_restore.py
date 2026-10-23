@@ -90,7 +90,25 @@ async def _live_entry(session_id: str) -> dict[str, str]:
 
 
 @pytest.mark.asyncio
-async def test_real_session_start_after_restart_starts_fresh() -> None:
+async def test_new_conversation_after_restart_starts_fresh() -> None:
+    sid = "restore-startup"
+    ep = EventProcessor()
+    await ep.process_event(_event(EventType.SESSION_START, sid))
+    await ep.process_event(_event(EventType.USER_PROMPT_SUBMIT, sid, prompt="old"))
+
+    restarted = EventProcessor()
+    await restarted.process_event(_event(EventType.SESSION_START, sid, source="startup"))
+
+    assert _types(restarted, sid) == ["session_start"]
+    async with database.AsyncSessionLocal() as db:
+        stored = (
+            await db.execute(select(EventRecord.event_type).where(EventRecord.session_id == sid))
+        ).scalars()
+        assert list(stored) == ["session_start"]
+
+
+@pytest.mark.asyncio
+async def test_resumed_session_after_restart_is_rebuilt_from_its_events() -> None:
     sid = "restore-resume"
     ep = EventProcessor()
     await ep.process_event(_event(EventType.SESSION_START, sid))
@@ -99,12 +117,7 @@ async def test_real_session_start_after_restart_starts_fresh() -> None:
     restarted = EventProcessor()
     await restarted.process_event(_event(EventType.SESSION_START, sid, source="resume"))
 
-    assert _types(restarted, sid) == ["session_start"]
-    async with database.AsyncSessionLocal() as db:
-        stored = (
-            await db.execute(select(EventRecord.event_type).where(EventRecord.session_id == sid))
-        ).scalars()
-        assert list(stored) == ["session_start"]
+    assert _types(restarted, sid) == ["session_start", "user_prompt_submit", "session_start"]
 
 
 @pytest.mark.asyncio
