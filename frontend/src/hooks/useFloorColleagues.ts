@@ -66,7 +66,8 @@ export function useFloorColleagues(
   sessions: Session[],
   fallbackName: string,
 ): Colleague[] {
-  const [leads, setLeads] = useState<Map<string, LiveLead>>(new Map());
+  // Null until the overview socket's first message: no lead is known yet.
+  const [leads, setLeads] = useState<Map<string, LiveLead> | null>(null);
   const wanted = sessions.length > 0;
 
   useEffect(() => {
@@ -77,7 +78,10 @@ export function useFloorColleagues(
     const connect = (): void => {
       socket = new WebSocket(`${WS_BASE}/ws/overview`);
       socket.onmessage = (event: MessageEvent<string>) => {
-        setLeads((previous) => readLeads(event.data, previous) ?? previous);
+        setLeads(
+          (previous) =>
+            readLeads(event.data, previous ?? new Map()) ?? previous,
+        );
       };
       socket.onclose = () => {
         if (!stopped) retry = setTimeout(connect, RECONNECT_MS);
@@ -90,38 +94,38 @@ export function useFloorColleagues(
       socket?.close();
       // What the closed socket last said goes stale: a colleague shown again
       // later waits for the next overview instead of starting from it.
-      setLeads(new Map());
+      setLeads(null);
     };
   }, [wanted]);
 
   return useMemo(
     () =>
-      sessions
-        // A colleague waits for its lead's overview: drawn before it, it would
-        // sit idle at a desk and then walk to the room it is working in.
-        .filter((session) => leads.has(session.id))
-        .map((session): Colleague => {
-          const lead = leads.get(session.id);
-          const boss = lead?.entry;
-          return {
-            sessionId: session.id,
-            agentName: codingAgentName(session.codingAgent) ?? fallbackName,
-            title: sessionTitle(session) ?? session.id.slice(0, 8),
-            activity: boss?.activity ?? null,
-            stuck: boss?.stuck ?? null,
-            bubble: boss?.bubble ?? null,
-            bubbleAt: lead?.bubbleAt ?? null,
-            since: boss?.lastEventAt ? Date.parse(boss.lastEventAt) : null,
-            thinking: boss
-              ? isQuietTurn({
-                  state: boss.state,
-                  activity: boss.activity,
-                  stuck: boss.stuck,
-                  turnActive: boss.turnActive,
-                })
-              : false,
-          };
-        }),
+      // Colleagues wait for the overview: drawn before it, they would sit idle
+      // at a desk and then walk to the rooms they are working in. A session
+      // the overview leaves out (not in the backend's memory, as right after
+      // it restarts) still shows, at its desk.
+      (leads === null ? [] : sessions).map((session): Colleague => {
+        const lead = leads?.get(session.id);
+        const boss = lead?.entry;
+        return {
+          sessionId: session.id,
+          agentName: codingAgentName(session.codingAgent) ?? fallbackName,
+          title: sessionTitle(session) ?? session.id.slice(0, 8),
+          activity: boss?.activity ?? null,
+          stuck: boss?.stuck ?? null,
+          bubble: boss?.bubble ?? null,
+          bubbleAt: lead?.bubbleAt ?? null,
+          since: boss?.lastEventAt ? Date.parse(boss.lastEventAt) : null,
+          thinking: boss
+            ? isQuietTurn({
+                state: boss.state,
+                activity: boss.activity,
+                stuck: boss.stuck,
+                turnActive: boss.turnActive,
+              })
+            : false,
+        };
+      }),
     [sessions, leads, fallbackName],
   );
 }
