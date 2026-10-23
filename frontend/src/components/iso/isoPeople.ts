@@ -520,8 +520,10 @@ export class IsoPeople {
 
   /**
    * Where a newcomer first appears: stepping out of the elevator, already on
-   * its break (the lounge sofa, the cafe) when it is on one, in the room its
-   * tool sends it to when the office is seen afresh, or in its seat.
+   * its break (the lounge sofa, the cafe) when it is on one, already in the
+   * room its tool sends it to, or in its seat. Only the elevator is walked:
+   * a colleague whose session turns up after the office is drawn (its
+   * overview comes on a socket of its own) is already at its work too.
    */
   private firstWalker(
     person: IsoPerson,
@@ -533,7 +535,7 @@ export class IsoPeople {
     if (breakRoom && !activity) {
       return seatedWalker(this.spotIn(person.id, breakRoom), breakRoom);
     }
-    const room = this.fresh && activity ? ROOM_FOR_ACTIVITY[activity] : "seat";
+    const room = activity ? ROOM_FOR_ACTIVITY[activity] : "seat";
     return room === "seat"
       ? seatedWalker(seat)
       : seatedWalker(this.spotIn(person.id, room), room);
