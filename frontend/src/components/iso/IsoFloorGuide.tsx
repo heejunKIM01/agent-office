@@ -68,8 +68,9 @@ export function IsoFloorGuide({
   const { awake, idle } = splitFloors(floors, current?.projectKey, now);
   const shown = showIdle ? floors : awake;
   const locale = dateFnsLocaleFor(language);
+  // The clock ticks every 15 s, so a session can have changed after it.
   const ago = (time: number): string =>
-    formatDistance(time, now, { addSuffix: true, locale });
+    formatDistance(Math.min(time, now), now, { addSuffix: true, locale });
 
   return (
     <aside className={className}>
