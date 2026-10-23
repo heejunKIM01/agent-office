@@ -52,7 +52,7 @@ import {
   watchesTheClock,
   type BookPile,
 } from "@/systems/roomGimmicks";
-import { liftLabels, type LabelBox } from "@/systems/labelLift";
+import { liftLabels, type LabelBox, type Lift } from "@/systems/labelLift";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import {
@@ -152,8 +152,8 @@ interface Placed {
   report: string | null;
   /** How far its chip and bubble are lifted clear of a nearer person's (px). */
   lift: number;
-  /** Its bubble is left out: a crowd leaves no room for it. */
-  hush: boolean;
+  /** Which of its chip and bubble a crowd leaves room for. */
+  shown: Lift["show"];
 }
 
 function nameChip(color: string): {
@@ -284,7 +284,7 @@ export class IsoPeople {
         seat,
         report: null,
         lift: 0,
-        hush: false,
+        shown: "all",
       });
     }
     this.fresh = false;
@@ -418,17 +418,18 @@ export class IsoPeople {
     }
     const lifts = liftLabels(boxes);
     for (const [id, placed] of this.placed) {
-      const { by, hush } = lifts.get(id) ?? { by: 0, hush: false };
+      const { by, show } = lifts.get(id) ?? { by: 0, show: "all" };
       if (by !== placed.lift) {
         placed.lift = by;
         const translate = by ? `0 ${-by}px` : "";
         placed.chip.element.style.translate = translate;
         placed.bubbleHolder.style.translate = translate;
       }
-      if (hush !== placed.hush) {
-        placed.hush = hush;
-        // Hidden, not removed: it is still measured next frame.
-        placed.bubbleHolder.style.visibility = hush ? "hidden" : "";
+      if (show !== placed.shown) {
+        placed.shown = show;
+        // Hidden, not removed: they are still measured next frame.
+        placed.bubbleHolder.style.visibility = show === "all" ? "" : "hidden";
+        placed.chip.element.style.visibility = show === "none" ? "hidden" : "";
       }
     }
   }
