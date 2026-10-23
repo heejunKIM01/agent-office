@@ -7,7 +7,7 @@ from typing import Annotated, Any, TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.connection_manager import get_manager
@@ -15,6 +15,7 @@ from app.core.event_processor import get_event_processor
 from app.core.transcript_title import transcript_titles
 from app.db.database import get_db
 from app.db.models import EventRecord, SessionRecord, TaskRecord, UserPreference
+from app.models.events import CONTINUING_SOURCES, session_start_source
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +164,10 @@ async def list_sessions(
 
     Sessions ended by ``/clear`` are left out too: the same terminal goes on as
     a new session, so each ``/clear`` would otherwise add a row. Resuming one
-    starts it afresh, which drops the clearing ``session_end`` and lists it again.
+    opens it again, so it is listed while open and after it ends some other way.
     So are ended sessions with nothing in them but opening, waiting and closing,
-    unless a title or a label names them.
+    unless a title or a label names them or they carried on a conversation by
+    resume or compact.
 
     Args:
         db: Database session dependency.
@@ -187,8 +189,13 @@ async def list_sessions(
         .subquery()
     )
 
+    newest_end = (
+        select(func.max(EventRecord.id))
+        .where(EventRecord.event_type == "session_end")
+        .group_by(EventRecord.session_id)
+    )
     cleared_subq = select(EventRecord.session_id).where(
-        EventRecord.event_type == "session_end",
+        EventRecord.id.in_(newest_end),
         func.json_extract(EventRecord.data, "$.reason") == "clear",
     )
 
@@ -198,7 +205,7 @@ async def list_sessions(
             func.coalesce(event_count_subq.c.event_count, 0).label("event_count"),
         )
         .outerjoin(event_count_subq, SessionRecord.id == event_count_subq.c.session_id)
-        .where(SessionRecord.id.not_in(cleared_subq))
+        .where(~and_(SessionRecord.status == "completed", SessionRecord.id.in_(cleared_subq)))
         .order_by(SessionRecord.updated_at.desc())
     )
 
@@ -211,11 +218,21 @@ async def list_sessions(
 
     # Find session IDs that have at least one session_start event.
     # Child @agent sessions never get session_start, so they're excluded.
-    sessions_with_start_stmt = (
-        select(EventRecord.session_id).where(EventRecord.event_type == "session_start").distinct()
+    # Those that started again by resume or compact carried on a conversation,
+    # even one whose events were wiped before resume and compact kept them.
+    start_result = await db.execute(
+        select(
+            EventRecord.session_id,
+            func.json_extract(EventRecord.data, "$.source"),
+            func.json_extract(EventRecord.data, "$.summary"),
+        ).where(EventRecord.event_type == "session_start")
     )
-    start_result = await db.execute(sessions_with_start_stmt)
-    sessions_with_start: set[str] = {row[0] for row in start_result.all()}
+    sessions_with_start: set[str] = set()
+    continued_sessions: set[str] = set()
+    for session_id, source, summary in start_result.all():
+        sessions_with_start.add(session_id)
+        if session_start_source(source, summary) in CONTINUING_SOURCES:
+            continued_sessions.add(session_id)
 
     # Sessions where something happened beyond opening, waiting and closing.
     sessions_with_work_stmt = (
@@ -242,6 +259,7 @@ async def list_sessions(
         if (
             rec.status == "completed"
             and rec.id not in sessions_with_work
+            and rec.id not in continued_sessions
             and rec.id not in titles
             and not rec.label
         ):
