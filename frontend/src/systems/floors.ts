@@ -7,7 +7,7 @@
 import type { Session } from "@/hooks/useSessions";
 
 /** An open session counts as working now while its events are this recent. */
-export const ACTIVE_NOW_MS = 2 * 60 * 1000;
+export const ACTIVE_NOW_MS = 5 * 60 * 1000;
 /** Floors quiet for longer than this fold under 「오래 쉰 층 N개 더 보기」. */
 export const IDLE_FLOOR_MS = 60 * 60 * 1000;
 /**

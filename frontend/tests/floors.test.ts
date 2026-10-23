@@ -118,9 +118,9 @@ describe("isActiveNow", () => {
   );
   const at = (time: string): number => Date.parse(time);
 
-  it("is an open session that sent events within two minutes", () => {
-    expect(isActiveNow(open, at("2026-10-03T05:01:59Z"))).toBe(true);
-    expect(isActiveNow(open, at("2026-10-03T05:02:00Z"))).toBe(false);
+  it("is an open session that sent events within five minutes", () => {
+    expect(isActiveNow(open, at("2026-10-03T05:04:59Z"))).toBe(true);
+    expect(isActiveNow(open, at("2026-10-03T05:05:00Z"))).toBe(false);
     expect(
       isActiveNow({ ...open, status: "completed" }, at("2026-10-03T05:00:30Z")),
     ).toBe(false);
