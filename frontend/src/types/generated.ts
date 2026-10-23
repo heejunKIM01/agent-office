@@ -281,6 +281,7 @@ export type Tododone = number;
 export type Todototal = number;
 export type Subagentcount = number;
 export type Turnactive1 = boolean;
+export type Lasteventat = string | null;
 export type Entries = OverviewEntry[];
 export type Lastupdated1 = string;
 export type ProjectName5 = string | null;
@@ -725,6 +726,7 @@ export interface OverviewEntry {
   stuck?: StuckReason | null;
   bubble?: BubbleContent | null;
   turnActive?: Turnactive1;
+  lastEventAt?: Lasteventat;
   [k: string]: unknown;
 }
 /**

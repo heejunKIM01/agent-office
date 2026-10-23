@@ -90,6 +90,41 @@ async def test_restored_history_keeps_what_the_log_shows() -> None:
 
 
 @pytest.mark.asyncio
+async def test_lead_time_follows_the_lead_and_survives_a_restart() -> None:
+    # A colleague's thinking counts from its lead's latest event, as the session
+    # itself counts it when shown; an employee's work does not move it.
+    ep = EventProcessor()
+    sid = "restore-lead-time"
+    prompted = "2026-10-23T05:00:01Z"
+    await ep.process_event(_event(EventType.SESSION_START, sid, "2026-10-23T05:00:00Z"))
+    await ep.process_event(_event(EventType.USER_PROMPT_SUBMIT, sid, prompted, prompt="go"))
+    await ep.process_event(
+        _event(
+            EventType.SUBAGENT_START,
+            sid,
+            "2026-10-23T05:00:09Z",
+            agent_id="subagent_x",
+            agent_name="Explore",
+            task_description="Map the auth flow",
+        )
+    )
+    assert ep.sessions[sid].lead_event_at == datetime(2026, 10, 23, 5, 0, 1, tzinfo=UTC)
+
+    del ep.sessions[sid]  # lost to a restart, events stay in the DB
+    await ep.process_event(
+        _event(
+            EventType.SUBAGENT_STOP,
+            sid,
+            "2026-10-23T05:00:20Z",
+            agent_id="subagent_x",
+            success=True,
+        )
+    )
+
+    assert ep.sessions[sid].lead_event_at == datetime(2026, 10, 23, 5, 0, 1, tzinfo=UTC)
+
+
+@pytest.mark.asyncio
 async def test_restored_history_keeps_utc_times_and_ids() -> None:
     sid = "restore-utc"
     first = await _live_entry(sid)

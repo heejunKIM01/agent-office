@@ -281,6 +281,31 @@ describe("officePeople — breaks", () => {
     expect(quiet[1].typedAt).toBeNull();
   });
 
+  it("dates what each one is doing from its own latest event", () => {
+    const at = (agentId: string, type: string, ms: number) =>
+      ({
+        ...compaction(type),
+        agentId,
+        timestamp: new Date(ms),
+      }) as EventLogEntry;
+    const people = officePeople(
+      {
+        boss: boss(),
+        agents: new Map([["a1", agent("a1", {})]]),
+        eventLog: [
+          at("a1", "pre_tool_use", 9_000),
+          at("main", "user_prompt_submit", 5_000),
+        ],
+      },
+      WORDS,
+    );
+    expect(people.map((p) => [p.id, p.since])).toEqual([
+      ["claude", 5_000],
+      ["me", null],
+      ["a1", 9_000],
+    ]);
+  });
+
   it("cheers whoever's tests just passed", () => {
     const passed = (agentId: string, at: number) =>
       ({
@@ -334,6 +359,7 @@ describe("officePeople — colleagues", () => {
           bubble: { type: "thought", text: "src/auth.py", icon: "📖" },
           bubbleAt: 5,
           thinking: false,
+          since: null,
         },
         {
           sessionId: "s3",
@@ -344,6 +370,7 @@ describe("officePeople — colleagues", () => {
           bubble: null,
           bubbleAt: null,
           thinking: false,
+          since: null,
         },
       ],
     );

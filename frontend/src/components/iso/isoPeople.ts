@@ -171,6 +171,8 @@ export class IsoPeople {
   private readonly departed = new Set<string>();
   /** A newcomer arrived: Claude picks up the phone on the next frame. */
   private callPending = false;
+  /** The next sync places a snapshot: everyone starts where they are. */
+  private fresh = true;
   private callUntil = 0;
 
   private words: BubbleWords = {
@@ -215,8 +217,13 @@ export class IsoPeople {
         this.departed.delete(person.id);
       }
       const seat = this.freeSeat(person.kind);
+      // A snapshot places everyone where they are: only a subagent made while
+      // the office watches walks in from the elevator.
       const arriving =
-        person.kind === "subagent" && person.arriving && !person.leaving;
+        !this.fresh &&
+        person.kind === "subagent" &&
+        person.arriving &&
+        !person.leaving;
       if (arriving) this.callPending = true;
       const rig = buildCharacter(person.kind, person.outfit);
       const chip = nameChip(dotColor(person));
@@ -250,6 +257,7 @@ export class IsoPeople {
         report: null,
       });
     }
+    this.fresh = false;
   }
 
   /** Move and pose everyone for this frame; ``dt`` in seconds. */
@@ -383,7 +391,14 @@ export class IsoPeople {
     act: PoseAct | null,
   ): void {
     const { person } = placed;
-    if (person.thinking) placed.thinkingSince ??= now;
+    // From its latest event (a Date.now time, moved onto this frame clock),
+    // so seeing it afresh (another session shown, a reload) does not start
+    // the count again.
+    if (person.thinking)
+      placed.thinkingSince =
+        person.since === null
+          ? (placed.thinkingSince ?? now)
+          : now - (Date.now() - person.since);
     else placed.thinkingSince = null;
     const onTrip = quiet ? null : this.tripBubble(placed);
     // Over coffee while compacting it says so instead of thinking aloud;
@@ -407,7 +422,7 @@ export class IsoPeople {
             thinkingSeconds:
               placed.thinkingSince === null
                 ? null
-                : Math.floor((now - placed.thinkingSince) / 1000),
+                : Math.max(0, Math.floor((now - placed.thinkingSince) / 1000)),
           }));
     const key = bubbleKey(bubble);
     if (key === placed.bubbleKey) return;
@@ -473,6 +488,7 @@ export class IsoPeople {
   clear(): void {
     for (const [id, placed] of this.placed) this.remove(id, placed);
     this.departed.clear();
+    this.fresh = true;
     this.callPending = false;
     this.callUntil = 0;
   }

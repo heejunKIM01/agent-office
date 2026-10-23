@@ -57,7 +57,10 @@ function stamp(previous: Clock, rows: RosterRow[], now: number): Clock {
   return { now, since };
 }
 
-/** Seconds since each row's status or task last changed, ticking once a second. */
+/**
+ * Seconds since each row's latest event, ticking once a second; where the
+ * page cannot tell, since its status or task last changed here.
+ */
 function useSecondsInState(rows: RosterRow[]): Map<string, number> {
   const latest = useRef(rows);
   useEffect(() => {
@@ -79,7 +82,8 @@ function useSecondsInState(rows: RosterRow[]): Map<string, number> {
     for (const row of rows) {
       const seen = clock.since.get(row.id);
       // A change the clock has not stamped yet has just happened.
-      const at = seen && seen.key === rowKey(row) ? seen.at : clock.now;
+      const at =
+        row.since ?? (seen && seen.key === rowKey(row) ? seen.at : clock.now);
       seconds.set(row.id, Math.max(0, Math.round((clock.now - at) / 1000)));
     }
     return seconds;

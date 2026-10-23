@@ -31,6 +31,8 @@ export interface RosterRow {
   doing: string;
   /** Tools it has used this session. */
   tools: number;
+  /** When its latest event came (ms); null when the page cannot tell. */
+  since: number | null;
 }
 
 /** Tool uses per character in the event log ("main" is the lead agent). */
@@ -94,6 +96,7 @@ export function rosterRows(
         status,
         doing,
         tools: counts.get(logId(person)) ?? 0,
+        since: person.since,
       };
     });
 }

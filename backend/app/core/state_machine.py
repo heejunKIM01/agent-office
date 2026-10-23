@@ -511,6 +511,11 @@ class StateMachine:
     # Not part of ``to_game_state`` output — internal eviction metadata only.
     last_event_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
+    # When the lead agent's latest event happened (the hook's time, as the
+    # history line shows it). The overview carries it so the office counts
+    # another session's lead from the same moment as when that session is shown.
+    lead_event_at: datetime | None = None
+
     # ---------------------------------------------------------------------------
     # Core methods
     # ---------------------------------------------------------------------------
