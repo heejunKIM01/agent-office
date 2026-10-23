@@ -63,6 +63,33 @@ async def test_event_after_eviction_is_applied_once() -> None:
 
 
 @pytest.mark.asyncio
+async def test_restored_history_keeps_what_the_log_shows() -> None:
+    sid = "restore-detail"
+    ep = EventProcessor()
+    await ep.process_event(_event(EventType.SESSION_START, sid))
+    await ep.process_event(
+        _event(EventType.USER_PROMPT_SUBMIT, sid, prompt="Rename the config loader")
+    )
+    await ep.process_event(
+        _event(
+            EventType.PRE_TOOL_USE,
+            sid,
+            tool_name="Read",
+            tool_use_id="t1",
+            tool_input={"file_path": "src/config.ts"},
+        )
+    )
+    live = [entry["detail"] for entry in ep.sessions[sid].history]
+
+    # A backend restart: a new processor rebuilds the session from the DB.
+    state = await EventProcessor().get_current_state(sid)
+    assert state is not None
+    assert [entry["detail"] for entry in state.history] == live
+    assert live[1]["prompt"] == "Rename the config loader"
+    assert live[2]["toolInput"] == {"file_path": "src/config.ts"}
+
+
+@pytest.mark.asyncio
 async def test_restored_history_keeps_utc_times_and_ids() -> None:
     sid = "restore-utc"
     first = await _live_entry(sid)

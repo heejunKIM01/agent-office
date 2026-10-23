@@ -101,6 +101,38 @@ def _wipes_stored_events(event: AnyEvent) -> bool:
     return session_start_source(event.data.source, event.data.summary) not in CONTINUING_SOURCES
 
 
+def _history_detail(event: AnyEvent) -> dict[str, Any]:
+    """What the frontend reads from a history entry: the prompt, the tool and
+    its input, a reply. A session rebuilt from the database gets the same.
+
+    Family-specific fields are read via getattr because event.data is the
+    union of all payload classes; only the family matching event.event_type
+    actually carries each field.
+    """
+    detail: dict[str, Any] = {}
+    for src, dst in [
+        ("tool_name", "toolName"),
+        ("tool_input", "toolInput"),
+        ("result_summary", "resultSummary"),
+        ("message", "message"),
+        ("thinking", "thinking"),
+        ("error_type", "errorType"),
+        ("task_description", "taskDescription"),
+        ("agent_name", "agentName"),
+        ("prompt", "prompt"),
+    ]:
+        val = getattr(event.data, src, None)
+        if val is not None:
+            detail[dst] = val
+    # A turn's reply rides with STOP in speech_content; the log shows it.
+    speech = getattr(event.data, "speech_content", None)
+    if event.event_type == EventType.STOP and speech is not None:
+        reply = speech.boss or speech.boss_phone
+        if reply:
+            detail.setdefault("message", reply)
+    return detail
+
+
 def _todos_unchanged(old_todos: list[TodoItem], new_todos: list[TodoItem]) -> bool:
     """Return True if two todo lists are semantically identical.
 
@@ -616,39 +648,13 @@ class EventProcessor:
             else event.data.agent_id or "main"
         )
 
-        # Build detail dict from event data fields for frontend inspection.
-        # Family-specific fields are read via getattr because event.data is the
-        # union of all payload classes; only the family matching event.event_type
-        # actually carries each field.
-        detail: dict[str, Any] = {}
-        for src, dst in [
-            ("tool_name", "toolName"),
-            ("tool_input", "toolInput"),
-            ("result_summary", "resultSummary"),
-            ("message", "message"),
-            ("thinking", "thinking"),
-            ("error_type", "errorType"),
-            ("task_description", "taskDescription"),
-            ("agent_name", "agentName"),
-            ("prompt", "prompt"),
-        ]:
-            val = getattr(event.data, src, None)
-            if val is not None:
-                detail[dst] = val
-        # A turn's reply rides with STOP in speech_content; the log shows it.
-        speech = getattr(event.data, "speech_content", None)
-        if event.event_type == EventType.STOP and speech is not None:
-            reply = speech.boss or speech.boss_phone
-            if reply:
-                detail.setdefault("message", reply)
-
         event_dict: HistoryEntry = {
             "id": str(event.timestamp.timestamp()),
             "type": str(event.event_type),
             "agentId": agent_id,
             "summary": self._get_event_summary(event),
             "timestamp": event.timestamp.isoformat(),
-            "detail": detail,
+            "detail": _history_detail(event),
         }
         sm.history.append(event_dict)
         if len(sm.history) > MAX_HISTORY_ENTRIES:
@@ -856,7 +862,7 @@ class EventProcessor:
                         "agentId": agent_id,
                         "summary": self._get_event_summary(evt),
                         "timestamp": evt.timestamp.isoformat(),
-                        "detail": {},
+                        "detail": _history_detail(evt),
                     }
                     sm.history.append(history_entry)
 
