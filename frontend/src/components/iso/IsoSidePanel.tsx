@@ -84,12 +84,19 @@ function useSecondsInState(rows: RosterRow[]): Map<string, number> {
     return { starts, unstamped };
   }, [rows, clock]);
   useEffect(() => {
+    const now = Date.now();
+    const times = [...starts.values()];
+    // Rows that came or changed since the last tick are counted (and
+    // stamped) at once, not up to a second late.
+    const behind =
+      unstamped ||
+      times.some((at) => secondsSince(at, now) !== secondsSince(at, clock.now));
     const timer = window.setTimeout(
       () => setClock((previous) => stamp(previous, rows, Date.now())),
-      unstamped ? 0 : untilNextSecond([...starts.values()], Date.now()),
+      behind ? 0 : untilNextSecond(times, now),
     );
     return () => window.clearTimeout(timer);
-  }, [rows, starts, unstamped]);
+  }, [rows, starts, unstamped, clock.now]);
   return useMemo(
     () =>
       new Map([...starts].map(([id, at]) => [id, secondsSince(at, clock.now)])),
