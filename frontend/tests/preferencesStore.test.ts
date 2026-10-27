@@ -55,3 +55,38 @@ describe("officeView", () => {
     );
   });
 });
+
+describe("place", () => {
+  beforeEach(() => {
+    apiFetch.mockReset();
+    usePreferencesStore.setState({ place: "office" });
+  });
+
+  it("shows the office unless the airport was chosen", async () => {
+    apiFetch.mockResolvedValueOnce(saved({}));
+    await usePreferencesStore.getState().loadPreferences();
+    expect(usePreferencesStore.getState().place).toBe("office");
+
+    apiFetch.mockResolvedValueOnce(saved({ place: "airport" }));
+    await usePreferencesStore.getState().loadPreferences();
+    expect(usePreferencesStore.getState().place).toBe("airport");
+
+    usePreferencesStore.setState({ place: "office" });
+    apiFetch.mockResolvedValueOnce(saved({ place: "moon" }));
+    await usePreferencesStore.getState().loadPreferences();
+    expect(usePreferencesStore.getState().place).toBe("office");
+  });
+
+  it("saves the choice", async () => {
+    apiFetch.mockResolvedValueOnce(saved({}));
+    await usePreferencesStore.getState().setPlace("airport");
+    expect(usePreferencesStore.getState().place).toBe("airport");
+    expect(apiFetch).toHaveBeenCalledWith(
+      "/api/v1/preferences/place",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ value: "airport" }),
+      }),
+    );
+  });
+});

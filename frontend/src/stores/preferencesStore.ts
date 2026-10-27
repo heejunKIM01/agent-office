@@ -5,6 +5,13 @@ import { isLocale, type Locale } from "@/i18n";
 import { OFFICE_VIEWS, type OfficeView } from "@/systems/floors";
 import { apiFetch } from "@/utils/api";
 import {
+  DEFAULT_PLACE,
+  isPlace,
+  readStoredPlace,
+  storePlace,
+  type Place,
+} from "@/utils/place";
+import {
   DEFAULT_THEME,
   isTheme,
   readStoredTheme,
@@ -22,6 +29,8 @@ export interface PreferencesState {
   officeView: OfficeView;
   language: Locale;
   theme: Theme;
+  /** Where the agents work: the office or the airport. */
+  place: Place;
   isLoaded: boolean;
 
   // Actions
@@ -30,6 +39,7 @@ export interface PreferencesState {
   setOfficeView: (view: OfficeView) => Promise<void>;
   setLanguage: (language: Locale) => Promise<void>;
   setTheme: (theme: Theme) => Promise<void>;
+  setPlace: (place: Place) => Promise<void>;
 }
 
 // ============================================================================
@@ -93,9 +103,14 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
   language: DEFAULT_LANGUAGE,
   // This browser's last theme until the saved preference arrives.
   theme: readStoredTheme() ?? DEFAULT_THEME,
+  // The page is drawn on the server with the default place; the browser's
+  // last one is read in loadPreferences, so the first render matches.
+  place: DEFAULT_PLACE,
   isLoaded: false,
 
   loadPreferences: async () => {
+    // This browser's last place until the saved preference arrives.
+    set({ place: readStoredPlace() ?? get().place });
     const prefs = await fetchPreferences();
 
     const autoFollowRaw = prefs.auto_follow_new_sessions;
@@ -107,12 +122,15 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
     // No saved theme yet: keep the one this browser used.
     const theme = isTheme(prefs.theme) ? prefs.theme : get().theme;
     storeTheme(theme);
+    const place = isPlace(prefs.place) ? prefs.place : get().place;
+    storePlace(place);
 
     set({
       autoFollowNewSessions,
       officeView: savedOfficeView(prefs),
       language: isLocale(language) ? language : DEFAULT_LANGUAGE,
       theme,
+      place,
       isLoaded: true,
     });
   },
@@ -137,6 +155,12 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
     storeTheme(theme);
     await setPreference("theme", theme);
   },
+
+  setPlace: async (place) => {
+    set({ place });
+    storePlace(place);
+    await setPreference("place", place);
+  },
 }));
 
 // ============================================================================
@@ -148,4 +172,5 @@ export const selectAutoFollowNewSessions = (state: PreferencesState) =>
 export const selectOfficeView = (state: PreferencesState) => state.officeView;
 export const selectLanguage = (state: PreferencesState) => state.language;
 export const selectTheme = (state: PreferencesState) => state.theme;
+export const selectPlace = (state: PreferencesState) => state.place;
 export const selectIsLoaded = (state: PreferencesState) => state.isLoaded;

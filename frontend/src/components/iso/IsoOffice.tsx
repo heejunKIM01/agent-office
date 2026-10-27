@@ -6,8 +6,13 @@ import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
 import { agentMachineService } from "@/machines/agentMachineService";
 import { selectShownSessionId, useGameStore } from "@/stores/gameStore";
-import { selectTheme, usePreferencesStore } from "@/stores/preferencesStore";
+import {
+  selectPlace,
+  selectTheme,
+  usePreferencesStore,
+} from "@/stores/preferencesStore";
 import type { AgentPhase } from "@/stores/slices/types";
+import type { Place } from "@/utils/place";
 import {
   officePeople,
   type Colleague,
@@ -20,7 +25,7 @@ import {
   latestTodoNotes,
   latestTurn,
 } from "@/systems/roomGimmicks";
-import type { BubbleWords } from "./isoBubbles";
+import type { PlaceWords } from "./isoWorld";
 import { createIsoView, type IsoView } from "./isoView";
 
 const ZOOM_STEP = 1.25;
@@ -69,12 +74,27 @@ const CONTROLS_BOTTOM =
 /**
  * The isometric office scene with its people, zoom buttons and control hint
  * (drag to pan, scroll to zoom, double-click to reset). ``colleagues`` are
- * the lead agents of other sessions working on the same floor.
+ * the lead agents of other sessions working on the same floor. It shows the
+ * place chosen in settings (설정 「장소」): another place draws a new scene.
  */
 export function IsoOffice({
   colleagues,
 }: {
   colleagues: Colleague[];
+}): React.ReactNode {
+  const place = usePreferencesStore(selectPlace);
+  // Wait for the saved place, so the office is not built only to make way.
+  const loaded = usePreferencesStore((s) => s.isLoaded);
+  if (!loaded) return <div className="relative h-full w-full" />;
+  return <IsoScene key={place} place={place} colleagues={colleagues} />;
+}
+
+function IsoScene({
+  colleagues,
+  place,
+}: {
+  colleagues: Colleague[];
+  place: Place;
 }): React.ReactNode {
   const { t } = useTranslation();
   const agentName = useCodingAgentName();
@@ -107,7 +127,7 @@ export function IsoOffice({
     const mount = mountRef.current;
     if (!mount) return;
     // A subagent that rode the elevator away leaves the session's office too.
-    const view = createIsoView(mount, (id) =>
+    const view = createIsoView(mount, place, (id) =>
       agentMachineService.dismissAgent(id),
     );
     viewRef.current = view;
@@ -116,21 +136,39 @@ export function IsoOffice({
       viewRef.current = null;
       placedForRef.current = null;
     };
-  }, []);
+  }, [place]);
 
-  const bubbleWords = useMemo<BubbleWords>(
+  const placeWords = useMemo<PlaceWords>(
     () => ({
-      thinking: t("iso.bubble.thinking"),
-      thinkingFor: (seconds) => t("iso.bubble.thinkingFor", { seconds }),
-      looking: t("iso.bubble.looking"),
-      bye: t("iso.bubble.bye"),
-      compacting: t("iso.bubble.compacting"),
+      office: {
+        thinking: t("iso.bubble.thinking"),
+        thinkingFor: (seconds) => t("iso.bubble.thinkingFor", { seconds }),
+        looking: t("iso.bubble.looking"),
+        bye: t("iso.bubble.bye"),
+        compacting: t("iso.bubble.compacting"),
+      },
+      airport: {
+        takeoff: t("iso.radio.takeoff"),
+        landing: t("iso.radio.landing"),
+        reading: t("iso.air.reading"),
+        editing: t("iso.air.editing"),
+        running: t("iso.air.running"),
+        browsing: t("iso.air.browsing"),
+        planning: t("iso.air.planning"),
+        asking: t("iso.air.asking"),
+        thinking: (seconds) => t("iso.air.thinking", { seconds }),
+        trouble: t("iso.air.trouble"),
+        done: t("iso.air.done"),
+        handover: t("iso.air.handover"),
+        called: t("iso.air.called"),
+        announce: t("iso.air.announce"),
+      },
     }),
     [t],
   );
   useEffect(() => {
-    viewRef.current?.setBubbleWords(bubbleWords);
-  }, [bubbleWords]);
+    viewRef.current?.setWords(placeWords);
+  }, [placeWords]);
 
   useEffect(() => {
     viewRef.current?.setTheme(theme);
