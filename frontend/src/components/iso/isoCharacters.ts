@@ -276,9 +276,10 @@ export function buildCharacter(
   sweat.visible = false;
   hips.add(sweat);
 
-  // Over the head and off to its side, clear of the name chip above it.
+  // At the top of the head, off to its side (see ``rainOn``): the name chip
+  // hangs just above the hair and would cover it there.
   const cloud = new THREE.Group();
-  cloud.position.set(0.95, 2.15, 0.1);
+  cloud.position.y = CLOUD_HEIGHT;
   for (const [x, y, r] of CLOUD_PUFFS) {
     cloud.add(sphere(r, C.cloud, x, y, 0, [14, 10]));
   }
@@ -319,6 +320,13 @@ const CLOUD_PUFFS: [number, number, number][] = [
   [0.06, 0.15, 0.2],
 ];
 const RAIN_DROPS = 3;
+/**
+ * Where the cloud hangs from the head: up by the hair, and out to the
+ * screen's right whichever way it faces (the camera looks from 45°, so that
+ * is +x and -z on the floor).
+ */
+const CLOUD_HEIGHT = 1.82;
+const CLOUD_SIDE: [number, number] = [0.74, -0.74];
 /** How long a drop takes to fall from the cloud (s), and how far (m). */
 const RAIN_FALL_SECONDS = 0.6;
 const RAIN_FALL = 0.75;
@@ -331,6 +339,11 @@ export function rainOn(
 ): void {
   rig.cloud.visible = raining;
   if (!raining) return;
+  // Undo its turn so the cloud stays on the screen's right of its head.
+  const turn = rig.root.rotation.y;
+  const [x, z] = CLOUD_SIDE;
+  rig.cloud.position.x = x * Math.cos(turn) - z * Math.sin(turn);
+  rig.cloud.position.z = x * Math.sin(turn) + z * Math.cos(turn);
   for (const drop of rig.cloud.children) {
     const phase = drop.userData.rainPhase;
     if (typeof phase !== "number") continue;
