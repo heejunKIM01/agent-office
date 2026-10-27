@@ -30,7 +30,37 @@ export function material(
 
 /** A material of its own, for a light that blinks or fades by itself. */
 export function lamp(color: string): THREE.MeshLambertMaterial {
-  return new THREE.MeshLambertMaterial({ color, emissive: color });
+  const found = new THREE.MeshLambertMaterial({ color, emissive: color });
+  found.userData.lamp = true;
+  return found;
+}
+
+/** How much darker the site's colours go at night. */
+const NIGHT_SHADE = 0.45;
+
+/**
+ * Shade everything under ``root`` for the night, or back to day. Lamps (and
+ * anything marked to glow) keep their colour. The shared materials are
+ * shaded once for all who use them, so things made later at night come out
+ * shaded too.
+ */
+export function shadeForNight(root: THREE.Object3D, night: boolean): void {
+  root.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const list: THREE.Material[] = Array.isArray(object.material)
+      ? object.material
+      : [object.material];
+    for (const m of list) {
+      if (!(
+        m instanceof THREE.MeshLambertMaterial ||
+        m instanceof THREE.MeshBasicMaterial
+      ))
+        continue;
+      if (m.userData.lamp || m.userData.glow) continue;
+      const day = (m.userData.dayColor ??= m.color.clone()) as THREE.Color;
+      m.color.copy(day).multiplyScalar(night ? NIGHT_SHADE : 1);
+    }
+  });
 }
 
 /** A box whose bottom sits at ``y`` (not its centre). */

@@ -144,6 +144,8 @@ function createOffice(
     setNotes: (statuses) => effects.setNotes(statuses),
     setCommits: (commits) => effects.setCommits(commits),
     setTurn: (turn) => effects.setTurn(turn),
+    // The office's night is its windows (setNightView), set by the view.
+    setNight: () => undefined,
     dispose: () => {
       people.dispose();
       effects.dispose();
@@ -397,6 +399,7 @@ export function createIsoView(
       lights.sun.color.set(color);
       lights.sun.intensity = sun;
       setNightView(theme === "dark");
+      world.setNight(theme === "dark");
     },
     zoomBy(factor: number): void {
       camera.zoom = THREE.MathUtils.clamp(

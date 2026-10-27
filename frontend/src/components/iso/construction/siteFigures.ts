@@ -18,7 +18,8 @@ export type SiteRole = "manager" | "owner" | "worker";
  * machine's levers), ``check`` (ticking a clipboard), ``point`` (directing,
  * at the schedule board or the building); ``talk`` and ``phone`` with me;
  * ``stand``; resting ``sit``, ``coffee`` and ``doze`` on the bench;
- * ``wave`` on the way out and ``cheer``.
+ * ``wave`` on the way out, ``cheer``, ``dismay`` (hands on the head when
+ * tests fail) and ``hatWave`` (the hard hat off and waved when I say thanks).
  */
 export type SitePose =
   | "walk"
@@ -34,7 +35,9 @@ export type SitePose =
   | "coffee"
   | "doze"
   | "wave"
-  | "cheer";
+  | "cheer"
+  | "dismay"
+  | "hatWave";
 
 const SEATED: ReadonlySet<SitePose> = new Set(["sit", "coffee", "doze"]);
 
@@ -42,6 +45,8 @@ export interface SiteFigure {
   root: THREE.Group;
   hips: THREE.Group;
   head: THREE.Group;
+  /** The hard hat, which comes off to be waved. */
+  hat: THREE.Group;
   legs: [THREE.Group, THREE.Group];
   arms: [THREE.Group, THREE.Group];
   clipboard: THREE.Object3D;
@@ -90,7 +95,7 @@ function shell(radius: number, color: string, theta: number): THREE.Mesh {
   return mesh;
 }
 
-function head(dress: Dress): THREE.Group {
+function head(dress: Dress): { group: THREE.Group; hat: THREE.Group } {
   const g = new THREE.Group();
   g.position.set(0, 1.42, 0);
   g.add(sphere(0.62, SITE.skin, 0, 0, 0, [28, 20]));
@@ -104,14 +109,16 @@ function head(dress: Dress): THREE.Group {
     g.add(cheek);
   }
   // The hard hat: a dome with a ridge and a brim all round, peaked in front.
-  const hat = shell(0.72, dress.hat, Math.PI * 0.45);
-  hat.position.y = 0.08;
-  g.add(hat);
-  g.add(box(0.12, 0.08, 1.1, dress.hat, 0, 0.74, 0));
+  const hat = new THREE.Group();
+  const dome = shell(0.72, dress.hat, Math.PI * 0.45);
+  dome.position.y = 0.08;
+  hat.add(dome);
+  hat.add(box(0.12, 0.08, 1.1, dress.hat, 0, 0.74, 0));
   const brim = cylinder(0.86, 0.86, 0.05, dress.hat, 0, 0.12, 0.08, 24);
   brim.scale.z = 1.08;
-  g.add(brim);
-  return g;
+  hat.add(brim);
+  g.add(hat);
+  return { group: g, hat };
 }
 
 function dressFor(role: SiteRole, hat: string): Dress {
@@ -175,7 +182,7 @@ export function buildSiteFigure(
       );
     }
   }
-  const face = head(dress);
+  const { group: face, hat: hardHat } = head(dress);
   hips.add(face);
 
   // The clipboard in the left hand, the hammer, cup and phone in the right.
@@ -210,6 +217,7 @@ export function buildSiteFigure(
     root,
     hips,
     head: face,
+    hat: hardHat,
     legs,
     arms,
     clipboard,
@@ -234,6 +242,8 @@ export function poseSiteFigure(
     (seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT) + TAG_OVER_HIPS;
   fig.hips.rotation.set(0, 0, 0);
   fig.head.rotation.set(0, 0, 0);
+  fig.hat.position.set(0, 0, 0);
+  fig.hat.rotation.set(0, 0, 0);
   legL.rotation.set(seated ? -Math.PI / 2 : 0, 0, 0);
   legR.rotation.set(seated ? -Math.PI / 2 : 0, 0, 0);
   armL.rotation.set(0, 0, 0);
@@ -317,6 +327,27 @@ export function poseSiteFigure(
       if (!seated)
         fig.hips.position.y =
           HIP_HEIGHT + 0.08 * Math.abs(Math.sin(seconds * 9));
+      return;
+    }
+    case "dismay":
+      // Hands on the hard hat, the head shaking a little.
+      armL.rotation.set(-0.4, 0, -2.35);
+      armR.rotation.set(-0.4, 0, 2.35);
+      fig.head.rotation.set(0.12, 0.18 * Math.sin(seconds * 7), 0);
+      return;
+    case "hatWave": {
+      // The hard hat off and waved overhead in the right hand.
+      const swing = 0.3 * Math.sin(seconds * 9);
+      armR.rotation.set(0, 0, 2.6 + swing);
+      armL.rotation.x = breath;
+      // The hand, relative to the head: the arm raised about its shoulder.
+      const angle = 2.6 + swing;
+      fig.hat.position.set(
+        0.49 + 0.62 * Math.sin(angle),
+        0.72 - 0.62 * Math.cos(angle) - 1.42 + 0.35,
+        0,
+      );
+      fig.hat.rotation.z = swing * 1.5 - 0.3;
       return;
     }
     case "stand":

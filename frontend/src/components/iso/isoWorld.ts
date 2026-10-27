@@ -39,6 +39,8 @@ export interface IsoWorld {
   hearts(): void;
   /** Work just shipped (a push or merge). */
   ship(): void;
+  /** The dark theme's night, or day again (the office and airport keep their own light). */
+  setNight(night: boolean): void;
   setNotes(statuses: readonly NoteStatus[] | null): void;
   setCommits(commits: {
     count: number;
