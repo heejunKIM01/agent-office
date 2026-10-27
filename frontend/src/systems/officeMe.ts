@@ -5,7 +5,8 @@
  * stays put, look over Claude's shoulder, have a coffee in the cafe or
  * stroll about, and now and then sit back down at my desk a while. When I
  * send a question I hurry back to my desk and type it out, and when Claude
- * comes to ask me something I sit down to answer.
+ * comes to ask me something I sit down to answer. When work ships I stop
+ * wherever I am to clap.
  *
  * I get about as the pets do (officePets.ts), on the floor only.
  * `stepOfficeMe` is pure: the path finder, the clock and the dice are
@@ -14,6 +15,7 @@
 
 import { MY_SEAT } from "@/constants/isoFloorPlan";
 import { ISO_WALK_SPEED } from "./isoErrands";
+import { PARTY_MS } from "./roomGimmicks";
 import type { FloorPoint } from "./isoNavGrid";
 import type { DogSighting } from "./officeDog";
 import {
@@ -59,6 +61,8 @@ export interface MeInput extends PetClock {
   typedAt: number | null;
   /** Claude has come to my desk to ask me something. */
   asked: boolean;
+  /** Work just shipped: confetti is falling, and I stop to clap. */
+  party: boolean;
   claude: ClaudeAt | null;
   dog: DogSighting | null;
   cat: PetSighting | null;
@@ -238,6 +242,13 @@ export const ME_BRAIN: PetBrain<MeAct, MeInput> = {
     const atDesk = me.plan.id === "desk" || me.plan.id === "type";
     if (input.asked && !atDesk) {
       return { ...ME_SPOTS.desk, speed: ME_RUN_SPEED };
+    }
+    // On my way somewhere when work ships, I stop where I am to clap.
+    if (input.party && me.phase === "walk" && me.plan.id !== "clap") {
+      return plan("clap", { x: me.x, z: me.z, facing: me.facing }, "look", [
+        PARTY_MS,
+        PARTY_MS,
+      ]);
     }
     return null;
   },

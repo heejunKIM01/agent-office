@@ -520,6 +520,7 @@ export class IsoPeople {
       walkable: isFloorWalkable,
       typedAt,
       asked: claude?.person.activity === "asking",
+      party: now < this.partyUntil,
       claude: this.claudeAt,
       dog: pets.dog,
       cat: pets.cat,

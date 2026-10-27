@@ -63,6 +63,7 @@ const meInput = (now: number, over: Partial<MeInput> = {}): MeInput => ({
   random: dice(0.5),
   typedAt: null,
   asked: false,
+  party: false,
   claude: null,
   dog: null,
   cat: null,
@@ -197,6 +198,15 @@ describe("stepOfficeMe", () => {
     const there = run(me, 100, (m) => m.phase === "stay", { typedAt: 5 });
     expect(there.me.plan.id).toBe("type");
     expect(distance(there.me, MY_SEAT)).toBeLessThan(0.01);
+  });
+
+  it("stops where I am to clap when work ships on my way somewhere", () => {
+    const leaving = stepOfficeMe({ ...away(), until: 0 }, meInput(100));
+    expect(leaving.phase).toBe("walk");
+    const clap = run(leaving, 100, (m) => m.phase === "stay", { party: true });
+    expect(clap.me.plan.id).toBe("clap");
+    expect(clap.now - 100).toBeLessThanOrEqual(200);
+    expect(distance(clap.me, leaving)).toBeLessThan(0.5);
   });
 
   it("sits back down when Claude comes to ask me something, and stays", () => {
