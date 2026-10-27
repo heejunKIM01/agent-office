@@ -14,10 +14,15 @@ import { MAX_PILE } from "@/systems/roomGimmicks";
  * Something a person is up to besides its pose: a lounge pastime, waiting
  * on a command, scratching its head while typing, or cheering passed tests.
  */
-export type PoseAct = LoungeAct | "watch" | "scratch" | "cheer" | "dismay";
+export type PoseAct =
+  LoungeAct | "watch" | "scratch" | "cheer" | "dismay" | "clap";
 
 const isPastime = (act: PoseAct): act is LoungeAct =>
-  act !== "watch" && act !== "scratch" && act !== "cheer" && act !== "dismay";
+  act !== "watch" &&
+  act !== "scratch" &&
+  act !== "cheer" &&
+  act !== "dismay" &&
+  act !== "clap";
 import type { Outfit, PersonKind } from "@/systems/officePeople";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, cylinder, material } from "./isoFurniture";
@@ -386,7 +391,8 @@ function drip(sweat: THREE.Group, seconds: number): void {
  * phone, a book, the TV, a doze); at the rack, waiting on a long command, it
  * crosses its arms and checks its watch; typing it scratches its head now
  * and then; when its tests pass it throws its arms up, and when they fail
- * it holds its head, rocking (stuck or not). ``seconds`` drives the motion.
+ * it holds its head, rocking (stuck or not). When work ships it claps.
+ * ``seconds`` drives the motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
@@ -431,6 +437,16 @@ export function poseCharacter(
     const clutch = 0.06 * Math.sin(seconds * 14);
     armL.rotation.set(-0.5, 0, -2.55 + clutch);
     armR.rotation.set(-0.5, 0, 2.55 - clutch);
+    legL.rotation.x = seated ? -Math.PI / 2 : 0;
+    legR.rotation.x = seated ? -Math.PI / 2 : 0;
+    rig.hips.position.y = seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT;
+    return;
+  }
+  if (act === "clap" && !stuck) {
+    // Both hands out in front, meeting and parting fast.
+    const beat = 0.3 + 0.25 * Math.sin(seconds * 20);
+    armL.rotation.set(-1.35, 0, beat);
+    armR.rotation.set(-1.35, 0, -beat);
     legL.rotation.x = seated ? -Math.PI / 2 : 0;
     legR.rotation.x = seated ? -Math.PI / 2 : 0;
     rig.hips.position.y = seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT;

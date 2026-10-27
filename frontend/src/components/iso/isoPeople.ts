@@ -47,6 +47,7 @@ import { loungeAct } from "@/systems/loungeActs";
 import {
   CHEER_MS,
   DISMAY_MS,
+  PARTY_MS,
   NO_PILE,
   bookPile,
   scratchesHead,
@@ -191,6 +192,9 @@ export class IsoPeople {
   private readonly departed = new Set<string>();
   /** A newcomer arrived: Claude picks up the phone on the next frame. */
   private callPending = false;
+  /** Work just shipped: everyone claps until ``partyUntil`` (performance.now ms). */
+  private partyPending = false;
+  private partyUntil = 0;
   /** The next sync places a snapshot: everyone starts where they are. */
   private fresh = true;
   /** The chair and room spots each person last had, kept for the tab. */
@@ -314,6 +318,10 @@ export class IsoPeople {
     if (this.callPending) {
       this.callPending = false;
       this.callUntil = now + CALL_MS;
+    }
+    if (this.partyPending) {
+      this.partyPending = false;
+      this.partyUntil = now + PARTY_MS;
     }
     const gone: string[] = [];
     // Claude keeps quiet while a subagent reports to it.
@@ -537,6 +545,8 @@ export class IsoPeople {
       if (person.failedTest !== null) placed.dismayUntil = now + DISMAY_MS;
     }
     if (!walker.path && now < placed.dismayUntil) return "dismay";
+    // Work just shipped: everyone on their feet or seat claps.
+    if (!walker.path && now < this.partyUntil) return "clap";
     const lounging =
       walker.goal === "lounge" && !walker.path && walker.pose === "sit";
     if (!lounging) placed.loungeSince = null;
@@ -572,6 +582,11 @@ export class IsoPeople {
     placed.rig.pile.children.forEach((book, i) => {
       book.visible = i < pile.count;
     });
+  }
+
+  /** Work just shipped (a push or merge): everyone claps for a moment. */
+  party(): void {
+    this.partyPending = true;
   }
 
   /** Take everyone off the floor; the next `sync` places them afresh. */

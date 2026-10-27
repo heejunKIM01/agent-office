@@ -162,6 +162,42 @@ export function lastFailedTestId(
   return run && !run.passed ? run.id : null;
 }
 
+/** How long the office claps after a push or merge (ms). */
+export const PARTY_MS = 3_000;
+/** A push or merge older than this is not cheered when the page first sees it (ms). */
+export const PARTY_FRESH_MS = 60_000;
+
+/** A shell command that ships work: a push, or merging a pull request. */
+export function isShipCommand(command: unknown): boolean {
+  return (
+    typeof command === "string" &&
+    /\bgit\s+push\b|\bgh\s+pr\s+merge\b/.test(command)
+  );
+}
+
+/**
+ * The latest push or merge anyone in the session finished: its log id and
+ * when it came (ms), or null when that one failed or there is none.
+ */
+export function lastShipped(
+  eventLog: readonly {
+    id: string;
+    type: string;
+    timestamp: Date;
+    detail?: { toolInput?: unknown; errorType?: string };
+  }[],
+): { id: string; at: number } | null {
+  for (const entry of eventLog) {
+    if (entry.type !== "post_tool_use") continue;
+    const input = entry.detail?.toolInput as { command?: unknown } | undefined;
+    if (!isShipCommand(input?.command)) continue;
+    return entry.detail?.errorType
+      ? null
+      : { id: entry.id, at: entry.timestamp.getTime() };
+  }
+  return null;
+}
+
 /** The lamp over the elevator door stays lit this long after someone steps out (s). */
 export const LAMP_HOLD_SECONDS = 1.5;
 

@@ -4,7 +4,9 @@ import {
   lampLit,
   SCRATCH_EVERY_MS,
   SCRATCH_MS,
+  isShipCommand,
   isTestCommand,
+  lastShipped,
   lastFailedTestId,
   lastPassedTestId,
   scratchesHead,
@@ -169,5 +171,41 @@ describe("lampLit", () => {
     expect(lampLit(10, 10)).toBe(true);
     expect(lampLit(10, 10 + LAMP_HOLD_SECONDS - 0.01)).toBe(true);
     expect(lampLit(10, 10 + LAMP_HOLD_SECONDS)).toBe(false);
+  });
+});
+
+describe("lastShipped", () => {
+  const post = (command: string, id: number, errorType?: string) => ({
+    id: String(id),
+    type: "post_tool_use",
+    timestamp: new Date(id * 1000),
+    detail: { toolInput: { command }, ...(errorType ? { errorType } : {}) },
+  });
+
+  it("knows a push or a merge when it sees one", () => {
+    for (const command of [
+      "git push -u origin feat/x",
+      "gh pr merge 74 --merge --delete-branch",
+      "cd web && git push",
+    ]) {
+      expect(isShipCommand(command)).toBe(true);
+    }
+    for (const command of ["git pull", "gh pr view 74", "git status", null]) {
+      expect(isShipCommand(command)).toBe(false);
+    }
+  });
+
+  it("names the latest push or merge that went through, and when", () => {
+    expect(
+      lastShipped([
+        post("git status", 30),
+        post("git push", 20),
+        post("gh pr merge 1", 10),
+      ]),
+    ).toEqual({ id: "20", at: 20_000 });
+    expect(
+      lastShipped([post("git push", 20, "tool_error"), post("git push", 10)]),
+    ).toBeNull();
+    expect(lastShipped([post("npm test", 10)])).toBeNull();
   });
 });

@@ -4,11 +4,17 @@
  * editing (and flashes red when its tests fail), the rack lights blink
  * faster while a command runs, and planning
  * writes on the meeting room whiteboard. The elevator doors open while
- * someone steps in or out.
+ * someone steps in or out, and paper confetti falls over the office when work
+ * ships (a push or merge).
  */
 
 import * as THREE from "three";
-import type { Furniture, IsoSpot } from "@/constants/isoFloorPlan";
+import {
+  FLOOR_DEPTH,
+  FLOOR_WIDTH,
+  type Furniture,
+  type IsoSpot,
+} from "@/constants/isoFloorPlan";
 import { globeSpeed, lampLit, type NoteStatus } from "@/systems/roomGimmicks";
 import { material } from "./isoFurniture";
 import { ISO_COLORS } from "./isoPalette";
@@ -20,6 +26,19 @@ const LED_BUSY_SPEED = 14;
 /** A failed test's screen flashes between these this many times a second. */
 const ALARM_COLORS = ["#ef4444", "#7f1d1d"] as const;
 const ALARM_FLASHES = 3;
+/** Confetti: how many pieces, how long they fall (s), from how high and how fast (m). */
+const CONFETTI_PIECES = 90;
+const CONFETTI_SECONDS = 3;
+const CONFETTI_TOP = 9;
+const CONFETTI_FALL = 3;
+const CONFETTI_COLORS = [
+  "#f87171",
+  "#fbbf24",
+  "#34d399",
+  "#60a5fa",
+  "#a78bfa",
+  "#f472b6",
+];
 /** How far the code scrolls per second, in screen heights. */
 const CODE_SCROLL_SPEED = 0.25;
 /** Seconds of planning to fill the whiteboard's writing rows. */
@@ -203,8 +222,26 @@ export class IsoEffects {
     color: LAMP_COLOR,
   });
   private lastArrival: number | null = null;
+  /** Paper confetti, falling from ``confettiStart`` (s) once work ships. */
+  private readonly confetti = new THREE.Group();
+  private confettiPending = false;
+  private confettiStart: number | null = null;
 
   constructor(office: THREE.Object3D) {
+    const piece = new THREE.PlaneGeometry(0.32, 0.2);
+    for (let i = 0; i < CONFETTI_PIECES; i++) {
+      const mesh = new THREE.Mesh(
+        piece,
+        new THREE.MeshBasicMaterial({
+          color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+          side: THREE.DoubleSide,
+        }),
+      );
+      this.confetti.add(mesh);
+    }
+    this.confetti.visible = false;
+    office.add(this.confetti);
+
     const found: { whiteboard?: THREE.Object3D } = {};
     office.traverse((object) => {
       if (typeof object.userData.ledPhase === "number") {
@@ -262,8 +299,55 @@ export class IsoEffects {
     });
   }
 
+  /** Work just shipped: let paper confetti fall over the office. */
+  burst(): void {
+    this.confettiPending = true;
+  }
+
+  /** Scatter the pieces over the floor high up, then let them flutter down. */
+  private fall(seconds: number): void {
+    if (this.confettiPending) {
+      this.confettiPending = false;
+      this.confettiStart = seconds;
+      const random = seeded(Math.floor(seconds * 1000) % 233280);
+      for (const mesh of this.confetti.children) {
+        mesh.userData.from = {
+          x: 1 + random() * (FLOOR_WIDTH - 2),
+          y: CONFETTI_TOP + random() * 3,
+          z: 1 + random() * (FLOOR_DEPTH - 2),
+          sway: random() * Math.PI * 2,
+          spin: 3 + random() * 5,
+        };
+      }
+    }
+    if (this.confettiStart === null) return;
+    const t = seconds - this.confettiStart;
+    if (t > CONFETTI_SECONDS) {
+      this.confettiStart = null;
+      this.confetti.visible = false;
+      return;
+    }
+    this.confetti.visible = true;
+    for (const mesh of this.confetti.children) {
+      const from = mesh.userData.from as {
+        x: number;
+        y: number;
+        z: number;
+        sway: number;
+        spin: number;
+      };
+      mesh.position.set(
+        from.x + 0.4 * Math.sin(t * 3 + from.sway),
+        from.y - CONFETTI_FALL * t,
+        from.z + 0.4 * Math.cos(t * 2.5 + from.sway),
+      );
+      mesh.rotation.set(t * from.spin, t * from.spin * 0.7, from.sway);
+    }
+  }
+
   /** Bring the rooms up to date for this frame; ``seconds`` is the clock. */
   update(seconds: number, dt: number, inUse: RoomsInUse): void {
+    this.fall(seconds);
     const speed = inUse.serverBusy ? LED_BUSY_SPEED : LED_IDLE_SPEED;
     for (const led of this.leds) {
       led.mesh.visible = Math.sin(seconds * speed + led.phase) > -0.35;
