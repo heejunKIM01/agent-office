@@ -13,7 +13,7 @@ import {
   type Colleague,
   type PeopleWords,
 } from "@/systems/officePeople";
-import { latestTodoNotes } from "@/systems/roomGimmicks";
+import { lastShipped, latestTodoNotes } from "@/systems/roomGimmicks";
 import type { BubbleWords } from "./isoBubbles";
 import { createIsoView, type IsoView } from "./isoView";
 
@@ -76,6 +76,8 @@ export function IsoOffice({
   const eventLog = useGameStore((s) => s.eventLog);
   // The latest to-do list goes up on the whiteboard as sticky notes.
   const notes = useMemo(() => latestTodoNotes(eventLog), [eventLog]);
+  // A push or merge that just went through sets off confetti and claps.
+  const shipped = useMemo(() => lastShipped(eventLog), [eventLog]);
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<IsoView | null>(null);
   /** The session snapshot the people on the floor were placed from. */
@@ -125,6 +127,10 @@ export function IsoOffice({
   useEffect(() => {
     viewRef.current?.setNotes(notes);
   }, [notes]);
+
+  useEffect(() => {
+    viewRef.current?.setShipped(shipped);
+  }, [shipped]);
 
   // Keep the people on the floor in step with the session.
   useEffect(() => {
