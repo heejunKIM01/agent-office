@@ -55,10 +55,11 @@ const CONFETTI_COLORS = [
 const SHEET_DROP_SECONDS = 0.35;
 const SHEET_NOTE_SECONDS = 4;
 const SHEET_THICKNESS = 0.018;
-/** The cat lies on my desk this far in front of my chair (m), turned to the room. */
-const CAT_REACH = 0.95;
+/** The cat lies on my desk this far in front of my chair (m), turned to the camera, this big. */
+const CAT_REACH = 0.85;
 const CAT_DESK_HEIGHT = 1.01;
-const CAT_TURN = -0.6;
+const CAT_TURN = 0.8;
+const CAT_SIZE = 1.5;
 /** It hops up onto the desk in this long (s). */
 const CAT_HOP_SECONDS = 0.35;
 const CAT_COLORS = {
@@ -304,6 +305,7 @@ export class IsoEffects {
       MY_SEAT.z + CAT_REACH * Math.cos(MY_SEAT.facing),
     );
     this.cat.rotation.y = CAT_TURN;
+    this.cat.scale.setScalar(CAT_SIZE);
     office.add(this.cat);
 
     this.tray.add(box(0.66, 0.04, 0.48, "#475569"));
@@ -462,7 +464,7 @@ export class IsoEffects {
     this.cat.visible = true;
     this.cat.position.y =
       CAT_DESK_HEIGHT + 0.5 * Math.max(0, 1 - t / CAT_HOP_SECONDS);
-    this.cat.scale.y = 1 + 0.04 * Math.sin(seconds * 2.4);
+    this.cat.scale.y = CAT_SIZE * (1 + 0.04 * Math.sin(seconds * 2.4));
     this.catTail.rotation.y = 0.5 * Math.sin(seconds * 1.8);
   }
 
