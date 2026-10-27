@@ -116,6 +116,9 @@ const es: Record<TranslationKey, string> = {
   "iso.floor.moreIdle_one": "{count} piso tranquilo más",
   "iso.floor.moreIdle_other": "{count} pisos tranquilos más",
   "iso.floor.lessIdle": "Contraer",
+  "iso.floor.morePast": "{count} sesiones anteriores más",
+  "iso.floor.morePast_one": "{count} sesión anterior más",
+  "iso.floor.morePast_other": "{count} sesiones anteriores más",
 
   // Zoom Controls
   "zoom.in": "Acercar",

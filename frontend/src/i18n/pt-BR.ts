@@ -116,6 +116,9 @@ const ptBR: Record<TranslationKey, string> = {
   "iso.floor.moreIdle_one": "Mais {count} andar parado",
   "iso.floor.moreIdle_other": "Mais {count} andares parados",
   "iso.floor.lessIdle": "Recolher",
+  "iso.floor.morePast": "Mais {count} sessões anteriores",
+  "iso.floor.morePast_one": "Mais {count} sessão anterior",
+  "iso.floor.morePast_other": "Mais {count} sessões anteriores",
 
   // Zoom Controls
   "zoom.in": "Aumentar zoom",

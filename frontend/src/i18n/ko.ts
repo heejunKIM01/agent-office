@@ -114,6 +114,9 @@ const ko: Record<TranslationKey, string> = {
   "iso.floor.moreIdle_one": "오래 쉰 층 {count}개 더 보기",
   "iso.floor.moreIdle_other": "오래 쉰 층 {count}개 더 보기",
   "iso.floor.lessIdle": "접기",
+  "iso.floor.morePast": "지난 세션 {count}개 더 보기",
+  "iso.floor.morePast_one": "지난 세션 {count}개 더 보기",
+  "iso.floor.morePast_other": "지난 세션 {count}개 더 보기",
 
   // Zoom Controls
   "zoom.in": "확대",

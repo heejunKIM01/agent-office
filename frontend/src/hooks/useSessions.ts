@@ -30,6 +30,8 @@ export interface Session {
   codingAgent: string | null;
   /** Its last turn has ended and it waits for the next prompt. */
   idle: boolean;
+  /** Something happened in it beyond opening, waiting and closing. */
+  hasWork: boolean;
 }
 
 // ============================================================================

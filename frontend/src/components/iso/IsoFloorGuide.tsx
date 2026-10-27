@@ -4,7 +4,8 @@
  * The left-hand 「층별 안내」 of the isometric office (docs/plan/spec.md
  * 「화면 재설계」, after the video): a card per floor (project) top floor
  * first, the floor being viewed open with 「최근 세션 자동으로 따라가기」 and
- * its sessions, and the quiet floors folded under 「오래 쉰 층 N개 더 보기」.
+ * its sessions (past ones folded under 「지난 세션 N개 더 보기」), and the
+ * quiet floors folded under 「오래 쉰 층 N개 더 보기」.
  * ``className`` places it: a column beside the office, or a sheet on phones.
  */
 
@@ -22,6 +23,7 @@ import {
   isActiveNow,
   sessionTitle,
   splitFloors,
+  splitSessions,
   type Floor,
 } from "@/systems/floors";
 
@@ -36,10 +38,11 @@ const FLOOR_TONES = [
 const toneOf = (floor: Floor): (typeof FLOOR_TONES)[number] =>
   FLOOR_TONES[(floor.number - 1) % FLOOR_TONES.length];
 
-/** The session to open on a floor: one working now, else the newest. */
+/** The session to open on a floor: one working now, else the newest listed. */
 function entranceOf(floor: Floor, now: number): string {
   return (
     floor.sessions.find((session) => isActiveNow(session, now)) ??
+    splitSessions(floor, null, now).recent[0] ??
     floor.sessions[0]
   ).id;
 }
@@ -63,6 +66,7 @@ export function IsoFloorGuide({
   const together = usePreferencesStore(selectShowFloorColleagues);
   const setTogether = usePreferencesStore((s) => s.setShowFloorColleagues);
   const [showIdle, setShowIdle] = useState(false);
+  const [showPast, setShowPast] = useState(false);
 
   const current = floorOfSession(floors, sessionId);
   const { awake, idle } = splitFloors(floors, current?.projectKey, now);
@@ -89,6 +93,7 @@ export function IsoFloorGuide({
           {shown.map((floor) => {
             const tone = toneOf(floor);
             const open = floor.projectKey === current?.projectKey;
+            const { recent, past } = splitSessions(floor, sessionId, now);
             const summary = (
               <>
                 <span
@@ -186,7 +191,7 @@ export function IsoFloorGuide({
                       {t("iso.floor.together")}
                     </button>
                     <ul className="-mr-1 flex max-h-[42vh] flex-col overflow-y-auto pr-1">
-                      {floor.sessions.map((session) => {
+                      {(showPast ? floor.sessions : recent).map((session) => {
                         const here = session.id === sessionId;
                         const working = isActiveNow(session, now);
                         return (
@@ -224,6 +229,17 @@ export function IsoFloorGuide({
                         );
                       })}
                     </ul>
+                    {past.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPast(!showPast)}
+                        className="w-full px-1 pt-1 text-left text-[10px] text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                      >
+                        {showPast
+                          ? t("iso.floor.lessIdle")
+                          : t("iso.floor.morePast", { count: past.length })}
+                      </button>
+                    )}
                   </div>
                 )}
               </li>
