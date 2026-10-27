@@ -198,11 +198,16 @@ function pat(
   return plan(id, facingTo(by, pet), "pat", [4_000, 7_000]);
 }
 
-/** Over Claude's shoulder while it sits at its desk or works in a room. */
+/**
+ * Watching Claude while it sits at its desk or works in a room: a head
+ * apart, so that neither of us hides the other (our heads are 1.4 m across).
+ */
+const PEEK_REACH = 2.2;
+
 function peek(input: MeInput): MePlan | null {
   const { claude } = input;
   if (!claude || !(claude.seated || claude.working)) return null;
-  const by = besidePoint(claude, 1.3, input);
+  const by = besidePoint(claude, PEEK_REACH, input);
   if (!by) return null;
   return plan("peek", facingTo(by, claude), "peek", [5_000, 9_000]);
 }
@@ -268,7 +273,7 @@ export const ME_BRAIN: PetBrain<MeAct, MeInput> = {
         return (
           input.claude !== null &&
           (input.claude.seated || input.claude.working) &&
-          distance(input.claude, target) < LOST_REACH
+          distance(input.claude, target) < PEEK_REACH + 0.8
         );
       default:
         return true;
