@@ -144,6 +144,26 @@ export function officeColleagues(
 }
 
 /**
+ * How many lead agents each floor has in the office when it holds every
+ * floor, by project: the session shown and the others working now. Floors
+ * with nobody there are left out.
+ */
+export function floorHeadcounts(
+  floors: Floor[],
+  sessionId: string,
+  now: number,
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const floor of floors) {
+    const count = floor.sessions.filter(
+      (session) => session.id === sessionId || isActiveNow(session, now),
+    ).length;
+    if (count > 0) counts.set(floor.projectKey, count);
+  }
+  return counts;
+}
+
+/**
  * A floor's sessions the guide lists at first and the rest it folds: those
  * that ended over an hour ago and those opened but never given anything to
  * do. The session shown and ones working now are always listed.

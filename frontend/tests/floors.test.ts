@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Session } from "@/hooks/useSessions";
 import {
   buildFloors,
+  floorHeadcounts,
   floorOfSession,
   isActiveNow,
   keepShownSession,
@@ -125,6 +126,37 @@ describe("officeColleagues", () => {
     const many = buildFloors(busy, now);
     expect(officeColleagues(many, "s0", "building", now)).toHaveLength(29);
     expect(officeColleagues(many, "s0", "floor", now)).toHaveLength(7);
+  });
+});
+
+describe("floorHeadcounts", () => {
+  const now = Date.parse("2026-10-03T05:01:00Z");
+  const working = (id: string, project: string): Session =>
+    session(
+      id,
+      project,
+      "2026-10-03T00:00:00Z",
+      "2026-10-03T05:00:30Z",
+      "active",
+    );
+  const floors = buildFloors(
+    [
+      session("shown", "p", "2026-10-03T00:00:00Z", "2026-10-03T04:00:00Z"),
+      working("busy", "p"),
+      working("elsewhere", "q"),
+      working("third", "q"),
+      session("quiet", "r", "2026-10-03T00:00:00Z", "2026-10-03T04:00:00Z"),
+    ],
+    now,
+  );
+
+  it("counts the session shown and those working now on each floor", () => {
+    expect(floorHeadcounts(floors, "shown", now)).toEqual(
+      new Map([
+        ["/work/q", 2],
+        ["/work/p", 2],
+      ]),
+    );
   });
 });
 
