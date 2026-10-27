@@ -400,6 +400,7 @@ describe("officePeople — colleagues", () => {
           sessionId: "s2",
           agentName: "Claude",
           title: "로그인 고치기",
+          floor: null,
           activity: "reading",
           stuck: null,
           bubble: { type: "thought", text: "src/auth.py", icon: "📖" },
@@ -411,6 +412,7 @@ describe("officePeople — colleagues", () => {
           sessionId: "s3",
           agentName: "Codex",
           title: "문서 정리",
+          floor: 3,
           activity: null,
           stuck: "waiting_permission",
           bubble: null,
@@ -424,7 +426,8 @@ describe("officePeople — colleagues", () => {
       ["claude", "claude", "Claude"],
       ["me", "me", "나"],
       ["colleague:s2", "colleague", "Claude · 로그인 고치기"],
-      ["colleague:s3", "colleague", "Codex · 문서 정리"],
+      // With every floor in the office, its chip says whose floor it is.
+      ["colleague:s3", "colleague", "3F · Codex · 문서 정리"],
     ]);
     expect(people[2]).toMatchObject({
       title: "로그인 고치기",
@@ -433,7 +436,7 @@ describe("officePeople — colleagues", () => {
       bubbleAt: 5,
     });
     // Waiting for a permission sends it to my desk, as with Claude.
-    expect(people[3].activity).toBe("asking");
+    expect(people[3]).toMatchObject({ activity: "asking", floor: 3 });
   });
 });
 

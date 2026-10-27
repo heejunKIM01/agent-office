@@ -10,31 +10,47 @@ const { usePreferencesStore } = await import("@/stores/preferencesStore");
 const saved = (prefs: Record<string, string>): Response =>
   ({ ok: true, json: async () => prefs }) as Response;
 
-describe("showFloorColleagues", () => {
+describe("officeView", () => {
   beforeEach(() => {
     apiFetch.mockReset();
-    usePreferencesStore.setState({ showFloorColleagues: true });
+    usePreferencesStore.setState({ officeView: "floor" });
   });
 
-  it("is on unless it was turned off", async () => {
+  it("shows the floor unless another view was chosen", async () => {
     apiFetch.mockResolvedValueOnce(saved({}));
     await usePreferencesStore.getState().loadPreferences();
-    expect(usePreferencesStore.getState().showFloorColleagues).toBe(true);
+    expect(usePreferencesStore.getState().officeView).toBe("floor");
 
+    apiFetch.mockResolvedValueOnce(saved({ office_view: "building" }));
+    await usePreferencesStore.getState().loadPreferences();
+    expect(usePreferencesStore.getState().officeView).toBe("building");
+
+    apiFetch.mockResolvedValueOnce(saved({ office_view: "upstairs" }));
+    await usePreferencesStore.getState().loadPreferences();
+    expect(usePreferencesStore.getState().officeView).toBe("floor");
+  });
+
+  it("keeps the old switch turned off as the chosen session alone", async () => {
     apiFetch.mockResolvedValueOnce(saved({ show_floor_colleagues: "false" }));
     await usePreferencesStore.getState().loadPreferences();
-    expect(usePreferencesStore.getState().showFloorColleagues).toBe(false);
+    expect(usePreferencesStore.getState().officeView).toBe("session");
+
+    apiFetch.mockResolvedValueOnce(
+      saved({ show_floor_colleagues: "false", office_view: "building" }),
+    );
+    await usePreferencesStore.getState().loadPreferences();
+    expect(usePreferencesStore.getState().officeView).toBe("building");
   });
 
   it("saves the choice", async () => {
     apiFetch.mockResolvedValueOnce(saved({}));
-    await usePreferencesStore.getState().setShowFloorColleagues(false);
-    expect(usePreferencesStore.getState().showFloorColleagues).toBe(false);
+    await usePreferencesStore.getState().setOfficeView("building");
+    expect(usePreferencesStore.getState().officeView).toBe("building");
     expect(apiFetch).toHaveBeenCalledWith(
-      "/api/v1/preferences/show_floor_colleagues",
+      "/api/v1/preferences/office_view",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ value: "false" }),
+        body: JSON.stringify({ value: "building" }),
       }),
     );
   });

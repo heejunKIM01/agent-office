@@ -4,6 +4,7 @@ import { useState, ReactNode } from "react";
 import { Moon, Sun } from "lucide-react";
 import Modal from "./Modal";
 import { usePreferencesStore } from "@/stores/preferencesStore";
+import { OFFICE_VIEWS } from "@/systems/floors";
 import { useTranslation } from "@/hooks/useTranslation";
 import { locales, type Locale } from "@/i18n";
 import { ConnectTab } from "@/components/settings/ConnectTab";
@@ -161,10 +162,8 @@ export default function SettingsModal({
   const setAutoFollowNewSessions = usePreferencesStore(
     (s) => s.setAutoFollowNewSessions,
   );
-  const showFloorColleagues = usePreferencesStore((s) => s.showFloorColleagues);
-  const setShowFloorColleagues = usePreferencesStore(
-    (s) => s.setShowFloorColleagues,
-  );
+  const officeView = usePreferencesStore((s) => s.officeView);
+  const setOfficeView = usePreferencesStore((s) => s.setOfficeView);
 
   const { t } = useTranslation();
 
@@ -258,14 +257,24 @@ export default function SettingsModal({
                 description={t("settings.autoFollowDesc")}
                 onToggle={handleAutoFollowToggle}
               />
-              <SessionSwitch
-                checked={showFloorColleagues}
-                label={t("settings.floorTogether")}
-                description={t("settings.floorTogetherDesc")}
-                onToggle={() =>
-                  void setShowFloorColleagues(!showFloorColleagues)
-                }
-              />
+              <div className="p-3 rounded-xl bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+                <p className="text-slate-700 dark:text-slate-200 text-[13px] font-semibold">
+                  {t("settings.officeView")}
+                </p>
+                <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 mb-2.5">
+                  {t("settings.officeViewDesc")}
+                </p>
+                <RadioButtons
+                  label="office view"
+                  options={OFFICE_VIEWS.map((value) => ({
+                    value,
+                    label: t(`iso.floor.view.${value}`),
+                  }))}
+                  value={officeView}
+                  onChange={(value) => void setOfficeView(value)}
+                  className="grid grid-cols-3 gap-2"
+                />
+              </div>
             </div>
           </div>
         </div>

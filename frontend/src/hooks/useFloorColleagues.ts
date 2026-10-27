@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { codingAgentName } from "@/constants/codingAgents";
-import type { Session } from "@/hooks/useSessions";
-import { sessionTitle } from "@/systems/floors";
+import { sessionTitle, type ColleagueSession } from "@/systems/floors";
 import { isQuietTurn, type Colleague } from "@/systems/officePeople";
 import type { BubbleContent, OverviewEntry } from "@/types";
 import { WS_BASE } from "@/utils/api";
@@ -63,7 +62,7 @@ export function readLeads(
  * while there is nobody to show.
  */
 export function useFloorColleagues(
-  sessions: Session[],
+  sessions: ColleagueSession[],
   fallbackName: string,
 ): Colleague[] {
   // Null until the overview socket's first message: no lead is known yet.
@@ -104,13 +103,14 @@ export function useFloorColleagues(
       // at a desk and then walk to the rooms they are working in. A session
       // the overview leaves out (not in the backend's memory, as right after
       // it restarts) still shows, at its desk.
-      (leads === null ? [] : sessions).map((session): Colleague => {
+      (leads === null ? [] : sessions).map(({ session, floor }): Colleague => {
         const lead = leads?.get(session.id);
         const boss = lead?.entry;
         return {
           sessionId: session.id,
           agentName: codingAgentName(session.codingAgent) ?? fallbackName,
           title: sessionTitle(session) ?? session.id.slice(0, 8),
+          floor,
           activity: boss?.activity ?? null,
           stuck: boss?.stuck ?? null,
           bubble: boss?.bubble ?? null,

@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { Session } from "@/hooks/useSessions";
 import {
   buildFloors,
-  floorColleagues,
   floorOfSession,
   isActiveNow,
   keepShownSession,
-  MAX_COLLEAGUES,
+  officeColleagues,
   sessionTitle,
   splitFloors,
   splitSessions,
@@ -78,37 +77,54 @@ describe("buildFloors", () => {
   });
 });
 
-describe("floorColleagues", () => {
+describe("officeColleagues", () => {
   const now = Date.parse("2026-10-03T05:01:00Z");
   const working = (id: string, project: string, updated: string): Session =>
     session(id, project, "2026-10-03T00:00:00Z", updated, "active");
+  const floors = buildFloors(
+    [
+      working("shown", "p", "2026-10-03T05:00:50Z"),
+      working("older", "p", "2026-10-03T05:00:10Z"),
+      working("newer", "p", "2026-10-03T05:00:40Z"),
+      working("idle", "p", "2026-10-03T04:00:00Z"),
+      session("done", "p", "2026-10-03T00:00:00Z", "2026-10-03T05:00:55Z"),
+      working("elsewhere", "q", "2026-10-03T05:00:58Z"),
+    ],
+    now,
+  );
+  const ids = (view: "session" | "floor" | "building") =>
+    officeColleagues(floors, "shown", view, now).map(({ session, floor }) => [
+      session.id,
+      floor,
+    ]);
 
   it("brings in the other sessions working on the same floor, newest first", () => {
-    const floors = buildFloors(
-      [
-        working("shown", "p", "2026-10-03T05:00:50Z"),
-        working("older", "p", "2026-10-03T05:00:10Z"),
-        working("newer", "p", "2026-10-03T05:00:40Z"),
-        working("idle", "p", "2026-10-03T04:00:00Z"),
-        session("done", "p", "2026-10-03T00:00:00Z", "2026-10-03T05:00:55Z"),
-        working("elsewhere", "q", "2026-10-03T05:00:58Z"),
-      ],
-      now,
-    );
-    const floor = floorOfSession(floors, "shown");
-    expect(floorColleagues(floor, "shown", now).map((s) => s.id)).toEqual([
-      "newer",
-      "older",
+    expect(ids("floor")).toEqual([
+      ["newer", null],
+      ["older", null],
     ]);
   });
 
-  it("leaves the rest of the dev chairs to subagents", () => {
-    const busy = Array.from({ length: 8 }, (_, i) =>
-      working(`s${i}`, "p", `2026-10-03T05:00:${10 + i}Z`),
+  it("brings in those working on every floor, each with its floor", () => {
+    expect(ids("building")).toEqual([
+      ["elsewhere", 2],
+      ["newer", 1],
+      ["older", 1],
+    ]);
+  });
+
+  it("brings in nobody when the office shows the chosen session alone", () => {
+    expect(ids("session")).toEqual([]);
+    expect(officeColleagues(floors, "missing", "floor", now)).toEqual([]);
+  });
+
+  it("brings in every busy session, however many", () => {
+    const busy = Array.from({ length: 30 }, (_, i) =>
+      working(`s${i}`, `p${i % 4}`, `2026-10-03T05:00:${10 + i}Z`),
     );
-    const floor = buildFloors(busy, now)[0];
-    expect(floorColleagues(floor, "s7", now)).toHaveLength(MAX_COLLEAGUES);
-    expect(floorColleagues(undefined, null, now)).toEqual([]);
+    const many = buildFloors(busy, now);
+    expect(officeColleagues(many, "s0", "building", now)).toHaveLength(29);
+    expect(officeColleagues(many, "s0", "floor", now)).toHaveLength(7);
   });
 });
 

@@ -12,11 +12,17 @@ export const ACTIVE_NOW_MS = 5 * 60 * 1000;
 export const IDLE_FLOOR_MS = 60 * 60 * 1000;
 /** Sessions ended longer ago than this fold under 「지난 세션 N개 더 보기」. */
 export const PAST_SESSION_MS = 60 * 60 * 1000;
+
 /**
- * At most this many other sessions send their lead agent into the office:
- * the dev room has eleven free chairs and subagents need the rest.
+ * Whose lead agents the office shows: the chosen session's alone, with the
+ * other sessions working on its floor, or with those working on every floor.
  */
-export const MAX_COLLEAGUES = 5;
+export type OfficeView = "session" | "floor" | "building";
+export const OFFICE_VIEWS: readonly OfficeView[] = [
+  "session",
+  "floor",
+  "building",
+];
 
 export interface Floor {
   /** 1-based floor number; 1F is the project whose first session is oldest. */
@@ -100,19 +106,41 @@ export function buildFloors(sessions: Session[], now = Date.now()): Floor[] {
     .reverse();
 }
 
+/** Another session working now, and its floor's number when the chip shows it. */
+export interface ColleagueSession {
+  session: Session;
+  /** Set when the office has every floor, so you can tell whose it is. */
+  floor: number | null;
+}
+
 /**
- * The other sessions on a floor that are working now, newest first: their
- * lead agents work in the office beside the session shown.
+ * The other sessions working now whose lead agents work in the office
+ * beside the session shown, newest first: none, those on its floor, or
+ * those on every floor.
  */
-export function floorColleagues(
-  floor: Floor | undefined,
-  sessionId: string | null,
+export function officeColleagues(
+  floors: Floor[],
+  sessionId: string,
+  view: OfficeView,
   now: number,
-): Session[] {
-  if (!floor) return [];
-  return floor.sessions
-    .filter((session) => session.id !== sessionId && isActiveNow(session, now))
-    .slice(0, MAX_COLLEAGUES);
+): ColleagueSession[] {
+  if (view === "session") return [];
+  const current = floorOfSession(floors, sessionId);
+  const shown = view === "building" ? floors : current ? [current] : [];
+  return shown
+    .flatMap((floor) =>
+      floor.sessions.map((session) => ({
+        session,
+        floor: view === "building" ? floor.number : null,
+      })),
+    )
+    .filter(
+      ({ session }) => session.id !== sessionId && isActiveNow(session, now),
+    )
+    .sort(
+      (a, b) =>
+        Date.parse(b.session.updatedAt) - Date.parse(a.session.updatedAt),
+    );
 }
 
 /**

@@ -213,9 +213,16 @@ function row<T>(count: number, make: (i: number) => T): T[] {
   return Array.from({ length: count }, (_, i) => make(i));
 }
 
-/** Long desks of the dev room: two rows of iMacs facing the windows. */
+/**
+ * Long desks of the dev room: two rows of eight iMacs facing the windows,
+ * enough chairs for the colleagues of every floor at once.
+ */
 const DEV_ROWS = [3.9, 8.3];
-const DEV_SEATS_X = row(6, (i) => 14.3 + i * 1.5);
+const DEV_SEATS_X = row(8, (i) => 14.3 + i * 1.5);
+const DEV_END_SEAT_X = DEV_SEATS_X[DEV_SEATS_X.length - 1];
+/** A long desk runs 1.05 m past the chairs at its ends. */
+export const DEV_DESK_LENGTH = DEV_END_SEAT_X - DEV_SEATS_X[0] + 2.1;
+const DEV_DESK_X = (DEV_SEATS_X[0] + DEV_END_SEAT_X) / 2;
 
 export const FURNITURE: Furniture[] = [
   // Library: shelves along both back walls, a round table in the middle
@@ -263,7 +270,7 @@ export const FURNITURE: Furniture[] = [
     z: 0.05,
   })),
   { kind: "clock", x: 26.8, z: 0.06 },
-  ...DEV_ROWS.map((z): Furniture => ({ kind: "longDesk", x: 18.05, z })),
+  ...DEV_ROWS.map((z): Furniture => ({ kind: "longDesk", x: DEV_DESK_X, z })),
   ...DEV_ROWS.flatMap((z) =>
     DEV_SEATS_X.flatMap((x): Furniture[] => [
       { kind: "imac", x, z: z - 0.3, y: 0.75 },
@@ -320,7 +327,7 @@ export const FURNITURE: Furniture[] = [
 export const FOOTPRINTS: Partial<Record<FurnitureKind, [number, number]>> = {
   bookshelf: [2.3, 0.5],
   roundTable: [2, 2],
-  longDesk: [9.6, 1.2],
+  longDesk: [DEV_DESK_LENGTH, 1.2],
   meetingTable: [4.7, 2.4],
   sofa: [3.3, 1.2],
   armchair: [1.4, 1.2],
@@ -358,26 +365,44 @@ const devSeat = (seat: number, row: number): IsoSpot => ({
 /** Claude's chair: the front row's end nearest my desk. */
 export const CLAUDE_SEAT: IsoSpot = devSeat(0, 1);
 
+/** Where a person sits on each chair of ``kind``, facing the way the chair does. */
+const chairSeats = (kind: FurnitureKind): IsoSpot[] =>
+  FURNITURE.filter((piece) => piece.kind === kind).map((piece) => ({
+    x: piece.x,
+    z: piece.z,
+    facing: ((piece.rot ?? 0) * Math.PI) / 2,
+  }));
+
 /**
- * Dev room chairs in the order subagents take them: every other chair of
- * the back row first, so their name chips do not stack on each other or on
- * Claude's, then the rest.
+ * Chairs in the order subagents and colleagues take them: every other dev
+ * room chair of the back row first, so their name chips do not stack on
+ * each other or on Claude's, then the rest of the dev room. With every
+ * floor in one office the dev room can fill up: then they sit around the
+ * meeting table, then the library's round table.
  */
-export const SUBAGENT_SEATS: IsoSpot[] = (
-  [
-    [0, 0],
-    [2, 0],
-    [4, 0],
-    [2, 1],
-    [4, 1],
-    [1, 0],
-    [3, 0],
-    [5, 0],
-    [1, 1],
-    [3, 1],
-    [5, 1],
-  ] as const
-).map(([seat, row]) => devSeat(seat, row));
+export const SUBAGENT_SEATS: IsoSpot[] = [
+  ...(
+    [
+      [0, 0],
+      [2, 0],
+      [4, 0],
+      [6, 0],
+      [2, 1],
+      [4, 1],
+      [6, 1],
+      [1, 0],
+      [3, 0],
+      [5, 0],
+      [7, 0],
+      [1, 1],
+      [3, 1],
+      [5, 1],
+      [7, 1],
+    ] as const
+  ).map(([seat, row]) => devSeat(seat, row)),
+  ...chairSeats("meetingChair"),
+  ...chairSeats("chair"),
+];
 
 /** My chair behind the reception desk. */
 export const MY_SEAT: IsoSpot = { x: 17.4, z: 19, facing: FACING_RIGHT };

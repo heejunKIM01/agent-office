@@ -47,6 +47,7 @@ function person(fields: Partial<IsoPerson>): IsoPerson {
     failedTest: null,
     rainCloud: false,
     outfit: "general",
+    floor: null,
     ...fields,
   };
 }

@@ -6,7 +6,7 @@
  */
 
 import * as THREE from "three";
-import type { FurnitureKind } from "@/constants/isoFloorPlan";
+import { DEV_DESK_LENGTH, type FurnitureKind } from "@/constants/isoFloorPlan";
 import { ISO_COLORS as C } from "./isoPalette";
 import { textTexture } from "./isoTextures";
 
@@ -177,7 +177,7 @@ function officeChair(): THREE.Group {
 }
 
 function longDesk(): THREE.Group {
-  const length = 9.6;
+  const length = DEV_DESK_LENGTH;
   return group(
     box(length, 0.06, 1.2, C.desk, 0, 0.72, 0),
     box(0.08, 0.72, 1.1, C.deskLeg, -length / 2 + 0.1, 0, 0),

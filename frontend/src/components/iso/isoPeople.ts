@@ -3,7 +3,7 @@
  * kept in step with the session by `sync` and moved every frame by the
  * errand rules in `update`. Claude sits at the front dev desk nearest my
  * desk, subagents and colleagues (other sessions' lead agents on this
- * floor) take the next free dev chairs, and I sit behind the reception
+ * floor, or on every floor) take the next free chairs, and I sit behind the reception
  * desk, typing for a moment each time I send a question. Claude rests on
  * the lounge sofa between turns, passing the time with a coffee, its
  * phone, a book or the TV and dozing off after a long rest, and has a
@@ -674,7 +674,8 @@ export class IsoPeople {
       taken,
       this.placeOf.get(key),
     );
-    const index = free >= 0 ? free : SUBAGENT_SEATS.length - 1;
+    // Every chair taken: share one, a different one for each newcomer.
+    const index = free >= 0 ? free : this.placed.size % SUBAGENT_SEATS.length;
     rememberPlace(this.placeOf, key, index);
     return SUBAGENT_SEATS[index];
   }
