@@ -100,7 +100,9 @@ export type FurnitureKind =
   | "bush"
   | "elevator"
   | "clock"
-  | "window";
+  | "window"
+  | "catTower"
+  | "catBowl";
 
 /**
  * One piece of furniture. ``rot`` turns it about y in quarter turns; a piece
@@ -224,6 +226,10 @@ const DEV_END_SEAT_X = DEV_SEATS_X[DEV_SEATS_X.length - 1];
 export const DEV_DESK_LENGTH = DEV_END_SEAT_X - DEV_SEATS_X[0] + 2.1;
 const DEV_DESK_X = (DEV_SEATS_X[0] + DEV_END_SEAT_X) / 2;
 
+/** The office cat's tower in the lounge and its bowl in the cafe (systems/officeCat.ts). */
+export const CAT_TOWER = { x: 9.5, z: 26.4 };
+export const CAT_BOWL = { x: 37.6, z: 29.9 };
+
 export const FURNITURE: Furniture[] = [
   // Library: shelves along both back walls, a round table in the middle
   ...row(4, (i): Furniture => ({
@@ -263,6 +269,7 @@ export const FURNITURE: Furniture[] = [
   { kind: "armchair", x: 7.2, z: 28.5, rot: 2 },
   { kind: "bush", x: 1, z: 29.7 },
   { kind: "plant", x: 9.5, z: 21.8 },
+  { kind: "catTower", ...CAT_TOWER },
   // Dev room: windows and a clock on the back wall, two rows of iMac desks
   ...[14.6, 18.95, 23.3].map((x): Furniture => ({
     kind: "window",
@@ -315,6 +322,7 @@ export const FURNITURE: Furniture[] = [
     { kind: "cafeChair", x: x + 1.05, z: 26.8, rot: 3 },
   ]),
   { kind: "plant", x: 28.4, z: 30 },
+  { kind: "catBowl", ...CAT_BOWL },
   { kind: "bush", x: 39.2, z: 25.5 },
 ];
 
@@ -343,6 +351,7 @@ export const FOOTPRINTS: Partial<Record<FurnitureKind, [number, number]>> = {
   receptionDesk: [6.6, 1.2],
   plant: [0.6, 0.6],
   bush: [0.7, 0.7],
+  catTower: [1.1, 1.1],
 };
 
 /** Where a person stands or sits, turned ``facing`` radians about y (0 faces +z). */

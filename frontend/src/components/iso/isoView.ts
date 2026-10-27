@@ -17,6 +17,7 @@ import { FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
 import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
 import type { BubbleWords } from "./isoBubbles";
+import { IsoCat } from "./isoCat";
 import { IsoEffects } from "./isoEffects";
 import { setNightView } from "./isoFurniture";
 import { IsoPeople } from "./isoPeople";
@@ -205,6 +206,7 @@ export function createIsoView(
   const lights = addLights(scene);
   const people = new IsoPeople(scene, onPersonLeft);
   const effects = new IsoEffects(office);
+  const cat = new IsoCat(office);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
   const home = new THREE.Vector3(FLOOR_CENTER.x, 0, FLOOR_CENTER.z);
@@ -262,7 +264,9 @@ export function createIsoView(
     lastFrame = now;
     stepReset(now);
     controls.update();
-    effects.update(now / 1000, dt, people.update(now, dt));
+    const inUse = people.update(now, dt);
+    effects.update(now / 1000, dt, inUse);
+    cat.update(now, dt, inUse);
     renderer.render(scene, camera);
     labels.render(scene, camera);
     frame = requestAnimationFrame(loop);
@@ -299,7 +303,9 @@ export function createIsoView(
         thanks.id !== thanksSeen &&
         Date.now() - thanks.at < FRESH_MS;
       thanksSeen = thanks?.id ?? null;
-      if (fresh) people.hearts();
+      if (!fresh) return;
+      people.hearts();
+      cat.hearts();
     },
     setShipped(shipped: { id: string; at: number } | null): void {
       const fresh =
@@ -310,6 +316,7 @@ export function createIsoView(
       if (!fresh) return;
       effects.burst();
       people.party();
+      cat.pounce();
     },
     setTheme(theme: Theme): void {
       const { color, ambient, sun } = LIGHTING[theme];

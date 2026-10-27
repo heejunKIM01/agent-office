@@ -329,7 +329,7 @@ export function buildCharacter(
 }
 
 /** A small heart, facing +z, its bottom tip at the origin. */
-function heartGeometry(): THREE.ExtrudeGeometry {
+export function heartGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
   shape.moveTo(0, 0);
   shape.bezierCurveTo(-0.05, 0.06, -0.2, 0.12, -0.2, 0.24);
