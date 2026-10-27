@@ -86,6 +86,21 @@ export const SITE = {
   cup: "#f4f1ec",
   phone: "#2a2d33",
   heart: "#f0507a",
+  // Moments: the warning beacon and sign, the topping-out flag's five
+  // colours (오방색), the ribbon, and the work lights at night.
+  beacon: "#ff3b2f",
+  beaconOff: "#7a2620",
+  warning: "#f7c42b",
+  flagBlue: "#2b5fd9",
+  flagRed: "#d93a2b",
+  flagYellow: "#f2c94c",
+  flagWhite: "#ffffff",
+  flagBlack: "#2a2d33",
+  ribbon: "#e0353a",
+  workLight: "#fff1c4",
+  workLightOff: "#b9b4a6",
+  aviation: "#ff2a1a",
+  windowGlow: "#ffcf73",
   // Tag marks: Claude's coral, my blue.
   manager: "#e8735a",
   owner: "#4f6fe8",

@@ -686,6 +686,8 @@ class Airport implements IsoWorld {
 
   setTurn(): void {}
 
+  setNight(): void {}
+
   clear(): void {
     for (const [id, placed] of this.placed) this.remove(id, placed);
     this.traffic.clear();

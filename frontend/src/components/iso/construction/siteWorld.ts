@@ -16,7 +16,10 @@
  * and a finished one walks out through it. Each commit has the crane lift
  * a slab onto the roof, one more floor, and a concrete mixer comes to
  * pour; the excavator digs while someone runs a command, and a dump truck
- * comes for the earth. The schedule board shows the to-do list.
+ * comes for the earth. The schedule board shows the to-do list. Failed
+ * tests flash the beacon, passed ones stamp the building, shipped work
+ * raises the topping-out flag, thanks get the hard hats waved, and the
+ * dark theme brings the night with its work lights (siteMoments.ts).
  */
 
 import * as THREE from "three";
@@ -42,8 +45,9 @@ import {
   type WorkSpot,
 } from "@/constants/sitePlan";
 import { myQuestion, secondsBetween, type TalkLine } from "@/systems/placeTalk";
-import type { NoteStatus } from "@/systems/roomGimmicks";
+import { CHEER_MS, DISMAY_MS, type NoteStatus } from "@/systems/roomGimmicks";
 import { rideSeconds } from "@/systems/siteMachines";
+import { HAT_WAVE_MS } from "@/systems/siteMoments";
 import { siteLine, type SiteWords } from "@/systems/siteTalk";
 import {
   floorsFor,
@@ -68,7 +72,9 @@ import {
   siteTag,
   type SiteTag,
 } from "./siteLabels";
+import { SiteMoments } from "./siteMoments";
 import { SITE } from "./sitePalette";
+import { shadeForNight } from "./siteSolids";
 
 /** How long I pass on my question after sending it (ms). */
 const REQUEST_MS = 4000;
@@ -108,6 +114,11 @@ interface Placed {
   board: "up" | "down" | null;
   /** In the hoist's cage: from what height, which way, since when (ms). */
   ride: { from: number; up: boolean; start: number } | null;
+  /** The test runs already acted out, and how long it cheers or despairs. */
+  seenPass: string | null;
+  seenFail: string | null;
+  cheerUntil: number;
+  dismayUntil: number;
 }
 
 /** A worker's hard-hat colour and the letter of its crew. */
@@ -172,6 +183,10 @@ class Site implements IsoWorld {
   private targetFloors = 1;
   /** The hoist's cage: where its last rider left it. */
   private cageY = 0;
+  private readonly moments = new SiteMoments();
+  private thanksPending = false;
+  /** Everyone waves their hard hat until then (ms). */
+  private hatWaveUntil = 0;
   private readonly sign: CSS2DObject;
   private readonly signText: HTMLSpanElement;
 
@@ -180,7 +195,7 @@ class Site implements IsoWorld {
     private readonly onLeft: (id: string) => void,
   ) {
     this.field = buildSite();
-    scene.add(this.field.root);
+    scene.add(this.field.root, this.moments.root);
     const sign = floorSign();
     this.signText = sign.text;
     this.sign = new CSS2DObject(sign.element);
@@ -286,6 +301,10 @@ class Site implements IsoWorld {
       level: "ground",
       board: null,
       ride: null,
+      seenPass: person.passedTest,
+      seenFail: person.failedTest,
+      cheerUntil: 0,
+      dismayUntil: 0,
     };
     this.placed.set(person.id, placed);
     this.name(placed);
@@ -422,6 +441,11 @@ class Site implements IsoWorld {
     if (this.shipPending) {
       this.shipPending = false;
       this.shippedAt = now;
+      this.moments.ship(now);
+    }
+    if (this.thanksPending) {
+      this.thanksPending = false;
+      this.hatWaveUntil = now + HAT_WAVE_MS;
     }
     const manager = [...this.placed.values()].find(
       (p) => p.person.kind === "claude",
@@ -448,6 +472,7 @@ class Site implements IsoWorld {
         this.tendOwner(placed, now, manager?.person ?? null);
         continue;
       }
+      this.react(placed, now);
       if (this.move(placed, dt, now)) {
         gone.push(id);
         continue;
@@ -455,6 +480,7 @@ class Site implements IsoWorld {
       this.work(placed, now);
     }
     hoist.update(building.roofY, this.cageY);
+    this.moments.update(now, building.roofY);
     for (const id of gone) {
       const placed = this.placed.get(id);
       if (!placed) continue;
@@ -466,9 +492,39 @@ class Site implements IsoWorld {
     }
   }
 
+  /**
+   * React to a test run that just finished: passed, the building gets the
+   * inspection stamp and it cheers; failed, the beacon flashes, a warning
+   * sign goes up beside it and it holds its head. Either way it stays put
+   * a moment before walking on.
+   */
+  private react(placed: Placed, now: number): void {
+    const { person, walker } = placed;
+    if (person.passedTest !== placed.seenPass) {
+      placed.seenPass = person.passedTest;
+      if (person.passedTest !== null) {
+        placed.cheerUntil = now + CHEER_MS;
+        this.moments.stamp(now);
+      }
+    }
+    if (person.failedTest !== placed.seenFail) {
+      placed.seenFail = person.failedTest;
+      if (person.failedTest !== null) {
+        placed.dismayUntil = now + DISMAY_MS;
+        this.moments.alarm(now);
+        this.moments.warn(person.id, walker.x, walker.z, now);
+      }
+    }
+  }
+
   /** Walk a person towards its goal; true when it has walked out of the gate. */
   private move(placed: Placed, dt: number, now: number): boolean {
-    const goal = this.goalFor(placed);
+    // Cheering or despairing over its tests, it finishes that first.
+    const reacting =
+      placed.walker.path.length === 0 &&
+      !placed.ride &&
+      (now < placed.cheerUntil || now < placed.dismayUntil);
+    const goal = reacting ? placed.goal : this.goalFor(placed);
     const changed =
       goal.kind !== placed.goal.kind ||
       (goal.kind === "spot" &&
@@ -560,8 +616,13 @@ class Site implements IsoWorld {
           line = { icon: "💤", text: "", detail: null, tone: "think" };
         }
       }
-      if (this.shippedAt !== null && now - this.shippedAt < SHIP_MS)
+      if (now < this.hatWaveUntil) pose = "hatWave";
+      if (
+        (this.shippedAt !== null && now - this.shippedAt < SHIP_MS) ||
+        now < placed.cheerUntil
+      )
         pose = "cheer";
+      if (now < placed.dismayUntil) pose = "dismay";
     }
     poseSiteFigure(placed.figure, pose, now / 1000);
     drawSiteLine(placed.tag, line);
@@ -724,7 +785,19 @@ class Site implements IsoWorld {
 
   setTurn(): void {}
 
-  hearts(): void {}
+  hearts(): void {
+    this.thanksPending = true;
+  }
+
+  /** Night falls with the dark theme: shade the site and light it up. */
+  setNight(night: boolean): void {
+    this.moments.setNight(night);
+    shadeForNight(this.field.root, night);
+    shadeForNight(this.moments.root, night);
+    for (const placed of this.placed.values()) {
+      shadeForNight(placed.figure.root, night);
+    }
+  }
 
   ship(): void {
     this.shipPending = true;
@@ -741,6 +814,8 @@ class Site implements IsoWorld {
   dispose(): void {
     this.clear();
     this.field.traffic.dispose();
+    this.moments.dispose();
+    this.moments.root.removeFromParent();
     this.sign.removeFromParent();
   }
 
