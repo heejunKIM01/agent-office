@@ -14,10 +14,10 @@ import { MAX_PILE } from "@/systems/roomGimmicks";
  * Something a person is up to besides its pose: a lounge pastime, waiting
  * on a command, scratching its head while typing, or cheering passed tests.
  */
-export type PoseAct = LoungeAct | "watch" | "scratch" | "cheer";
+export type PoseAct = LoungeAct | "watch" | "scratch" | "cheer" | "dismay";
 
 const isPastime = (act: PoseAct): act is LoungeAct =>
-  act !== "watch" && act !== "scratch" && act !== "cheer";
+  act !== "watch" && act !== "scratch" && act !== "cheer" && act !== "dismay";
 import type { Outfit, PersonKind } from "@/systems/officePeople";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, cylinder, material } from "./isoFurniture";
@@ -385,8 +385,8 @@ function drip(sweat: THREE.Group, seconds: number): void {
  * its ear. Seated in the lounge it keeps busy with ``act`` (a coffee, its
  * phone, a book, the TV, a doze); at the rack, waiting on a long command, it
  * crosses its arms and checks its watch; typing it scratches its head now
- * and then; and when its tests pass it throws its arms up. ``seconds``
- * drives the motion.
+ * and then; when its tests pass it throws its arms up, and when they fail
+ * it holds its head, rocking (stuck or not). ``seconds`` drives the motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
@@ -409,6 +409,7 @@ export function poseCharacter(
   rig.handset.visible = pastime === "phone";
   rig.phone.visible = pose === "phone";
   rig.hips.rotation.x = pastime ? loungeLean(pastime, seconds) : 0;
+  rig.hips.rotation.z = act === "dismay" ? 0.1 * Math.sin(seconds * 7) : 0;
   rig.sweat.visible = stuck;
   if (stuck) drip(rig.sweat, seconds);
   // Only waving and the phone swing an arm out sideways.
@@ -425,6 +426,15 @@ export function poseCharacter(
     return;
   }
   const seated = pose === "sit" || pose === "type" || pose === "phone";
+  if (act === "dismay") {
+    // Both hands up on its head, elbows out.
+    armL.rotation.set(-2.75, 0, 0.5);
+    armR.rotation.set(-2.75, 0, -0.5);
+    legL.rotation.x = seated ? -Math.PI / 2 : 0;
+    legR.rotation.x = seated ? -Math.PI / 2 : 0;
+    rig.hips.position.y = seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT;
+    return;
+  }
   if (act === "cheer" && !stuck) {
     // Both arms up and out, swinging, with a hop when on its feet.
     const swing = 0.25 * Math.sin(seconds * 9);

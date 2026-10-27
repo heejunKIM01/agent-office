@@ -44,6 +44,7 @@ function person(fields: Partial<IsoPerson>): IsoPerson {
     typedAt: null,
     since: null,
     passedTest: null,
+    failedTest: null,
     outfit: "general",
     ...fields,
   };

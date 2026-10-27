@@ -112,28 +112,54 @@ export function isTestCommand(command: unknown): boolean {
   );
 }
 
+/** How long it holds its head after its tests fail (ms). */
+export const DISMAY_MS = 2_500;
+
+type TestLog = readonly {
+  id: string;
+  type: string;
+  agentId: string;
+  detail?: { toolInput?: unknown; errorType?: string };
+}[];
+
 /**
- * The log id of ``agentId``'s latest test command when it passed, or null
- * when its latest one failed or it ran none. A failed tool carries an
- * errorType. The office cheers when a new id shows up, not by the event's
- * time: the backend dates a finished tool near its start.
+ * ``agentId``'s latest finished test command: its log id, and whether it
+ * passed (a failed tool carries an errorType).
  */
-export function lastPassedTestId(
-  eventLog: readonly {
-    id: string;
-    type: string;
-    agentId: string;
-    detail?: { toolInput?: unknown; errorType?: string };
-  }[],
+function lastTestRun(
+  eventLog: TestLog,
   agentId: string,
-): string | null {
+): { id: string; passed: boolean } | null {
   for (const entry of eventLog) {
     if (entry.type !== "post_tool_use" || entry.agentId !== agentId) continue;
     const input = entry.detail?.toolInput as { command?: unknown } | undefined;
     if (!isTestCommand(input?.command)) continue;
-    return entry.detail?.errorType ? null : entry.id;
+    return { id: entry.id, passed: !entry.detail?.errorType };
   }
   return null;
+}
+
+/**
+ * The log id of ``agentId``'s latest test command when it passed, or null
+ * when its latest one failed or it ran none. The office cheers when a new id
+ * shows up, not by the event's time: the backend dates a finished tool near
+ * its start.
+ */
+export function lastPassedTestId(
+  eventLog: TestLog,
+  agentId: string,
+): string | null {
+  const run = lastTestRun(eventLog, agentId);
+  return run?.passed ? run.id : null;
+}
+
+/** The log id of ``agentId``'s latest test command when it failed, as above. */
+export function lastFailedTestId(
+  eventLog: TestLog,
+  agentId: string,
+): string | null {
+  const run = lastTestRun(eventLog, agentId);
+  return run && !run.passed ? run.id : null;
 }
 
 /** The lamp over the elevator door stays lit this long after someone steps out (s). */
