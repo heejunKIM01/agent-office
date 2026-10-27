@@ -308,6 +308,7 @@ export class IsoEffects {
       cup.add(cylinder(0.078, 0.078, 0.01, "#8b5a3c", 0, 0.192, 0, 16));
       cup.add(box(0.03, 0.11, 0.07, "#f8fafc", 0.1, 0.05, 0));
       cup.rotation.y = i * 1.3;
+      cup.scale.setScalar(1.5);
       cup.visible = false;
       this.cups.push(cup);
     }
@@ -396,13 +397,13 @@ export class IsoEffects {
           placeKey(item.x, item.z) ===
           placeKey(CLAUDE_SEAT.x, CLAUDE_SEAT.z - SEAT_TO_SCREEN)
         ) {
-          this.tray.position.set(item.x + 0.85, item.y ?? 0, item.z + 0.05);
-          // The cups line up on the other side of the iMac.
-          this.cups.forEach((cup, i) =>
+          this.tray.position.set(item.x + 0.62, item.y ?? 0, item.z + 0.05);
+          // The cups line up in front of the tray, clear of Claude in its chair.
+          this.cups.forEach((cup, n) =>
             cup.position.set(
-              item.x - 0.75 - i * 0.26,
+              item.x + 0.45 + n * 0.3,
               item.y ?? 0,
-              item.z + 0.12,
+              item.z + 0.45,
             ),
           );
         }
