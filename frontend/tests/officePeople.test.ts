@@ -332,6 +332,28 @@ describe("officePeople — breaks", () => {
     ]);
   });
 
+  it("has whoever's tests just failed hold its head", () => {
+    const failed = (agentId: string, at: number) =>
+      ({
+        id: `${agentId}${at}`,
+        type: "post_tool_use",
+        agentId,
+        summary: "",
+        timestamp: new Date(at),
+        detail: { toolInput: { command: "npm test" }, errorType: "tool_error" },
+      }) as unknown as EventLogEntry;
+    const agents = new Map([["a1", agent("a1", {})]]);
+    const people = officePeople(
+      { boss: boss(), agents, eventLog: [failed("a1", 9_000)] },
+      WORDS,
+    );
+    expect(people.map((p) => [p.id, p.failedTest, p.passedTest])).toEqual([
+      ["claude", null, null],
+      ["me", null, null],
+      ["a1", "a19000", null],
+    ]);
+  });
+
   it("ends the coffee with the next event", () => {
     expect(isCompacting([])).toBe(false);
     expect(isCompacting([compaction("context_compaction")])).toBe(true);

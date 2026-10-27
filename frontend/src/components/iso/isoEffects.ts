@@ -1,7 +1,8 @@
 /**
  * Room effects of the isometric office, from the video author's notes in
  * docs/plan/spec.md 「화면 재설계」: code runs down the iMac of whoever is
- * editing, the rack lights blink faster while a command runs, and planning
+ * editing (and flashes red when its tests fail), the rack lights blink
+ * faster while a command runs, and planning
  * writes on the meeting room whiteboard. The elevator doors open while
  * someone steps in or out.
  */
@@ -16,6 +17,9 @@ import type { RoomsInUse } from "./isoPeople";
 /** Blink speed of the rack lights (rad/s), idle and while a command runs. */
 const LED_IDLE_SPEED = 2.5;
 const LED_BUSY_SPEED = 14;
+/** A failed test's screen flashes between these this many times a second. */
+const ALARM_COLORS = ["#ef4444", "#7f1d1d"] as const;
+const ALARM_FLASHES = 3;
 /** How far the code scrolls per second, in screen heights. */
 const CODE_SCROLL_SPEED = 0.25;
 /** Seconds of planning to fill the whiteboard's writing rows. */
@@ -174,6 +178,9 @@ export class IsoEffects {
   private readonly codeMaterial = new THREE.MeshBasicMaterial({
     map: this.code,
   });
+  private readonly alarmMaterial = new THREE.MeshBasicMaterial({
+    color: ALARM_COLORS[0],
+  });
   private readonly board: Board | null = null;
   private wasPlanning = false;
   private readonly doors: { mesh: THREE.Object3D; side: number }[] = [];
@@ -267,8 +274,20 @@ export class IsoEffects {
         placeKey(seat.x, seat.z - SEAT_TO_SCREEN),
       ),
     );
+    const alarmed = new Set(
+      inUse.alarmSeats.map((seat: IsoSpot) =>
+        placeKey(seat.x, seat.z - SEAT_TO_SCREEN),
+      ),
+    );
+    this.alarmMaterial.color.set(
+      ALARM_COLORS[Math.floor(seconds * ALARM_FLASHES * 2) % 2],
+    );
     for (const [key, screen] of this.screens) {
-      screen.mesh.material = typing.has(key) ? this.codeMaterial : screen.idle;
+      screen.mesh.material = alarmed.has(key)
+        ? this.alarmMaterial
+        : typing.has(key)
+          ? this.codeMaterial
+          : screen.idle;
     }
     this.code.offset.y -= dt * CODE_SCROLL_SPEED;
 
@@ -324,6 +343,7 @@ export class IsoEffects {
   dispose(): void {
     this.code.dispose();
     this.codeMaterial.dispose();
+    this.alarmMaterial.dispose();
     this.tvOn.dispose();
     this.lampOn.dispose();
     if (this.board) {

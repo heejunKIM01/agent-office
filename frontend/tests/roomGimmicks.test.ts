@@ -5,6 +5,7 @@ import {
   SCRATCH_EVERY_MS,
   SCRATCH_MS,
   isTestCommand,
+  lastFailedTestId,
   lastPassedTestId,
   scratchesHead,
   GLOBE_SPIN_SPEED,
@@ -148,6 +149,17 @@ describe("test passes", () => {
       post("main", "npm test", 10),
     ];
     expect(lastPassedTestId(log, "main")).toBeNull();
+  });
+
+  it("names the agent's latest test run when it failed", () => {
+    const log = [
+      post("main", "git status", 30, "tool_error"),
+      post("main", "npm test", 20, "tool_error"),
+      post("sub", "npm test", 10),
+    ];
+    expect(lastFailedTestId(log, "main")).toBe("20");
+    expect(lastFailedTestId(log, "sub")).toBeNull();
+    expect(lastFailedTestId(log, "other")).toBeNull();
   });
 });
 

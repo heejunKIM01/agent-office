@@ -46,6 +46,7 @@ import { findFloorPath } from "@/systems/isoNavGrid";
 import { loungeAct } from "@/systems/loungeActs";
 import {
   CHEER_MS,
+  DISMAY_MS,
   NO_PILE,
   bookPile,
   scratchesHead,
@@ -113,6 +114,8 @@ export interface RoomsInUse {
   serverBusy: boolean;
   /** Seats of people typing at their desks. */
   editingSeats: IsoSpot[];
+  /** Seats of people whose tests just failed: their screens flash red. */
+  alarmSeats: IsoSpot[];
   /** Someone is planning at the whiteboard. */
   planning: boolean;
   /** Someone is stepping into or out of the elevator. */
@@ -147,6 +150,9 @@ interface Placed {
   /** The passed test run it has cheered (or found when placed), and until when it cheers. */
   seenPass: string | null;
   cheerUntil: number;
+  /** The failed test run it has held its head over, and until when it does. */
+  seenFail: string | null;
+  dismayUntil: number;
   walker: IsoWalker;
   seat: IsoSpot;
   /** What it tells Claude when its work is done, read when it gets there. */
@@ -281,6 +287,8 @@ export class IsoPeople {
         // A pass from before it was placed is old news: no cheer for it.
         seenPass: person.passedTest,
         cheerUntil: 0,
+        seenFail: person.failedTest,
+        dismayUntil: 0,
         walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
@@ -296,6 +304,7 @@ export class IsoPeople {
     const inUse: RoomsInUse = {
       serverBusy: false,
       editingSeats: [],
+      alarmSeats: [],
       planning: false,
       elevatorOpen: false,
       tvOn: false,
@@ -377,6 +386,7 @@ export class IsoPeople {
       if (act === "tv") inUse.tvOn = true;
       if (activity === "browsing") inUse.browsing = true;
       if (walker.pose === "type") inUse.editingSeats.push(placed.seat);
+      if (act === "dismay") inUse.alarmSeats.push(placed.seat);
       if (walker.goal === "meeting" && walker.pose === "work") {
         inUse.planning = true;
       }
@@ -521,6 +531,12 @@ export class IsoPeople {
       if (person.passedTest !== null) placed.cheerUntil = now + CHEER_MS;
     }
     if (!walker.path && now < placed.cheerUntil) return "cheer";
+    // Its tests just failed: hands on its head.
+    if (person.failedTest !== placed.seenFail) {
+      placed.seenFail = person.failedTest;
+      if (person.failedTest !== null) placed.dismayUntil = now + DISMAY_MS;
+    }
+    if (!walker.path && now < placed.dismayUntil) return "dismay";
     const lounging =
       walker.goal === "lounge" && !walker.path && walker.pose === "sit";
     if (!lounging) placed.loungeSince = null;

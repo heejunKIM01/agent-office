@@ -17,7 +17,7 @@
  */
 
 import type { BreakRoomId } from "@/constants/isoFloorPlan";
-import { lastPassedTestId } from "@/systems/roomGimmicks";
+import { lastFailedTestId, lastPassedTestId } from "@/systems/roomGimmicks";
 import type { Activity, BubbleContent, StuckReason } from "@/types";
 import type {
   AgentAnimationState,
@@ -67,6 +67,8 @@ export interface IsoPerson {
   since: number | null;
   /** The log id of its latest test command when it passed, to cheer a new one. */
   passedTest: string | null;
+  /** The log id of its latest test command when it failed, to hold its head. */
+  failedTest: string | null;
   outfit: Outfit;
 }
 
@@ -255,6 +257,7 @@ export function officePeople(
       typedAt: null,
       since: lastEventAt(state.eventLog, "main"),
       passedTest: lastPassedTestId(state.eventLog, "main"),
+      failedTest: lastFailedTestId(state.eventLog, "main"),
       outfit: "general",
     },
     {
@@ -275,6 +278,7 @@ export function officePeople(
       typedAt: lastPromptAt(state.eventLog),
       since: null,
       passedTest: null,
+      failedTest: null,
       outfit: "general",
     },
   ];
@@ -299,6 +303,7 @@ export function officePeople(
       typedAt: null,
       since: lastEventAt(state.eventLog, agent.id),
       passedTest: lastPassedTestId(state.eventLog, agent.id),
+      failedTest: lastFailedTestId(state.eventLog, agent.id),
       outfit: outfitOf(agent.agentType),
     });
   }
@@ -320,6 +325,7 @@ export function officePeople(
       typedAt: null,
       since: colleague.since,
       passedTest: null,
+      failedTest: null,
       outfit: "general",
     });
   }
