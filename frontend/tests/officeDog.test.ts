@@ -38,6 +38,7 @@ const input = (now: number, over: Partial<DogInput> = {}): DogInput => ({
   random: CALM,
   findPath: findFloorPath,
   walkable: isFloorWalkable,
+  me: null,
   ...over,
 });
 

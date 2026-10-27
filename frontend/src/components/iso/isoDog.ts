@@ -6,19 +6,25 @@
  * sphinx, sits, drinks, bows to play with its tennis ball (and carries the
  * ball in its mouth), sniffs the floor and the cat, bounces when it greets
  * someone and tilts its head when it sits by someone whose tests failed.
- * When I say thanks a heart rises over it and its tail goes faster still.
+ * When I say thanks a heart rises over it and its tail goes faster still,
+ * as it does while I pat it. Playing fetch, the ball flies from my hand to
+ * where it lands.
  */
 
 import * as THREE from "three";
 import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
 import {
   dogAt,
+  dogSightingOf,
+  pattedBy,
   stepOfficeDog,
   type DogAct,
   type DogPlan,
+  type DogSighting,
   type OfficeDog,
 } from "@/systems/officeDog";
-import { petActOf, sightingOf, type PetSighting } from "@/systems/officePets";
+import { THROW_MS, type MeThrow } from "@/systems/officeMe";
+import { petActOf, type PetSighting } from "@/systems/officePets";
 import { HEARTS_MS, PARTY_MS } from "@/systems/roomGimmicks";
 import { petSnore } from "./isoBubbles";
 import { heartGeometry } from "./isoCharacters";
@@ -46,6 +52,33 @@ const BALL_RADIUS = 0.15;
 const SNORE_HEIGHT = 0.6;
 /** Where its ball sits in its mouth, in its head's own space. */
 const IN_MOUTH = new THREE.Vector3(0, 0.03, 0.34);
+/** A thrown ball leaves my hand this far into the throw, this high, and flies this long (ms). */
+const RELEASE = 0.55;
+const HAND_HEIGHT = 2.1;
+const FLIGHT_MS = 650;
+/** How high over the straight line a thrown ball arcs (m). */
+const FLIGHT_ARC = 1.6;
+/** Patted, a heart rises over it this often (s). */
+const PAT_HEART_SECONDS = 2;
+
+/**
+ * Where a ball I threw is ``ms`` after the throw began: in my hand, then
+ * arcing down to where it lands; null once it is down.
+ */
+function ballInFlight(thrown: MeThrow, ms: number): THREE.Vector3 | null {
+  const release = THROW_MS * RELEASE;
+  if (ms >= release + FLIGHT_MS) return null;
+  const { from, to } = thrown;
+  if (ms < release) return new THREE.Vector3(from.x, HAND_HEIGHT, from.z);
+  const t = (ms - release) / FLIGHT_MS;
+  return new THREE.Vector3(
+    from.x + (to.x - from.x) * t,
+    HAND_HEIGHT +
+      (BALL_RADIUS - HAND_HEIGHT) * t +
+      FLIGHT_ARC * Math.sin(Math.PI * t),
+    from.z + (to.z - from.z) * t,
+  );
+}
 
 interface DogRig {
   root: THREE.Group;
@@ -307,9 +340,9 @@ export class IsoDog {
     this.heartsPending = true;
   }
 
-  /** Where it is and what it is up to, for the cat. */
-  sighting(): PetSighting | null {
-    return this.dog && sightingOf(this.dog);
+  /** Where it is, what it is up to and where its ball is, for the cat and me. */
+  sighting(): DogSighting | null {
+    return this.dog && dogSightingOf(this.dog);
   }
 
   /**
@@ -343,6 +376,7 @@ export class IsoDog {
       upset: inUse.upset,
       party: this.partyFrom !== null && now - this.partyFrom < PARTY_MS,
       play,
+      me: inUse.me,
       random: Math.random,
       findPath: findFloorPath,
       walkable: isFloorWalkable,
@@ -353,33 +387,43 @@ export class IsoDog {
       this.heartsFrom !== null && now - this.heartsFrom < HEARTS_MS
         ? (now - this.heartsFrom) / 1000
         : null;
+    const patted = pattedBy(inUse.me, this.dog);
     root.position.set(this.dog.x, this.dog.y, this.dog.z);
     root.rotation.y = this.dog.facing;
     const act = petActOf(this.dog);
-    poseDog(this.rig, act, seconds, thanks === null ? 9 : 22);
+    poseDog(this.rig, act, seconds, thanks === null && !patted ? 9 : 22);
     this.snore(act === "sleep");
 
-    // Its ball: on the floor where it left it, or in its mouth.
+    // Its ball: in the air from my hand, on the floor where it lies, or in
+    // its mouth.
     const { ball } = this.dog;
+    const thrown = inUse.me?.thrown;
+    const flying =
+      ball && thrown && ball.x === thrown.to.x && ball.z === thrown.to.z
+        ? ballInFlight(thrown, now - thrown.at)
+        : null;
     if (ball) {
       if (this.ball.parent !== this.office) {
         this.office.add(this.ball);
         this.ball.scale.setScalar(1);
       }
-      this.ball.position.set(ball.x, BALL_RADIUS, ball.z);
+      if (flying) this.ball.position.copy(flying);
+      else this.ball.position.set(ball.x, BALL_RADIUS, ball.z);
     } else if (this.ball.parent !== head) {
       head.add(this.ball);
       this.ball.scale.setScalar(1 / DOG_SIZE);
       this.ball.position.copy(IN_MOUTH);
     }
 
-    // A heart over it when I say thanks, and while it boops the cat.
+    // A heart over it when I say thanks, while it boops the cat and while I pat it.
     const rise =
       thanks !== null
         ? (thanks * 0.8) % 1
         : act === "boop"
           ? (seconds % 2) / 2
-          : null;
+          : patted
+            ? (seconds % PAT_HEART_SECONDS) / PAT_HEART_SECONDS
+            : null;
     heart.visible = rise !== null;
     if (rise !== null) {
       heart.position.set(0, 0.95 + 0.4 * rise, 0.2);

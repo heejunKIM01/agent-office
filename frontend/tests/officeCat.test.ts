@@ -34,6 +34,7 @@ const input = (now: number, over: Partial<CatInput> = {}): CatInput => ({
   random: dice(0.5),
   findPath: findFloorPath,
   walkable: isFloorWalkable,
+  me: null,
   ...over,
 });
 

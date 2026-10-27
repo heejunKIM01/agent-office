@@ -9,6 +9,9 @@
  * in. It runs to the elevator to greet a newcomer, runs to whoever's tests
  * just failed and sits by them, tears round in zoomies when work ships and
  * lies down beside my chair, its ball by it, while Claude waits on me.
+ * When I call it to play fetch (officeMe.ts) it runs over with a play
+ * bow, chases each ball I throw and brings it back to my feet; while I pat
+ * it, it stays put.
  */
 
 import {
@@ -19,6 +22,7 @@ import {
   MY_SEAT,
 } from "@/constants/isoFloorPlan";
 import type { FloorPoint } from "./isoNavGrid";
+import { FETCH_PLANS, type MeSighting } from "./officeMe";
 import {
   PLAY_PREFIX,
   besidePoint,
@@ -33,6 +37,7 @@ import {
   type PetClock,
   type PetPlan,
   type PetSighting,
+  sightingOf,
 } from "./officePets";
 
 /** What it does once there. */
@@ -56,6 +61,13 @@ export type DogPlan = PetPlan<DogAct>;
 export interface OfficeDog extends Pet<DogAct> {
   /** Where its ball lies; null while it carries the ball in its mouth. */
   ball: FloorPoint | null;
+  /** When the last ball I threw left my hand (ms), once it has gone after it. */
+  chased: number | null;
+}
+
+/** What the others see of the dog: where it is, what it is up to and where its ball is. */
+export interface DogSighting extends PetSighting {
+  ball: FloorPoint | null;
 }
 
 export interface DogInput extends PetClock {
@@ -71,7 +83,11 @@ export interface DogInput extends PetClock {
   party: boolean;
   /** Its part in a game with the cat (systems/petPlay.ts), while one goes on. */
   play: DogPlan | null;
+  me: MeSighting | null;
 }
+
+/** Called away to these, it does not come to play. */
+const BUSY = new Set(["greet", "comfort", "myChair", "zoomies"]);
 
 /** A walk, a trot and a run (m/s). */
 export const DOG_WALK_SPEED = 1.6;
@@ -227,6 +243,33 @@ function fetchBall(ball: FloorPoint, input: DogInput): DogPlan | null {
   });
 }
 
+/** I stand calling it to play fetch. */
+const calledToPlay = (me: MeSighting | null): me is MeSighting =>
+  me !== null && me.planId === "fetch" && me.staying;
+
+/** Over to me at a run, a play bow, and the ball dropped at my feet. */
+function toMe(
+  id: "fetchMe" | "bring",
+  me: FloorPoint,
+  input: DogInput,
+): DogPlan | null {
+  const by = besidePoint(me, 1.3, input);
+  if (!by) return null;
+  return dogPlan(id, facingTo(by, me), "play", [0, 0], {
+    speed: id === "fetchMe" ? DOG_RUN_SPEED : DOG_TROT_SPEED,
+    hold: true,
+  });
+}
+
+/** After the ball I just threw, to where it lands. */
+function chase(to: FloorPoint, input: DogInput): DogPlan | null {
+  const by = besidePoint(to, 0.6, input);
+  if (!by) return null;
+  return dogPlan("chase", facingTo(by, to), "play", [400, 700], {
+    speed: DOG_RUN_SPEED,
+  });
+}
+
 /** Over to the cat, when the cat is down on the floor and staying put. */
 function visit(cat: PetSighting | null, input: DogInput): DogPlan | null {
   if (!cat || cat.y > 0 || cat.phase !== "stay") return null;
@@ -276,7 +319,15 @@ export const DOG_BRAIN: PetBrain<DogAct, DogInput> = {
       return DOG_CALLS.greet;
     }
     if (input.napping) return id !== "myChair" ? DOG_CALLS.myChair : null;
-    return input.play && id !== input.play.id ? input.play : null;
+    if (input.play) return id !== input.play.id ? input.play : null;
+    if (calledToPlay(input.me)) {
+      const { thrown } = input.me;
+      if (thrown && thrown.at !== dog.chased) return chase(thrown.to, input);
+      if (!FETCH_PLANS.has(id) && !BUSY.has(id)) {
+        return toMe("fetchMe", input.me, input);
+      }
+    }
+    return null;
   },
   keeps: (dog, input) => {
     if (dog.plan.id.startsWith(PLAY_PREFIX)) {
@@ -292,6 +343,9 @@ export const DOG_BRAIN: PetBrain<DogAct, DogInput> = {
           input.claude?.working === true &&
           distance(input.claude, dog.plan.floor) < FOLLOW_REACH
         );
+      case "fetchMe":
+      case "bring":
+        return calledToPlay(input.me);
       case "visit":
         return (
           input.cat !== null &&
@@ -304,6 +358,11 @@ export const DOG_BRAIN: PetBrain<DogAct, DogInput> = {
   },
   next: (pet, input) => {
     const dog = pet as OfficeDog;
+    // The ball in its mouth, back to me while I still play.
+    if (dog.plan.id === "chase" && calledToPlay(input.me)) {
+      const back = toMe("bring", input.me, input);
+      if (back) return back;
+    }
     const tries: (() => DogPlan | null)[] = [
       () => (input.random() < ZOOMIES_CHANCE ? zoomies(dog, input) : null),
       () =>
@@ -335,20 +394,53 @@ function dropBall(dog: OfficeDog, input: DogInput): FloorPoint | null {
 
 /** The dog when the office opens: asleep on its bed, its ball beside it. */
 export function dogAt(now: number, random: () => number): OfficeDog {
-  return { ...petAt(DOG_SPOTS.bed, now, random), ball: DOG_BALL_START };
+  return {
+    ...petAt(DOG_SPOTS.bed, now, random),
+    ball: DOG_BALL_START,
+    chased: null,
+  };
 }
+
+/** I pat it from this close (m). */
+const PAT_REACH = 1.6;
+
+/** I crouch beside it patting it. */
+export const pattedBy = (me: MeSighting | null, dog: FloorPoint): boolean =>
+  me !== null &&
+  me.planId === "patDog" &&
+  me.staying &&
+  distance(me, dog) < PAT_REACH;
+
+/** What the others see of the dog. */
+export const dogSightingOf = (dog: OfficeDog): DogSighting => ({
+  ...sightingOf(dog),
+  ball: dog.ball,
+});
 
 /**
  * Move the dog on by ``input.dt``. Leaving its ball's spot it picks the
  * ball up, and it puts it down at the next place it stops.
  */
 export function stepOfficeDog(dog: OfficeDog, input: DogInput): OfficeDog {
-  const moved = stepPet(dog, input, DOG_BRAIN) as OfficeDog;
-  let ball = dog.ball;
+  // Patted, it stays where it is a while longer.
+  const still =
+    dog.phase === "stay" && pattedBy(input.me, dog)
+      ? { ...dog, until: Math.max(dog.until, input.now + 1000) }
+      : dog;
+  const moved = stepPet(still, input, DOG_BRAIN) as OfficeDog;
+  let { ball, chased } = dog;
+  // Off after a ball I threw: it lands where the dog runs to.
+  const thrown = input.me?.thrown;
+  if (moved.plan.id === "chase" && thrown && thrown.at !== chased) {
+    chased = thrown.at;
+    ball = thrown.to;
+  }
   const leftBall =
-    dog.plan.id === "ball" && dog.phase === "stay" && moved.phase !== "stay";
+    (dog.plan.id === "ball" || dog.plan.id === "chase") &&
+    dog.phase === "stay" &&
+    moved.phase !== "stay";
   if (leftBall) ball = null;
   const stopped = moved.phase === "stay" && dog.phase !== "stay";
   if (!ball && stopped) ball = dropBall(moved, input);
-  return { ...moved, ball };
+  return { ...moved, ball, chased };
 }

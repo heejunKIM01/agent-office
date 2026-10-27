@@ -192,6 +192,7 @@ describe("the cat at play", () => {
       napping: false,
       claude: null,
       dog: null,
+      me: null,
       random: dice(0.5),
       findPath: findFloorPath,
       walkable: isFloorWalkable,

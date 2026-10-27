@@ -61,6 +61,8 @@ export const ISO_COLORS = {
   catBed: "#c4b5fd",
   cardboard: "#c8955a",
   cardboardDark: "#b07d45",
+  wandStick: "#a16207",
+  wandFeather: ["#f472b6", "#a78bfa", "#facc15"],
   dogBed: "#64748b",
   dogCushion: "#cbd5e1",
   sofaDark: "#5c3e31",
