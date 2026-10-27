@@ -194,6 +194,9 @@ export function createIsoView(
   labels.domElement.style.position = "absolute";
   labels.domElement.style.inset = "0";
   labels.domElement.style.pointerEvents = "none";
+  // The renderer numbers each chip's z-index by depth, past the settings
+  // window's when the office is full: keep those numbers inside this layer.
+  labels.domElement.style.isolation = "isolate";
   container.appendChild(labels.domElement);
 
   const scene = new THREE.Scene();
