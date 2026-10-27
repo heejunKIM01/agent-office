@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { ReactNode, useEffect, useId } from "react";
+import { MouseEvent, ReactNode, useEffect, useId, useRef } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 
 interface ModalProps {
@@ -23,6 +23,9 @@ export default function Modal({
 }: ModalProps) {
   const { t } = useTranslation();
   const titleId = useId();
+  /** The press began, and ended, on the backdrop itself rather than in the window. */
+  const pressedBackdrop = useRef(false);
+  const releasedBackdrop = useRef(false);
 
   // Close on Escape key (only if dismissible)
   useEffect(() => {
@@ -37,10 +40,28 @@ export default function Modal({
 
   if (!isOpen) return null;
 
+  // A click outside closes it, but only one that both began and ended on the
+  // backdrop: not a text selection dragged out of the window, nor the second
+  // click of a double click on the button that opened it.
+  const closeFromBackdrop = (e: MouseEvent<HTMLDivElement>) => {
+    const outside =
+      pressedBackdrop.current &&
+      releasedBackdrop.current &&
+      e.target === e.currentTarget;
+    pressedBackdrop.current = false;
+    if (outside && e.detail <= 1) onClose();
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-[2px] dark:bg-black/50 animate-in fade-in duration-200"
-      onClick={dismissible ? onClose : undefined}
+      onMouseDown={(e) => {
+        pressedBackdrop.current = e.target === e.currentTarget;
+      }}
+      onMouseUp={(e) => {
+        releasedBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={dismissible ? closeFromBackdrop : undefined}
     >
       <div
         role="dialog"
