@@ -2,11 +2,13 @@
 
 /**
  * The left-hand 「층별 안내」 of the isometric office (docs/plan/spec.md
- * 「화면 재설계」, after the video): a card per floor (project) top floor
- * first, the floor being viewed open with 「최근 세션 자동으로 따라가기」,
- * whose lead agents the office shows (세션만 · 같은 층 · 모든 층) and its
- * sessions (past ones folded under 「지난 세션 N개 더 보기」), and the
- * quiet floors folded under 「오래 쉰 층 N개 더 보기」.
+ * 「화면 재설계」, after the video): whose lead agents the office shows
+ * (세션만 · 같은 층 · 모든 층) on top, then a card per floor (project) top
+ * floor first, the floor being viewed open with 「최근 세션 자동으로
+ * 따라가기」 and its sessions (past ones folded under 「지난 세션 N개 더
+ * 보기」), and the quiet floors folded under 「오래 쉰 층 N개 더 보기」.
+ * With every floor in the office, each floor that has someone there is
+ * outlined in its colour and says how many.
  * ``className`` places it: a column beside the office, or a sheet on phones.
  */
 
@@ -20,6 +22,7 @@ import {
   usePreferencesStore,
 } from "@/stores/preferencesStore";
 import {
+  floorHeadcounts,
   floorOfSession,
   isActiveNow,
   OFFICE_VIEWS,
@@ -72,6 +75,8 @@ export function IsoFloorGuide({
 
   const current = floorOfSession(floors, sessionId);
   const { awake, idle } = splitFloors(floors, current?.projectKey, now);
+  const headcounts =
+    view === "building" ? floorHeadcounts(floors, sessionId, now) : null;
   const shown = showIdle ? floors : awake;
   const locale = dateFnsLocaleFor(language);
   // The clock ticks every 15 s, so a session can have changed after it.
@@ -90,11 +95,44 @@ export function IsoFloorGuide({
         </span>
       </header>
 
+      <div
+        role="radiogroup"
+        aria-label="office view"
+        title={t("settings.officeView")}
+        className="flex items-center gap-1 px-1"
+      >
+        <span
+          aria-hidden="true"
+          className={view === "session" ? "opacity-40 grayscale" : ""}
+        >
+          👥
+        </span>
+        <span className="flex min-w-0 flex-1 rounded-md bg-slate-200/70 p-0.5 dark:bg-slate-800">
+          {OFFICE_VIEWS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              role="radio"
+              aria-checked={view === option}
+              onClick={() => void setView(option)}
+              className={`flex-auto whitespace-nowrap rounded px-1 py-0.5 text-[10px] ${
+                view === option
+                  ? "bg-white font-bold text-slate-800 shadow-sm dark:bg-slate-600 dark:text-white"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              {t(`iso.floor.view.${option}`)}
+            </button>
+          ))}
+        </span>
+      </div>
+
       <div className="-mr-1 flex min-h-0 flex-col gap-2 overflow-y-auto pr-1">
         <ol className="flex flex-col gap-2">
           {shown.map((floor) => {
             const tone = toneOf(floor);
             const open = floor.projectKey === current?.projectKey;
+            const inOffice = headcounts?.get(floor.projectKey) ?? 0;
             const { recent, past } = splitSessions(floor, sessionId, now);
             const summary = (
               <>
@@ -113,11 +151,19 @@ export function IsoFloorGuide({
                     {floor.name}
                   </span>
                   <span className="line-clamp-2 block text-[10px] leading-snug text-slate-400 dark:text-slate-500">
-                    {t("iso.floor.sessions", { count: floor.sessions.length })}
-                    {" · "}
-                    {floor.active
-                      ? t("iso.floor.activeNow")
-                      : ago(floor.updatedAt)}
+                    {inOffice > 0 ? (
+                      t("iso.floor.inOffice", { count: inOffice })
+                    ) : (
+                      <>
+                        {t("iso.floor.sessions", {
+                          count: floor.sessions.length,
+                        })}
+                        {" · "}
+                        {floor.active
+                          ? t("iso.floor.activeNow")
+                          : ago(floor.updatedAt)}
+                      </>
+                    )}
                   </span>
                 </span>
                 <span
@@ -134,11 +180,15 @@ export function IsoFloorGuide({
               <li
                 key={floor.projectKey}
                 className={`overflow-hidden rounded-xl border bg-white/95 shadow-sm dark:bg-slate-900/90 ${
-                  open
+                  open || inOffice > 0
                     ? "border-[1.5px]"
                     : "border-slate-200/80 dark:border-slate-700/70"
                 }`}
-                style={open ? { borderColor: tone.strong } : undefined}
+                style={
+                  open || inOffice > 0
+                    ? { borderColor: tone.strong }
+                    : undefined
+                }
               >
                 {open ? (
                   <div className="flex items-center gap-2 p-2">{summary}</div>
@@ -173,39 +223,6 @@ export function IsoFloorGuide({
                       </span>
                       {t("iso.floor.follow")}
                     </button>
-                    <div
-                      role="radiogroup"
-                      aria-label="office view"
-                      title={t("settings.officeView")}
-                      className="mb-1 flex items-center gap-1 px-1 py-0.5"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={
-                          view === "session" ? "opacity-40 grayscale" : ""
-                        }
-                      >
-                        👥
-                      </span>
-                      <span className="flex min-w-0 flex-1 rounded-md bg-slate-100 p-0.5 dark:bg-slate-800">
-                        {OFFICE_VIEWS.map((option) => (
-                          <button
-                            key={option}
-                            type="button"
-                            role="radio"
-                            aria-checked={view === option}
-                            onClick={() => void setView(option)}
-                            className={`flex-auto whitespace-nowrap rounded px-1 py-0.5 text-[10px] ${
-                              view === option
-                                ? "bg-white font-bold text-slate-800 shadow-sm dark:bg-slate-600 dark:text-white"
-                                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                            }`}
-                          >
-                            {t(`iso.floor.view.${option}`)}
-                          </button>
-                        ))}
-                      </span>
-                    </div>
                     <ul className="-mr-1 flex max-h-[42vh] flex-col overflow-y-auto pr-1">
                       {(showPast ? floor.sessions : recent).map((session) => {
                         const here = session.id === sessionId;
