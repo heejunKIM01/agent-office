@@ -268,7 +268,9 @@ export class IsoEffects {
     this.sheetText.className =
       "line-clamp-2 max-w-[220px] rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium leading-snug text-slate-800 shadow-md dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100";
     this.sheetNote = new CSS2DObject(this.sheetText);
-    this.sheetNote.position.set(0, 1.1, 0);
+    // Its bottom just over the tray, as the people's bubbles hang.
+    this.sheetNote.center.set(0.5, 1);
+    this.sheetNote.position.set(0, 0.5, 0);
     this.sheetNote.visible = false;
     this.tray.add(this.sheetNote);
 
