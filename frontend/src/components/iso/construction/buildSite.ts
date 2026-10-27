@@ -3,9 +3,10 @@
  * (constants/sitePlan.ts) in the office's style: packed earth with a
  * gravel road from the gate, a mesh fence round it, the site office
  * containers with the plan table and the schedule board, the rest tent,
- * the material yard, the excavator by its dirt pile, the building and the
- * tower crane. Only the site's own parts: nothing of the office's or the
- * airport's. Returns the pieces the scene moves.
+ * the material yard, the excavator by its pit and heap, the building with
+ * its hoist, the tower crane and the trucks' way in. Only the site's own
+ * parts: nothing of the office's or the airport's. Returns the pieces the
+ * scene moves.
  */
 
 import * as THREE from "three";
@@ -25,14 +26,13 @@ import {
 import { softShadowTexture, textTexture, tileTexture } from "../isoTextures";
 import { SiteBuilding } from "./siteBuilding";
 import { TowerCrane } from "./siteCrane";
+import { Excavator, Hoist, SiteTraffic } from "./siteMachines";
 import { SITE } from "./sitePalette";
 import {
   bench,
   brickPallet,
   cone,
   container,
-  dirtPile,
-  excavator,
   fence,
   formwork,
   generator,
@@ -57,6 +57,9 @@ export interface SiteScene {
   root: THREE.Group;
   crane: TowerCrane;
   building: SiteBuilding;
+  excavator: Excavator;
+  hoist: Hoist;
+  traffic: SiteTraffic;
   /** The schedule board by the site office, drawn into. */
   board: { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture };
 }
@@ -252,8 +255,6 @@ function yard(): THREE.Group {
 
 function digging(): THREE.Group {
   const g = new THREE.Group();
-  g.add(place(excavator(), EXCAVATOR.x, EXCAVATOR.z, 3));
-  g.add(place(dirtPile(), EXCAVATOR.x - 5.5, EXCAVATOR.z));
   for (const [cx, cz] of [
     [EXCAVATOR.x - 8, EXCAVATOR.z - 3],
     [EXCAVATOR.x - 8, EXCAVATOR.z + 3],
@@ -284,6 +285,17 @@ export function buildSite(): SiteScene {
   }
   const building = new SiteBuilding();
   const crane = new TowerCrane();
-  root.add(building.root, crane.root);
-  return { root, crane, building, board: office.board };
+  const excavator = new Excavator();
+  const hoist = new Hoist();
+  const traffic = new SiteTraffic();
+  root.add(building.root, crane.root, excavator.root, hoist.root, traffic.root);
+  return {
+    root,
+    crane,
+    building,
+    excavator,
+    hoist,
+    traffic,
+    board: office.board,
+  };
 }

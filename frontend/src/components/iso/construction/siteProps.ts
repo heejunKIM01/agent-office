@@ -2,7 +2,7 @@
  * Things standing about the construction site, built from the site's own
  * solids: the site office containers, the plan table, the rest tent with
  * its benches, water cooler and portable toilets, materials in the yard
- * (bricks, rebar, pipes, formwork, slabs), the excavator, a generator,
+ * (bricks, rebar, pipes, formwork, slabs), a generator,
  * traffic cones and the mesh fence. Each faces +z with its origin on the
  * ground at its centre.
  */
@@ -206,42 +206,6 @@ export function slabStack(count: number): THREE.Group {
     g.add(box(0.15, 0.12, 2.6, SITE.pallet, 1.2, i * 0.4, 0));
     g.add(box(3.2, 0.28, 2.8, SITE.slab, 0, i * 0.4 + 0.12, 0));
   }
-  return g;
-}
-
-/** A yellow excavator, its arm reaching forward (+z) to the ground. */
-export function excavator(): THREE.Group {
-  const g = new THREE.Group();
-  for (const side of [-1, 1]) {
-    g.add(box(0.7, 0.7, 3.2, SITE.dark, side * 1.05, 0, 0));
-  }
-  g.add(box(1.6, 0.4, 2.2, SITE.dark, 0, 0.4, 0));
-  const body = new THREE.Group();
-  body.add(box(2.2, 1, 2.4, SITE.yellow, 0, 0.8, -0.2));
-  body.add(box(1, 1.3, 1.1, SITE.yellowDark, -0.55, 1.8, 0.4));
-  body.add(
-    box(0.9, 0.7, 0.05, SITE.glass, -0.55, 2.2, 0.96, { shadow: false }),
-  );
-  body.add(box(2, 0.7, 0.6, SITE.counterweight, 0, 0.9, -1.4));
-  // Boom up and out, the stick down to the bucket.
-  const boom = box(0.4, 0.4, 3, SITE.yellow, 0, -0.2, 1.5);
-  const boomMount = new THREE.Group();
-  boomMount.add(boom);
-  boomMount.position.set(0.5, 1.8, 0.6);
-  boomMount.rotation.x = -0.5;
-  body.add(boomMount);
-  const stick = box(0.32, 2.4, 0.32, SITE.yellowDark, 0.5, 0.2, 3.3);
-  body.add(stick);
-  body.add(box(0.9, 0.5, 0.7, SITE.dark, 0.5, 0, 3.5));
-  g.add(body);
-  return g;
-}
-
-/** A pile of dug earth. */
-export function dirtPile(): THREE.Group {
-  const g = new THREE.Group();
-  g.add(sphere(1.4, SITE.dirt, 0, -0.5, 0, [14, 10]));
-  g.add(sphere(1, SITE.dirt, 1.1, -0.4, 0.5, [12, 8]));
   return g;
 }
 
