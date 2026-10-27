@@ -62,7 +62,7 @@ describe("place", () => {
     usePreferencesStore.setState({ place: "office" });
   });
 
-  it("shows the office unless the airport was chosen", async () => {
+  it("shows the office unless another place was chosen", async () => {
     apiFetch.mockResolvedValueOnce(saved({}));
     await usePreferencesStore.getState().loadPreferences();
     expect(usePreferencesStore.getState().place).toBe("office");
@@ -70,6 +70,10 @@ describe("place", () => {
     apiFetch.mockResolvedValueOnce(saved({ place: "airport" }));
     await usePreferencesStore.getState().loadPreferences();
     expect(usePreferencesStore.getState().place).toBe("airport");
+
+    apiFetch.mockResolvedValueOnce(saved({ place: "site" }));
+    await usePreferencesStore.getState().loadPreferences();
+    expect(usePreferencesStore.getState().place).toBe("site");
 
     usePreferencesStore.setState({ place: "office" });
     apiFetch.mockResolvedValueOnce(saved({ place: "moon" }));

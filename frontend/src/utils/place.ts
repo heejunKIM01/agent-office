@@ -1,11 +1,13 @@
 /**
- * Where the agents work (설정 「장소」): the office, or the airport where
- * Claude is the controller in the tower and subagents fly as planes. The
+ * Where the agents work (설정 「장소」): the office, the airport where
+ * Claude is the controller in the tower and subagents fly as planes, or the
+ * construction site where it is the site manager and a commit raises the
+ * building a floor. The
  * choice is saved as the ``place`` preference and mirrored in localStorage,
  * so the page opens on the last place without drawing the other first.
  */
 
-export const places = ["office", "airport"] as const;
+export const places = ["office", "airport", "site"] as const;
 export type Place = (typeof places)[number];
 
 export const DEFAULT_PLACE: Place = "office";

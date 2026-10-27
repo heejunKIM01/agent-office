@@ -40,6 +40,18 @@ const ROOM_LEGEND = [
   { icon: "🛗", room: "elevator" },
 ] as const;
 
+/** The construction site's spots and what happens there (설정 「장소」 · 건설 현장). */
+const SITE_LEGEND = [
+  { icon: "📐", spot: "plans" },
+  { icon: "🧱", spot: "build" },
+  { icon: "🏗️", spot: "crane" },
+  { icon: "🚜", spot: "machines" },
+  { icon: "📦", spot: "yard" },
+  { icon: "📋", spot: "board" },
+  { icon: "🚧", spot: "gate" },
+  { icon: "⛺", spot: "rest" },
+] as const;
+
 /** The airport's spots and what happens there (설정 「장소」 · 공항). */
 const AIRPORT_LEGEND = [
   { icon: "🗼", spot: "tower" },
@@ -142,6 +154,37 @@ export function IsoSidePanel({
 }): React.ReactNode {
   const { t } = useTranslation();
   const place = usePreferencesStore(selectPlace);
+  // The place's map: what is where, and what happens there.
+  const legend =
+    place === "airport"
+      ? {
+          heading: t("iso.panel.airport"),
+          items: AIRPORT_LEGEND.map(({ icon, spot }) => ({
+            icon,
+            key: spot,
+            name: t(`iso.spot.${spot}`),
+            does: t(`iso.spotDoes.${spot}`),
+          })),
+        }
+      : place === "site"
+        ? {
+            heading: t("iso.panel.site"),
+            items: SITE_LEGEND.map(({ icon, spot }) => ({
+              icon,
+              key: spot,
+              name: t(`iso.siteSpot.${spot}`),
+              does: t(`iso.siteSpotDoes.${spot}`),
+            })),
+          }
+        : {
+            heading: t("iso.panel.rooms"),
+            items: ROOM_LEGEND.map(({ icon, room }) => ({
+              icon,
+              key: room,
+              name: t(`iso.room.${room}`),
+              does: t(`iso.roomDoes.${room}`),
+            })),
+          };
   const agentName = useCodingAgentName();
   const boss = useGameStore((s) => s.boss);
   const agents = useGameStore((s) => s.agents);
@@ -320,33 +363,17 @@ export function IsoSidePanel({
       </section>
 
       <section className={card}>
-        <h2 className="mb-1.5 text-[13px] font-bold">
-          {t(place === "airport" ? "iso.panel.airport" : "iso.panel.rooms")}
-        </h2>
+        <h2 className="mb-1.5 text-[13px] font-bold">{legend.heading}</h2>
         <ul className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] leading-snug">
-          {place === "airport"
-            ? AIRPORT_LEGEND.map(({ icon, spot }) => (
-                <li key={spot} className="flex gap-1">
-                  <span aria-hidden="true">{icon}</span>
-                  <span className="min-w-0">
-                    <b className="font-semibold">{t(`iso.spot.${spot}`)}</b>{" "}
-                    <span className="text-slate-400">
-                      {t(`iso.spotDoes.${spot}`)}
-                    </span>
-                  </span>
-                </li>
-              ))
-            : ROOM_LEGEND.map(({ icon, room }) => (
-                <li key={room} className="flex gap-1">
-                  <span aria-hidden="true">{icon}</span>
-                  <span className="min-w-0">
-                    <b className="font-semibold">{t(`iso.room.${room}`)}</b>{" "}
-                    <span className="text-slate-400">
-                      {t(`iso.roomDoes.${room}`)}
-                    </span>
-                  </span>
-                </li>
-              ))}
+          {legend.items.map(({ icon, key, name, does }) => (
+            <li key={key} className="flex gap-1">
+              <span aria-hidden="true">{icon}</span>
+              <span className="min-w-0">
+                <b className="font-semibold">{name}</b>{" "}
+                <span className="text-slate-400">{does}</span>
+              </span>
+            </li>
+          ))}
         </ul>
       </section>
     </aside>
