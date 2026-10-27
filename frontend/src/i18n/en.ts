@@ -113,6 +113,9 @@ const en = {
   "iso.floor.moreIdle_one": "{count} more quiet floor",
   "iso.floor.moreIdle_other": "{count} more quiet floors",
   "iso.floor.lessIdle": "Collapse",
+  "iso.floor.morePast": "{count} more past sessions",
+  "iso.floor.morePast_one": "{count} more past session",
+  "iso.floor.morePast_other": "{count} more past sessions",
 
   // Zoom Controls
   "zoom.in": "Zoom in",

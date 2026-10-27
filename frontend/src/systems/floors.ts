@@ -10,6 +10,8 @@ import type { Session } from "@/hooks/useSessions";
 export const ACTIVE_NOW_MS = 5 * 60 * 1000;
 /** Floors quiet for longer than this fold under 「오래 쉰 층 N개 더 보기」. */
 export const IDLE_FLOOR_MS = 60 * 60 * 1000;
+/** Sessions ended longer ago than this fold under 「지난 세션 N개 더 보기」. */
+export const PAST_SESSION_MS = 60 * 60 * 1000;
 /**
  * At most this many other sessions send their lead agent into the office:
  * the dev room has eleven free chairs and subagents need the rest.
@@ -111,6 +113,30 @@ export function floorColleagues(
   return floor.sessions
     .filter((session) => session.id !== sessionId && isActiveNow(session, now))
     .slice(0, MAX_COLLEAGUES);
+}
+
+/**
+ * A floor's sessions the guide lists at first and the rest it folds: those
+ * that ended over an hour ago and those opened but never given anything to
+ * do. The session shown and ones working now are always listed.
+ */
+export function splitSessions(
+  floor: Floor,
+  sessionId: string | null,
+  now: number,
+): { recent: Session[]; past: Session[] } {
+  const recent: Session[] = [];
+  const past: Session[] = [];
+  for (const session of floor.sessions) {
+    const isPast =
+      session.id !== sessionId &&
+      !isActiveNow(session, now) &&
+      (!session.hasWork ||
+        (session.status === "completed" &&
+          now - Date.parse(session.updatedAt) >= PAST_SESSION_MS));
+    (isPast ? past : recent).push(session);
+  }
+  return { recent, past };
 }
 
 /** The floor a session belongs to. */

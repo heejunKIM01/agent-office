@@ -9,6 +9,7 @@ import {
   MAX_COLLEAGUES,
   sessionTitle,
   splitFloors,
+  splitSessions,
 } from "@/systems/floors";
 
 function session(
@@ -31,6 +32,7 @@ function session(
     eventCount: 1,
     codingAgent: null,
     idle: false,
+    hasWork: true,
   };
 }
 
@@ -202,5 +204,61 @@ describe("keepShownSession", () => {
 
   it("adds nothing it never saw", () => {
     expect(keepShownSession([other], [], "s1")).toEqual([other]);
+  });
+});
+
+describe("splitSessions", () => {
+  const at = (time: string): number => Date.parse(time);
+  const now = at("2026-10-27T01:40:00Z");
+  const floor = buildFloors(
+    [
+      // Working now.
+      session(
+        "work",
+        "web",
+        "2026-10-27T00:00:00Z",
+        "2026-10-27T01:39:00Z",
+        "active",
+      ),
+      // Waiting for the next prompt since this morning.
+      {
+        ...session(
+          "wait",
+          "web",
+          "2026-10-27T00:00:00Z",
+          "2026-10-27T00:10:00Z",
+          "active",
+        ),
+        idle: true,
+      },
+      // Opened and left waiting, nothing asked of it.
+      {
+        ...session(
+          "empty",
+          "web",
+          "2026-10-27T00:37:00Z",
+          "2026-10-27T00:38:00Z",
+          "active",
+        ),
+        idle: true,
+        hasWork: false,
+      },
+      // Ended half an hour ago, and four days ago.
+      session("ended", "web", "2026-10-27T00:00:00Z", "2026-10-27T01:10:00Z"),
+      session("old", "web", "2026-10-23T00:00:00Z", "2026-10-23T08:00:00Z"),
+    ],
+    now,
+  )[0];
+
+  it("folds sessions ended over an hour ago and ones never given anything to do", () => {
+    const { recent, past } = splitSessions(floor, "work", now);
+    expect(recent.map((s) => s.id)).toEqual(["work", "ended", "wait"]);
+    expect(past.map((s) => s.id)).toEqual(["empty", "old"]);
+  });
+
+  it("always lists the session shown", () => {
+    const { recent, past } = splitSessions(floor, "old", now);
+    expect(recent.map((s) => s.id)).toContain("old");
+    expect(past.map((s) => s.id)).toEqual(["empty"]);
   });
 });

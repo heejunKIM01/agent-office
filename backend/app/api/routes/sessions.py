@@ -64,6 +64,8 @@ class SessionSummary(TypedDict):
     # Its last turn has ended, no subagent is at work, and it waits for the
     # next prompt.
     idle: bool
+    # Something happened in it beyond opening, waiting and closing.
+    hasWork: bool
 
 
 _TITLE_MAX_CHARS = 80
@@ -326,6 +328,7 @@ async def list_sessions(
                 "status": rec.status,
                 "eventCount": count,
                 "idle": rec.id in idle,
+                "hasWork": rec.id in sessions_with_work,
                 "codingAgent": rec.coding_agent,
             }
         )
