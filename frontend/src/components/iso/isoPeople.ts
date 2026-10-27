@@ -48,6 +48,7 @@ import {
   CHEER_MS,
   DISMAY_MS,
   PARTY_MS,
+  HEARTS_MS,
   catOnKeyboard,
   NO_PILE,
   bookPile,
@@ -77,6 +78,7 @@ import {
   poseCharacter,
   type CharacterRig,
   type PoseAct,
+  heartsOn,
   rainOn,
 } from "./isoCharacters";
 import { OUTFIT_COLORS } from "./isoPalette";
@@ -199,6 +201,9 @@ export class IsoPeople {
   /** Work just shipped: everyone claps until ``partyUntil`` (performance.now ms). */
   private partyPending = false;
   private partyUntil = 0;
+  /** I said thanks: hearts rise from ``heartsFrom`` (performance.now ms) for a while. */
+  private heartsPending = false;
+  private heartsFrom: number | null = null;
   /** The next sync places a snapshot: everyone starts where they are. */
   private fresh = true;
   /** The chair and room spots each person last had, kept for the tab. */
@@ -328,6 +333,13 @@ export class IsoPeople {
       this.partyPending = false;
       this.partyUntil = now + PARTY_MS;
     }
+    if (this.heartsPending) {
+      this.heartsPending = false;
+      this.heartsFrom = now;
+    }
+    if (this.heartsFrom !== null && now - this.heartsFrom > HEARTS_MS) {
+      this.heartsFrom = null;
+    }
     const gone: string[] = [];
     // Claude keeps quiet while a subagent reports to it.
     const listening = [...this.placed.values()].some(({ walker }) =>
@@ -385,6 +397,12 @@ export class IsoPeople {
       // In the cab, behind its doors: no chip or bubble either.
       const inCab = walker.z < ELEVATOR_DOOR.z - IN_CAB_DEPTH;
       rainOn(placed.rig, placed.person.rainCloud && !inCab, now / 1000);
+      heartsOn(
+        placed.rig,
+        this.heartsFrom === null || inCab
+          ? null
+          : (now - this.heartsFrom) / 1000,
+      );
       placed.chip.visible = !inCab;
       placed.bubble.visible = !inCab;
       this.showBubble(
@@ -596,6 +614,11 @@ export class IsoPeople {
     placed.rig.pile.children.forEach((book, i) => {
       book.visible = i < pile.count;
     });
+  }
+
+  /** I said thanks: hearts rise beside everyone's head for a moment. */
+  hearts(): void {
+    this.heartsPending = true;
   }
 
   /** Work just shipped (a push or merge): everyone claps for a moment. */

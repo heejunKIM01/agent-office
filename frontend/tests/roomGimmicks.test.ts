@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   CAT_AFTER_MS,
+  isThanks,
+  lastThanks,
   failuresInARow,
   CUP_EVERY_MS,
   cupsFor,
@@ -324,5 +326,40 @@ describe("failuresInARow", () => {
       post("main", "Bash", true),
     ];
     expect(failuresInARow(log, "main")).toBe(1);
+  });
+});
+
+describe("lastThanks", () => {
+  const prompt = (text: string, id: number) => ({
+    id: String(id),
+    type: "user_prompt_submit",
+    timestamp: new Date(id * 1000),
+    detail: { prompt: text },
+  });
+
+  it("knows thanks in Korean and English", () => {
+    for (const text of [
+      "고마워!",
+      "정말 감사합니다",
+      "Thanks a lot",
+      "thx",
+      "ty",
+    ]) {
+      expect(isThanks(text)).toBe(true);
+    }
+    for (const text of ["다 진행해", "type check", undefined]) {
+      expect(isThanks(text)).toBe(false);
+    }
+  });
+
+  it("answers only my latest prompt", () => {
+    expect(lastThanks([prompt("고마워", 20), prompt("고쳐줘", 10)])).toEqual({
+      id: "20",
+      at: 20_000,
+    });
+    expect(
+      lastThanks([prompt("다음 거 해줘", 30), prompt("고마워", 20)]),
+    ).toBeNull();
+    expect(lastThanks([])).toBeNull();
   });
 });

@@ -82,6 +82,8 @@ export interface CharacterRig {
   sweat: THREE.Group;
   /** A little rain cloud over its head after the same tool failed again and again. */
   cloud: THREE.Group;
+  /** Hearts rising beside its head when I say thanks. */
+  hearts: THREE.Group;
   /** Where the name chip hangs, just above the hair. */
   chipAnchor: THREE.Object3D;
 }
@@ -291,6 +293,15 @@ export function buildCharacter(
   cloud.visible = false;
   hips.add(cloud);
 
+  const hearts = new THREE.Group();
+  for (let i = 0; i < HEART_COUNT; i++) {
+    const heart = new THREE.Mesh(heartGeometry(), material(C.heart));
+    heart.userData.heartPhase = i / HEART_COUNT;
+    hearts.add(heart);
+  }
+  hearts.visible = false;
+  hips.add(hearts);
+
   const chipAnchor = new THREE.Object3D();
   chipAnchor.position.set(0, 2.2, 0);
   hips.add(chipAnchor);
@@ -308,8 +319,59 @@ export function buildCharacter(
     phone,
     sweat,
     cloud,
+    hearts,
     chipAnchor,
   };
+}
+
+/** A small heart, facing +z, its bottom tip at the origin. */
+function heartGeometry(): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.bezierCurveTo(-0.05, 0.06, -0.2, 0.12, -0.2, 0.24);
+  shape.bezierCurveTo(-0.2, 0.33, -0.12, 0.38, -0.06, 0.38);
+  shape.bezierCurveTo(-0.02, 0.38, 0, 0.35, 0, 0.32);
+  shape.bezierCurveTo(0, 0.35, 0.02, 0.38, 0.06, 0.38);
+  shape.bezierCurveTo(0.12, 0.38, 0.2, 0.33, 0.2, 0.24);
+  shape.bezierCurveTo(0.2, 0.12, 0.05, 0.06, 0, 0);
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: 0.06,
+    bevelEnabled: false,
+  });
+}
+
+const HEART_COUNT = 2;
+/** Hearts rise on the screen's left of the head (the cloud keeps the right). */
+const HEART_SIDE: [number, number] = [-0.8, 0.8];
+const HEART_RISE = 0.9;
+/** The camera looks from 45°: turned this way the hearts face it. */
+const FACE_CAMERA = Math.PI / 4;
+
+/**
+ * Show hearts rising beside the head ``t`` seconds after I said thanks
+ * (null: none), one after the other, facing the camera however it turns.
+ */
+export function heartsOn(rig: CharacterRig, t: number | null): void {
+  rig.hearts.visible = t !== null;
+  if (t === null) return;
+  const turn = rig.root.rotation.y;
+  const [x, z] = HEART_SIDE;
+  rig.hearts.position.set(
+    x * Math.cos(turn) - z * Math.sin(turn),
+    1.5,
+    x * Math.sin(turn) + z * Math.cos(turn),
+  );
+  rig.hearts.rotation.y = FACE_CAMERA - turn;
+  for (const heart of rig.hearts.children) {
+    const phase = heart.userData.heartPhase as number;
+    const rise = (t * 0.8 + phase) % 1;
+    heart.position.set(
+      0.15 * Math.sin((t + phase) * 5) + (phase - 0.25) * 0.5,
+      HEART_RISE * rise,
+      0,
+    );
+    heart.scale.setScalar(Math.min(1, rise * 4));
+  }
 }
 
 /** The rain cloud's puffs (x, y, radius), and its drops. */

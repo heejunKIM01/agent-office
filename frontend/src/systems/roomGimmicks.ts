@@ -310,6 +310,32 @@ export function failuresInARow(
   return count;
 }
 
+/** How long the office shows its hearts after I say thanks (ms). */
+export const HEARTS_MS = 3_000;
+
+/** A prompt that says thanks, in Korean or English. */
+export function isThanks(prompt: unknown): boolean {
+  return (
+    typeof prompt === "string" &&
+    /고마워|고맙|감사|thank|\bthx\b|\bty\b/i.test(prompt)
+  );
+}
+
+/** My latest prompt when it said thanks: its log id and when (ms); null otherwise. */
+export function lastThanks(
+  eventLog: readonly {
+    id: string;
+    type: string;
+    timestamp: Date;
+    detail?: { prompt?: string };
+  }[],
+): { id: string; at: number } | null {
+  const prompt = eventLog.find((entry) => entry.type === "user_prompt_submit");
+  return prompt && isThanks(prompt.detail?.prompt)
+    ? { id: prompt.id, at: prompt.timestamp.getTime() }
+    : null;
+}
+
 /** The lamp over the elevator door stays lit this long after someone steps out (s). */
 export const LAMP_HOLD_SECONDS = 1.5;
 

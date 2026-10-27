@@ -113,6 +113,8 @@ export const ISO_COLORS = {
   /** The rain cloud over someone whose tool keeps failing, and its rain. */
   cloud: "#7b8494",
   rain: "#5aa9e6",
+  /** Hearts when I say thanks. */
+  heart: "#f0507a",
   labelText: "#8e98a7",
   wallLabelText: "#4a5262",
   books: [
