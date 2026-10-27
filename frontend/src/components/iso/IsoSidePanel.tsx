@@ -8,7 +8,7 @@
  * or a sheet on phones.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@/hooks/useSessions";
 import { useCodingAgentName } from "@/hooks/useCodingAgentName";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -18,9 +18,11 @@ import { OUTFIT_COLORS } from "./isoPalette";
 import {
   logLines,
   rosterRows,
+  secondsSince,
   startedTasks,
   toolCounts,
   toolTargets,
+  untilNextSecond,
   type RosterRow,
   type RosterWords,
 } from "@/systems/officeRoster";
@@ -59,36 +61,40 @@ function stamp(previous: Clock, rows: RosterRow[], now: number): Clock {
 }
 
 /**
- * Seconds since each row's latest event, ticking once a second; where the
- * page cannot tell, since its status or task last changed here.
+ * Seconds since each row's latest event, counted as the thinking bubble
+ * counts them and ticking the moment a row's count goes up, so both show the
+ * same number; where the page cannot tell, since its status or task last
+ * changed here.
  */
 function useSecondsInState(rows: RosterRow[]): Map<string, number> {
-  const latest = useRef(rows);
-  useEffect(() => {
-    latest.current = rows;
-  }, [rows]);
   const [clock, setClock] = useState<Clock>(() => ({
     now: Date.now(),
     since: new Map(),
   }));
-  useEffect(() => {
-    const timer = window.setInterval(
-      () => setClock((previous) => stamp(previous, latest.current, Date.now())),
-      1000,
-    );
-    return () => window.clearInterval(timer);
-  }, []);
-  return useMemo(() => {
-    const seconds = new Map<string, number>();
+  const { starts, unstamped } = useMemo(() => {
+    const starts = new Map<string, number>();
+    let unstamped = false;
     for (const row of rows) {
       const seen = clock.since.get(row.id);
+      const stamped = seen && seen.key === rowKey(row) ? seen.at : null;
       // A change the clock has not stamped yet has just happened.
-      const at =
-        row.since ?? (seen && seen.key === rowKey(row) ? seen.at : clock.now);
-      seconds.set(row.id, Math.max(0, Math.round((clock.now - at) / 1000)));
+      if (row.since === null && stamped === null) unstamped = true;
+      starts.set(row.id, row.since ?? stamped ?? clock.now);
     }
-    return seconds;
+    return { starts, unstamped };
   }, [rows, clock]);
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setClock((previous) => stamp(previous, rows, Date.now())),
+      unstamped ? 0 : untilNextSecond([...starts.values()], Date.now()),
+    );
+    return () => window.clearTimeout(timer);
+  }, [rows, starts, unstamped]);
+  return useMemo(
+    () =>
+      new Map([...starts].map(([id, at]) => [id, secondsSince(at, clock.now)])),
+    [starts, clock.now],
+  );
 }
 
 function Avatar({ row }: { row: RosterRow }): React.ReactNode {

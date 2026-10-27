@@ -37,6 +37,20 @@ export interface RosterRow {
   since: number | null;
 }
 
+/** Whole seconds from ``at`` to ``now`` (ms), as the thinking bubble counts them. */
+export const secondsSince = (at: number, now: number): number =>
+  Math.max(0, Math.floor((now - at) / 1000));
+
+/** How long (ms) until the count from any of ``starts`` goes up, at most a second. */
+export function untilNextSecond(starts: number[], now: number): number {
+  let wait = 1000;
+  for (const at of starts) {
+    const elapsed = now - at;
+    wait = Math.min(wait, elapsed < 0 ? -elapsed : 1000 - (elapsed % 1000));
+  }
+  return wait;
+}
+
 /** Tool uses per character in the event log ("main" is the lead agent). */
 export function toolCounts(entries: EventLogEntry[]): Map<string, number> {
   const counts = new Map<string, number>();
