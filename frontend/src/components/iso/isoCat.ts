@@ -1,20 +1,23 @@
 /**
  * The office cat on screen (systems/officeCat.ts decides where it goes): an
- * orange tabby with white socks that ambles on four legs, tail up, hops onto
- * its perches and, once there, curls up asleep, loafs, washes a paw, dozes,
- * eats, sniffs or rubs against Claude's legs with a heart. When work ships
- * it leaps at the falling confetti, and when I say thanks a heart rises over
- * it too.
+ * orange tabby with white socks that ambles or dashes on four legs, tail
+ * up, hops onto its perches and, once there, curls up asleep, loafs, washes
+ * a paw, dozes, eats, sniffs, scratches the post, sits looking about or
+ * rubs against Claude's legs with a heart. It swats at the dog when the dog
+ * comes sniffing. When work ships it leaps at the falling confetti, and
+ * when I say thanks a heart rises over it too.
  */
 
 import * as THREE from "three";
-import { findFloorPath } from "@/systems/isoNavGrid";
+import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
+import { catAt, stepOfficeCat, type OfficeCat } from "@/systems/officeCat";
 import {
-  catActOf,
-  catAt,
-  stepOfficeCat,
-  type OfficeCat,
-} from "@/systems/officeCat";
+  distance,
+  petActOf,
+  sightingOf,
+  towards,
+  type PetSighting,
+} from "@/systems/officePets";
 import { HEARTS_MS, PARTY_MS } from "@/systems/roomGimmicks";
 import { heartGeometry } from "./isoCharacters";
 import { box, material } from "./isoFurniture";
@@ -36,6 +39,8 @@ const COLORS = {
 const FACE_CAMERA = Math.PI / 4;
 /** Rubbing, a heart rises over it this often (s). */
 const RUB_HEART_SECONDS = 2;
+/** A dog sniffing this close gets a swat, unless the cat sleeps (m). */
+const SWAT_REACH = 1.8;
 
 interface CatRig {
   root: THREE.Group;
@@ -95,7 +100,7 @@ function buildCat(): CatRig {
   return { root, body, head, eyes, tail, legs, heart };
 }
 
-type CatPose = ReturnType<typeof catActOf>;
+type CatPose = ReturnType<typeof petActOf<OfficeCat["plan"]["act"]>>;
 
 /** Pose the cat for ``act``; ``seconds`` drives the motion. */
 function poseCat(rig: CatRig, act: CatPose, seconds: number): void {
@@ -111,9 +116,14 @@ function poseCat(rig: CatRig, act: CatPose, seconds: number): void {
     leg.visible = true;
     leg.rotation.set(0, 0, 0);
   }
+  const curled = act === "sleep" || act === "snuggle";
   const lying =
-    act === "loaf" || act === "keyboard" || act === "doze" || act === "sleep";
-  const shut = act === "doze" || act === "sleep";
+    curled ||
+    act === "loaf" ||
+    act === "keyboard" ||
+    act === "doze" ||
+    act === "box";
+  const shut = act === "doze" || curled;
   for (const eye of eyes) eye.scale.y = shut ? 0.2 : 1;
   if (lying) {
     // Paws tucked under, breathing slowly, the tail swaying along the floor.
@@ -122,7 +132,7 @@ function poseCat(rig: CatRig, act: CatPose, seconds: number): void {
     body.scale.y = 1 + 0.04 * Math.sin(seconds * (shut ? 1.6 : 2.4));
     tail.rotation.set(0, 0.5 * Math.sin(seconds * 1.8), 0);
     if (act === "doze") head.position.y = 0.06;
-    if (act === "sleep") {
+    if (curled) {
       // Curled up: the head down on its side, the tail wrapped round.
       body.scale.z = 0.85;
       head.position.set(0.08, 0.02, 0.22);
@@ -132,16 +142,39 @@ function poseCat(rig: CatRig, act: CatPose, seconds: number): void {
     return;
   }
   switch (act) {
-    case "walk": {
-      const swing = 0.55 * Math.sin(seconds * 10);
+    case "walk":
+    case "run": {
+      const running = act === "run";
+      const pace = running ? 18 : 10;
+      const swing = (running ? 0.95 : 0.55) * Math.sin(seconds * pace);
       frontL.rotation.x = swing;
       backR.rotation.x = swing;
       frontR.rotation.x = -swing;
       backL.rotation.x = -swing;
-      body.position.y = LEG + 0.015 * Math.abs(Math.cos(seconds * 10));
-      tail.rotation.x = 1.1 + 0.12 * Math.sin(seconds * 3);
+      body.position.y =
+        LEG + (running ? 0.05 : 0.015) * Math.abs(Math.cos(seconds * pace));
+      tail.rotation.x = running ? 0.5 : 1.1 + 0.12 * Math.sin(seconds * 3);
       return;
     }
+    case "scratch":
+      // Up on its hind legs against the post, front paws clawing it.
+      body.position.y = LEG * 0.7;
+      body.rotation.x = -1.05;
+      backL.rotation.x = backR.rotation.x = 1.05;
+      frontL.rotation.x = -0.5 + 0.45 * Math.sin(seconds * 12);
+      frontR.rotation.x = -0.5 - 0.45 * Math.sin(seconds * 12);
+      head.rotation.x = 0.9;
+      tail.rotation.x = 0.3;
+      return;
+    case "look":
+      // Sitting up, turning its head to watch the room.
+      body.position.y = 0.05;
+      body.rotation.x = -0.6;
+      backL.visible = backR.visible = false;
+      frontL.rotation.x = frontR.rotation.x = 0.6;
+      head.rotation.set(0.6, 0.7 * Math.sin(seconds * 0.8), 0);
+      tail.rotation.set(0, 1.2 + 0.2 * Math.sin(seconds * 2), 0);
+      return;
     case "hop":
       frontL.rotation.x = frontR.rotation.x = -0.7;
       backL.rotation.x = backR.rotation.x = 0.7;
@@ -211,8 +244,21 @@ export class IsoCat {
     this.heartsPending = true;
   }
 
-  /** Move and pose it for this frame; ``now`` in ms, ``dt`` in seconds. */
-  update(now: number, dt: number, inUse: RoomsInUse): void {
+  /** Where it is and what it is up to, for the dog. */
+  sighting(): PetSighting | null {
+    return this.cat && sightingOf(this.cat);
+  }
+
+  /**
+   * Move and pose it for this frame; ``now`` in ms, ``dt`` in seconds,
+   * ``dog`` as the dog was last frame.
+   */
+  update(
+    now: number,
+    dt: number,
+    inUse: RoomsInUse,
+    dog: PetSighting | null,
+  ): void {
     if (this.pouncePending) {
       this.pouncePending = false;
       this.pounceFrom = now;
@@ -232,17 +278,32 @@ export class IsoCat {
         now,
         dt,
         napping: inUse.catNap,
-        claudeSeated: inUse.claudeSeated,
+        claude: inUse.claude,
+        dog,
         random: Math.random,
         findPath: findFloorPath,
+        walkable: isFloorWalkable,
       });
     }
     const { root, body, legs, heart } = this.rig;
     const seconds = now / 1000;
-    const act = catActOf(this.cat);
+    const act = petActOf(this.cat);
     root.position.set(this.cat.x, this.cat.y, this.cat.z);
     root.rotation.y = this.cat.facing;
     poseCat(this.rig, pounce === null ? act : "walk", seconds);
+    const awake = act !== "sleep" && act !== "doze" && act !== "snuggle";
+    const pestered =
+      dog !== null &&
+      this.cat.y === 0 &&
+      this.cat.phase === "stay" &&
+      awake &&
+      distance(this.cat, dog) < SWAT_REACH;
+    if (pounce === null && pestered) {
+      // Turned on the dog, one front paw batting at its nose.
+      root.rotation.y = towards(this.cat, dog);
+      legs[1].visible = true;
+      legs[1].rotation.x = -1.4 + 0.5 * Math.sin(seconds * 16);
+    }
     if (pounce !== null) {
       // Up on its hind legs, front paws batting at the pieces.
       for (const leg of legs) leg.visible = true;

@@ -630,6 +630,52 @@ function catBowl(): THREE.Group {
   );
 }
 
+/** An open cardboard box, its flaps folded out. */
+function catBox(): THREE.Group {
+  const [w, d, h] = [0.9, 0.8, 0.4];
+  const flap = (
+    fw: number,
+    fd: number,
+    x: number,
+    z: number,
+    tilt: [number, number],
+  ) => {
+    const mesh = box(fw, 0.02, fd, C.cardboardDark, x, h - 0.02, z);
+    mesh.rotation.set(tilt[0], 0, tilt[1]);
+    return mesh;
+  };
+  return group(
+    box(w, 0.04, d, C.cardboard, 0, 0, 0),
+    box(w, h, 0.03, C.cardboard, 0, 0, -d / 2 + 0.015),
+    box(w, h, 0.03, C.cardboard, 0, 0, d / 2 - 0.015),
+    box(0.03, h, d, C.cardboard, -w / 2 + 0.015, 0, 0),
+    box(0.03, h, d, C.cardboard, w / 2 - 0.015, 0, 0),
+    flap(w, 0.3, 0, -d / 2 - 0.13, [-0.5, 0]),
+    flap(w, 0.3, 0, d / 2 + 0.13, [0.5, 0]),
+    flap(0.3, d, -w / 2 - 0.13, 0, [0, 0.5]),
+    flap(0.3, d, w / 2 + 0.13, 0, [0, -0.5]),
+  );
+}
+
+/** A dog bed: a cushion with a bolster round three sides. */
+function dogBed(): THREE.Group {
+  return group(
+    box(1.6, 0.1, 1.1, C.dogBed, 0, 0, 0),
+    box(1.2, 0.05, 0.8, C.dogCushion, 0, 0.1, 0.06),
+    box(1.6, 0.26, 0.24, C.dogBed, 0, 0, -0.43),
+    box(0.24, 0.22, 1.1, C.dogBed, -0.68, 0, 0),
+    box(0.24, 0.22, 1.1, C.dogBed, 0.68, 0, 0),
+  );
+}
+
+/** A steel bowl of water. */
+function waterBowl(): THREE.Group {
+  return group(
+    cylinder(0.32, 0.26, 0.14, "#94a3b8", 0, 0, 0, 20),
+    cylinder(0.27, 0.27, 0.02, "#7dd3fc", 0, 0.11, 0, 20),
+  );
+}
+
 /** Build one piece of furniture; ``seed`` varies books, LEDs and leaves. */
 export function buildFurniture(kind: FurnitureKind, seed = 0): THREE.Group {
   switch (kind) {
@@ -693,5 +739,11 @@ export function buildFurniture(kind: FurnitureKind, seed = 0): THREE.Group {
       return catTower();
     case "catBowl":
       return catBowl();
+    case "catBox":
+      return catBox();
+    case "dogBed":
+      return dogBed();
+    case "waterBowl":
+      return waterBowl();
   }
 }

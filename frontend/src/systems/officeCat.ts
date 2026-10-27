@@ -1,69 +1,72 @@
 /**
- * The office cat (docs/plan/spec.md 「작업 공간 기믹」): it strolls from one
- * favourite spot to the next and does there what cats do: naps curled up on
- * its tower in the lounge, loafs on the sofa's armrest, washes on the
- * library table, dozes by the warm server racks, eats at its bowl in the
- * cafe, sniffs the plant in the search room and rubs against Claude's legs
- * while Claude sits at its desk. Waking from a nap it stretches before it
- * goes.
- * When Claude has waited on my next prompt a while it heads for my keyboard
- * and lies on it until I type.
- *
- * `stepOfficeCat` is pure: the path finder, the clock and the dice are
- * passed in.
+ * The office cat (docs/plan/spec.md 「작업 공간 기믹」), getting about as
+ * officePets.ts does. It roams: now and then it ambles to some open bit of
+ * floor and looks about, or tears off across the office at a dash, and in
+ * between it visits its favourite spots: naps curled up on its tower in the
+ * lounge or scratches the tower's post, loafs on the sofa's armrest, washes
+ * on the library table, dozes by the warm server racks, sits in its
+ * cardboard box, eats at its bowl, sniffs the search room's plant and rubs
+ * against Claude's legs while Claude sits at its desk. When the dog sleeps
+ * on its bed, the cat may curl up on its back. When Claude has waited on my
+ * next prompt a while it heads for my keyboard and lies on it until I type.
  */
 
-import type { PathState } from "@/stores/slices/types";
 import {
   CAT_BOWL,
+  CAT_BOX,
   CAT_TOWER,
   CLAUDE_SEAT,
+  DOG_BED,
   MY_SEAT,
 } from "@/constants/isoFloorPlan";
 import type { FloorPoint } from "./isoNavGrid";
-import { advanceAlongPath } from "./pathFollow";
-
-/** Where the cat goes: its favourite spots, and my keyboard. */
-export type CatStopId =
-  | "tower"
-  | "sofa"
-  | "library"
-  | "server"
-  | "bowl"
-  | "plant"
-  | "claude"
-  | "keyboard";
+import {
+  openSpot,
+  petAt,
+  stepPet,
+  towards,
+  type ClaudeAt,
+  type Pet,
+  type PetBrain,
+  type PetClock,
+  type PetPlan,
+  type PetSighting,
+} from "./officePets";
 
 /** What it does once there. */
 export type CatAct =
-  "sleep" | "loaf" | "groom" | "doze" | "eat" | "sniff" | "rub" | "keyboard";
+  | "sleep"
+  | "loaf"
+  | "groom"
+  | "doze"
+  | "eat"
+  | "sniff"
+  | "rub"
+  | "keyboard"
+  | "scratch"
+  | "box"
+  | "look"
+  | "snuggle";
 
-/** A point it stands or lies at, ``y`` up off the floor, turned ``facing`` (0 faces +z). */
-export interface CatSpot {
-  x: number;
-  y: number;
-  z: number;
-  facing: number;
+export type CatPlan = PetPlan<CatAct>;
+export type OfficeCat = Pet<CatAct>;
+
+export interface CatInput extends PetClock {
+  /** Claude has waited on my next prompt a while: go lie on my keyboard. */
+  napping: boolean;
+  claude: ClaudeAt | null;
+  dog: PetSighting | null;
 }
 
-export interface CatStop {
-  /** Where it walks to, on the floor. */
-  floor: CatSpot;
-  /** Where it hops up to from there (a table, sofa or desk), if anywhere. */
-  perch: CatSpot | null;
-  act: CatAct;
-  /** How long it stays (ms), at least and at most; the keyboard: until I type. */
-  stay: [number, number];
-}
-
-/** The height of the bed on its tower (isoFurniture.ts). */
+/** An amble, slower than people, and a dash. */
+export const CAT_WALK_SPEED = 1.3;
+export const CAT_DASH_SPEED = 3.6;
+/** The height of the bed on its tower and of the dog's back (isoFurniture.ts, isoDog.ts). */
 const CAT_TOWER_BED = 1.67;
-/** Turned this way, it faces the camera; turned the other, it shows its side as well. */
+const DOG_BACK = 0.75;
+/** Turned this way it faces the camera; this way it shows its side as well. */
 const TO_CAMERA = 0.8;
 const THREE_QUARTER = 0.15;
-
-const towardsPoint = (from: FloorPoint, to: FloorPoint): number =>
-  Math.atan2(to.x - from.x, to.z - from.z);
 
 const SEARCH_PLANT: FloorPoint = { x: 38.8, z: 20.6 };
 const SNIFF_AT: FloorPoint = { x: 38.1, z: 21.3 };
@@ -71,323 +74,206 @@ const CLAUDE_RUB: FloorPoint = {
   x: CLAUDE_SEAT.x - 0.8,
   z: CLAUDE_SEAT.z + 0.6,
 };
+const TOWER_FOOT: FloorPoint = { x: CAT_TOWER.x, z: CAT_TOWER.z + 1.3 };
 
-export const CAT_STOPS: Record<CatStopId, CatStop> = {
-  tower: {
-    floor: { x: CAT_TOWER.x, y: 0, z: CAT_TOWER.z + 1.3, facing: Math.PI },
-    perch: {
-      x: CAT_TOWER.x,
-      y: CAT_TOWER_BED,
-      z: CAT_TOWER.z,
-      facing: TO_CAMERA,
+const plan = (
+  id: string,
+  floor: FloorPoint & { facing: number },
+  act: CatAct,
+  stay: [number, number],
+  more: Partial<CatPlan> = {},
+): CatPlan => ({
+  id,
+  floor: { ...floor, y: 0 },
+  perch: null,
+  act,
+  stay,
+  speed: CAT_WALK_SPEED,
+  ...more,
+});
+
+/** Its favourite spots. */
+export const CAT_SPOTS = {
+  tower: plan(
+    "tower",
+    { ...TOWER_FOOT, facing: Math.PI },
+    "sleep",
+    [25_000, 45_000],
+    {
+      perch: {
+        x: CAT_TOWER.x,
+        y: CAT_TOWER_BED,
+        z: CAT_TOWER.z,
+        facing: TO_CAMERA,
+      },
+      rest: true,
     },
-    act: "sleep",
-    stay: [40_000, 70_000],
-  },
+  ),
+  // Up on its hind legs, clawing the tower's post.
+  scratch: plan(
+    "scratch",
+    { ...TOWER_FOOT, facing: Math.PI },
+    "scratch",
+    [4_000, 6_000],
+  ),
   // The armrest at the sofa's left end, beside whoever rests there.
-  sofa: {
-    floor: { x: 2.75, y: 0, z: 22.75, facing: Math.PI / 2 },
-    perch: { x: 3.41, y: 0.72, z: 22.25, facing: 0 },
-    act: "loaf",
-    stay: [20_000, 35_000],
-  },
-  library: {
-    floor: { x: 7.6, y: 0, z: 7.6, facing: -2.4 },
-    perch: { x: 6.5, y: 0.78, z: 6.7, facing: THREE_QUARTER },
-    act: "groom",
-    stay: [15_000, 25_000],
-  },
+  sofa: plan(
+    "sofa",
+    { x: 2.75, z: 22.75, facing: Math.PI / 2 },
+    "loaf",
+    [12_000, 20_000],
+    {
+      perch: { x: 3.41, y: 0.72, z: 22.25, facing: 0 },
+      rest: true,
+    },
+  ),
+  library: plan(
+    "library",
+    { x: 7.6, z: 7.6, facing: -2.4 },
+    "groom",
+    [10_000, 16_000],
+    {
+      perch: { x: 6.5, y: 0.78, z: 6.7, facing: THREE_QUARTER },
+    },
+  ),
   // On the floor in front of the racks, where the air is warm.
-  server: {
-    floor: { x: 34.3, y: 0, z: 6.7, facing: THREE_QUARTER },
-    perch: null,
-    act: "doze",
-    stay: [25_000, 40_000],
-  },
-  bowl: {
-    floor: { x: CAT_BOWL.x, y: 0, z: CAT_BOWL.z - 0.6, facing: 0 },
-    perch: null,
-    act: "eat",
-    stay: [8_000, 12_000],
-  },
+  server: plan(
+    "server",
+    { x: 34.3, z: 6.7, facing: THREE_QUARTER },
+    "doze",
+    [15_000, 25_000],
+    {
+      rest: true,
+    },
+  ),
+  // Into the cardboard box, only its head showing.
+  box: plan(
+    "box",
+    { x: CAT_BOX.x, z: CAT_BOX.z + 1.15, facing: Math.PI },
+    "box",
+    [10_000, 18_000],
+    {
+      perch: { x: CAT_BOX.x, y: 0.06, z: CAT_BOX.z, facing: TO_CAMERA },
+      rest: true,
+    },
+  ),
+  bowl: plan(
+    "bowl",
+    { x: CAT_BOWL.x, z: CAT_BOWL.z - 0.6, facing: 0 },
+    "eat",
+    [6_000, 9_000],
+  ),
   // The plant in the corner of the search room.
-  plant: {
-    floor: { ...SNIFF_AT, y: 0, facing: towardsPoint(SNIFF_AT, SEARCH_PLANT) },
-    perch: null,
-    act: "sniff",
-    stay: [4_000, 6_000],
-  },
-  claude: {
-    floor: {
-      ...CLAUDE_RUB,
-      y: 0,
-      facing: towardsPoint(CLAUDE_RUB, CLAUDE_SEAT),
+  plant: plan(
+    "plant",
+    { ...SNIFF_AT, facing: towards(SNIFF_AT, SEARCH_PLANT) },
+    "sniff",
+    [3_000, 5_000],
+  ),
+  claude: plan(
+    "claude",
+    { ...CLAUDE_RUB, facing: towards(CLAUDE_RUB, CLAUDE_SEAT) },
+    "rub",
+    [5_000, 8_000],
+  ),
+  // Curled up on the sleeping dog's back.
+  snuggle: plan(
+    "snuggle",
+    { x: DOG_BED.x - 1.1, z: DOG_BED.z, facing: Math.PI / 2 },
+    "snuggle",
+    [15_000, 25_000],
+    {
+      perch: { x: DOG_BED.x, y: DOG_BACK, z: DOG_BED.z, facing: TO_CAMERA },
+      rest: true,
     },
-    perch: null,
-    act: "rub",
-    stay: [6_000, 9_000],
-  },
+  ),
   // Behind my desk, then up onto the keyboard in front of my chair.
-  keyboard: {
-    floor: { x: 17.6, y: 0, z: 18, facing: Math.PI / 2 },
-    perch: {
-      x: MY_SEAT.x + 0.85 * Math.sin(MY_SEAT.facing),
-      y: 1.01,
-      z: MY_SEAT.z + 0.85 * Math.cos(MY_SEAT.facing),
-      facing: TO_CAMERA,
+  keyboard: plan(
+    "keyboard",
+    { x: 17.6, z: 18, facing: Math.PI / 2 },
+    "keyboard",
+    [0, 0],
+    {
+      perch: {
+        x: MY_SEAT.x + 0.85 * Math.sin(MY_SEAT.facing),
+        y: 1.01,
+        z: MY_SEAT.z + 0.85 * Math.cos(MY_SEAT.facing),
+        facing: TO_CAMERA,
+      },
+      rest: true,
+      hold: true,
     },
-    act: "keyboard",
-    stay: [0, 0],
+  ),
+} satisfies Record<string, CatPlan>;
+
+export type CatSpotId = keyof typeof CAT_SPOTS;
+
+/** How often it roams the open floor instead of going to a spot, and how often it dashes. */
+const ROAM_CHANCE = 0.3;
+const DASH_CHANCE = 0.1;
+
+/** The dog lies asleep on its bed: a warm back to curl up on. */
+const dogAsleep = (dog: PetSighting | null): boolean =>
+  dog !== null && dog.planId === "bed" && dog.phase === "stay";
+
+/** The spots it may go to now, other than where it is. */
+export function catChoices(
+  from: string,
+  input: Pick<CatInput, "claude" | "dog">,
+): CatSpotId[] {
+  return (Object.keys(CAT_SPOTS) as CatSpotId[]).filter(
+    (id) =>
+      id !== from &&
+      id !== "keyboard" &&
+      (id !== "claude" || input.claude?.seated === true) &&
+      (id !== "snuggle" || dogAsleep(input.dog)),
+  );
+}
+
+/** Off across the open floor to look about, now and then at a dash. */
+function roam(cat: OfficeCat, input: CatInput): CatPlan | null {
+  const to = openSpot(cat, input);
+  if (!to) return null;
+  const dash = input.random() < DASH_CHANCE;
+  return plan("roam", { ...to, facing: TO_CAMERA }, "look", [2_000, 5_000], {
+    speed: dash ? CAT_DASH_SPEED : CAT_WALK_SPEED,
+  });
+}
+
+export const CAT_BRAIN: PetBrain<CatAct, CatInput> = {
+  urgent: (cat, input) =>
+    input.napping && cat.plan.id !== "keyboard" ? CAT_SPOTS.keyboard : null,
+  keeps: (cat, input) => {
+    switch (cat.plan.id) {
+      case "keyboard":
+        return input.napping;
+      case "claude":
+        return input.claude?.seated === true;
+      case "snuggle":
+        return dogAsleep(input.dog);
+      default:
+        return true;
+    }
+  },
+  next: (cat, input) => {
+    if (input.random() < ROAM_CHANCE) {
+      const roaming = roam(cat, input);
+      if (roaming) return roaming;
+    }
+    const choices = catChoices(cat.plan.id, input);
+    return CAT_SPOTS[
+      choices[Math.floor(input.random() * choices.length)] ?? "tower"
+    ];
   },
 };
 
-/** The spots it strolls between, in no order. */
-export const STROLL_STOPS: CatStopId[] = [
-  "tower",
-  "sofa",
-  "library",
-  "server",
-  "bowl",
-  "plant",
-  "claude",
-];
-
-/** Walking speed (m/s): an amble, slower than people. */
-export const CAT_WALK_SPEED = 1.3;
-/** A hop up onto or down from a perch (ms). */
-export const CAT_HOP_MS = 450;
-/** Waking from a rest it stretches this long before it goes (ms). */
-export const CAT_STRETCH_MS = 1400;
-const RESTS: ReadonlySet<CatAct> = new Set([
-  "sleep",
-  "loaf",
-  "doze",
-  "keyboard",
-]);
-
-export type CatPhase = "walk" | "hopUp" | "hopDown" | "stay" | "stretch";
-
-export interface OfficeCat {
-  x: number;
-  y: number;
-  z: number;
-  facing: number;
-  /** Where it is heading or staying. */
-  stop: CatStopId;
-  phase: CatPhase;
-  path: PathState | null;
-  /** Where a hop starts and lands, while it hops. */
-  hop: { from: CatSpot; to: CatSpot } | null;
-  /** When this phase began, and when a stay ends (ms). */
-  since: number;
-  until: number;
-}
-
-export interface CatInput {
-  /** The clock (ms). */
-  now: number;
-  /** Seconds since the last step. */
-  dt: number;
-  /** Claude has waited on my next prompt a while: go lie on my keyboard. */
-  napping: boolean;
-  /** Claude sits at its desk: its legs are there to rub against. */
-  claudeSeated: boolean;
-  /** A number in [0, 1). */
-  random: () => number;
-  findPath: (from: FloorPoint, to: FloorPoint) => FloorPoint[];
-}
-
-const settleSpot = (stop: CatStopId): CatSpot =>
-  CAT_STOPS[stop].perch ?? CAT_STOPS[stop].floor;
-
-function stayFor(stop: CatStopId, now: number, random: () => number): number {
-  const [least, most] = CAT_STOPS[stop].stay;
-  return now + least + (most - least) * random();
-}
-
-/** Settled at ``stop`` (curled up on the tower when the office opens). */
-export function catAt(
-  stop: CatStopId,
+/** The cat when the office opens: curled up asleep on its tower. */
+export const catAt = (
+  spot: CatSpotId,
   now: number,
   random: () => number,
-): OfficeCat {
-  const spot = settleSpot(stop);
-  return {
-    ...spot,
-    stop,
-    phase: "stay",
-    path: null,
-    hop: null,
-    since: now,
-    until: stayFor(stop, now, random),
-  };
-}
-
-/** Somewhere else to stroll to; Claude's legs only while Claude sits at its desk. */
-export function nextStop(
-  from: CatStopId,
-  claudeSeated: boolean,
-  random: () => number,
-): CatStopId {
-  const choices = STROLL_STOPS.filter(
-    (stop) => stop !== from && (stop !== "claude" || claudeSeated),
-  );
-  return choices[Math.floor(random() * choices.length)] ?? "tower";
-}
-
-function walkTo(cat: OfficeCat, stop: CatStopId, input: CatInput): OfficeCat {
-  const to = CAT_STOPS[stop].floor;
-  const found = input.findPath(cat, to);
-  const points = found.length > 0 ? found : [cat, to];
-  return {
-    ...cat,
-    y: 0,
-    stop,
-    phase: "walk",
-    path: {
-      waypoints: points.map((p) => ({ x: p.x, y: p.z })),
-      currentIndex: 0,
-      progress: 0,
-    },
-    hop: null,
-    since: input.now,
-  };
-}
-
-/** Leave for ``stop``: down off its perch first, if it is up on one. */
-function leaveFor(cat: OfficeCat, stop: CatStopId, input: CatInput): OfficeCat {
-  if (cat.y > 0) {
-    const down = CAT_STOPS[cat.stop].floor;
-    return {
-      ...cat,
-      stop,
-      phase: "hopDown",
-      path: null,
-      hop: { from: { ...cat }, to: { ...down, facing: cat.facing } },
-      since: input.now,
-    };
-  }
-  return walkTo(cat, stop, input);
-}
-
-/** Where it wants to be now, if not where it is going. */
-function calledAway(cat: OfficeCat, input: CatInput): CatStopId | null {
-  if (input.napping) return cat.stop === "keyboard" ? null : "keyboard";
-  if (cat.stop === "keyboard")
-    return nextStop("keyboard", input.claudeSeated, input.random);
-  if (cat.stop === "claude" && !input.claudeSeated) {
-    return nextStop("claude", false, input.random);
-  }
-  return null;
-}
-
-function hopAlong(cat: OfficeCat, input: CatInput): OfficeCat {
-  const hop = cat.hop;
-  if (!hop) return cat;
-  const t = Math.min(1, (input.now - cat.since) / CAT_HOP_MS);
-  const at = {
-    x: hop.from.x + (hop.to.x - hop.from.x) * t,
-    z: hop.from.z + (hop.to.z - hop.from.z) * t,
-    y: hop.from.y + (hop.to.y - hop.from.y) * t + 0.35 * Math.sin(Math.PI * t),
-  };
-  if (t < 1) return { ...cat, ...at };
-  if (cat.phase === "hopDown") {
-    return walkTo({ ...cat, ...hop.to }, cat.stop, input);
-  }
-  return {
-    ...cat,
-    ...hop.to,
-    phase: "stay",
-    hop: null,
-    since: input.now,
-    until: stayFor(cat.stop, input.now, input.random),
-  };
-}
-
-function walkAlong(cat: OfficeCat, input: CatInput): OfficeCat {
-  if (!cat.path) return cat;
-  const step = advanceAlongPath(cat.path, CAT_WALK_SPEED * input.dt);
-  const { floor, perch } = CAT_STOPS[cat.stop];
-  if (step.arrived) {
-    const there = { ...cat, ...floor, path: null, since: input.now };
-    if (perch) {
-      return {
-        ...there,
-        phase: "hopUp",
-        hop: {
-          from: { ...floor, facing: towardsPoint(floor, perch) },
-          to: perch,
-        },
-        facing: towardsPoint(floor, perch),
-      };
-    }
-    return {
-      ...there,
-      phase: "stay",
-      until: stayFor(cat.stop, input.now, input.random),
-    };
-  }
-  const x = step.position.x;
-  const z = step.position.y;
-  const moved = x !== cat.x || z !== cat.z;
-  return {
-    ...cat,
-    x,
-    z,
-    facing: moved ? towardsPoint(cat, { x, z }) : cat.facing,
-    path: step.path,
-  };
-}
+): OfficeCat => petAt(CAT_SPOTS[spot], now, random);
 
 /** Move the cat on by ``input.dt``. */
-export function stepOfficeCat(cat: OfficeCat, input: CatInput): OfficeCat {
-  const away = cat.phase === "hopDown" ? null : calledAway(cat, input);
-  if (away) {
-    // Settled at a rest it wakes with a stretch; anything else it drops.
-    if (cat.phase === "stay" && RESTS.has(CAT_STOPS[cat.stop].act)) {
-      return { ...cat, phase: "stretch", since: input.now, until: input.now };
-    }
-    if (cat.phase !== "stretch" && cat.phase !== "hopUp") {
-      return leaveFor(cat, away, input);
-    }
-  }
-  switch (cat.phase) {
-    case "walk":
-      return walkAlong(cat, input);
-    case "hopUp":
-    case "hopDown":
-      return hopAlong(cat, input);
-    case "stretch":
-      if (input.now - cat.since < CAT_STRETCH_MS) return cat;
-      return leaveFor(
-        cat,
-        away ?? nextStop(cat.stop, input.claudeSeated, input.random),
-        input,
-      );
-    case "stay":
-      if (input.now < cat.until || cat.stop === "keyboard") return cat;
-      if (RESTS.has(CAT_STOPS[cat.stop].act)) {
-        return { ...cat, phase: "stretch", since: input.now };
-      }
-      return leaveFor(
-        cat,
-        nextStop(cat.stop, input.claudeSeated, input.random),
-        input,
-      );
-  }
-}
-
-/** What it is doing, for posing it. */
-export function catActOf(cat: OfficeCat): CatAct | "walk" | "hop" | "stretch" {
-  switch (cat.phase) {
-    case "walk":
-      return "walk";
-    case "hopUp":
-    case "hopDown":
-      return "hop";
-    case "stretch":
-      return "stretch";
-    case "stay":
-      return CAT_STOPS[cat.stop].act;
-  }
-}
+export const stepOfficeCat = (cat: OfficeCat, input: CatInput): OfficeCat =>
+  stepPet(cat, input, CAT_BRAIN);

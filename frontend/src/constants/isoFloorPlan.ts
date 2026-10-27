@@ -102,7 +102,10 @@ export type FurnitureKind =
   | "clock"
   | "window"
   | "catTower"
-  | "catBowl";
+  | "catBowl"
+  | "catBox"
+  | "dogBed"
+  | "waterBowl";
 
 /**
  * One piece of furniture. ``rot`` turns it about y in quarter turns; a piece
@@ -226,9 +229,17 @@ const DEV_END_SEAT_X = DEV_SEATS_X[DEV_SEATS_X.length - 1];
 export const DEV_DESK_LENGTH = DEV_END_SEAT_X - DEV_SEATS_X[0] + 2.1;
 const DEV_DESK_X = (DEV_SEATS_X[0] + DEV_END_SEAT_X) / 2;
 
-/** The office cat's tower in the lounge and its bowl in the cafe (systems/officeCat.ts). */
+/**
+ * The office pets' things (systems/officeCat.ts, officeDog.ts): the cat's
+ * tower in the lounge, its bowl in the cafe and a cardboard box on the rug
+ * by my desk; the dog's bed at the front of the lounge and its water bowl
+ * beside the cat's.
+ */
 export const CAT_TOWER = { x: 9.5, z: 26.4 };
 export const CAT_BOWL = { x: 37.6, z: 29.9 };
+export const CAT_BOX = { x: 22.6, z: 21.8 };
+export const DOG_BED = { x: 4.6, z: 30 };
+export const DOG_WATER = { x: 39, z: 29.7 };
 
 export const FURNITURE: Furniture[] = [
   // Library: shelves along both back walls, a round table in the middle
@@ -270,6 +281,7 @@ export const FURNITURE: Furniture[] = [
   { kind: "bush", x: 1, z: 29.7 },
   { kind: "plant", x: 9.5, z: 21.8 },
   { kind: "catTower", ...CAT_TOWER },
+  { kind: "dogBed", ...DOG_BED },
   // Dev room: windows and a clock on the back wall, two rows of iMac desks
   ...[14.6, 18.95, 23.3].map((x): Furniture => ({
     kind: "window",
@@ -306,6 +318,7 @@ export const FURNITURE: Furniture[] = [
   { kind: "cafeChair", x: 17.3, z: 21.6, rot: 1 },
   { kind: "plant", x: 14.3, z: 14.4 },
   { kind: "bush", x: 15, z: 23 },
+  { kind: "catBox", ...CAT_BOX },
   // Search room: kiosks in a row, a desk and a globe
   ...[30.4, 33.4, 36.5].map((x): Furniture => ({ kind: "kiosk", x, z: 14.8 })),
   { kind: "workDesk", x: 31.6, z: 18.4 },
@@ -323,6 +336,7 @@ export const FURNITURE: Furniture[] = [
   ]),
   { kind: "plant", x: 28.4, z: 30 },
   { kind: "catBowl", ...CAT_BOWL },
+  { kind: "waterBowl", ...DOG_WATER },
   { kind: "bush", x: 39.2, z: 25.5 },
 ];
 
@@ -352,6 +366,7 @@ export const FOOTPRINTS: Partial<Record<FurnitureKind, [number, number]>> = {
   plant: [0.6, 0.6],
   bush: [0.7, 0.7],
   catTower: [1.1, 1.1],
+  catBox: [0.9, 0.8],
 };
 
 /** Where a person stands or sits, turned ``facing`` radians about y (0 faces +z). */
