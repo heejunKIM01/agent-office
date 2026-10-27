@@ -443,10 +443,10 @@ export function poseCharacter(
     return;
   }
   if (act === "clap" && !stuck) {
-    // Both hands out in front, meeting and parting fast.
-    const beat = 0.3 + 0.25 * Math.sin(seconds * 20);
-    armL.rotation.set(-1.35, 0, beat);
-    armR.rotation.set(-1.35, 0, -beat);
+    // Both hands up in front of its face, meeting and parting fast.
+    const beat = 0.2 + 0.3 * Math.sin(seconds * 20);
+    armL.rotation.set(-2.1, 0, beat);
+    armR.rotation.set(-2.1, 0, -beat);
     legL.rotation.x = seated ? -Math.PI / 2 : 0;
     legR.rotation.x = seated ? -Math.PI / 2 : 0;
     rig.hips.position.y = seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT;
