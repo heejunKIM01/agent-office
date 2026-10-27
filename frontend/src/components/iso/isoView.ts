@@ -48,6 +48,8 @@ export interface IsoView {
   }): void;
   /** The session's latest turn: a long one leaves empty cups on Claude's desk. */
   setTurn(turn: { start: number; end: number | null } | null): void;
+  /** My latest prompt when it said thanks: a fresh new one raises hearts. */
+  setThanks(thanks: { id: string; at: number } | null): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
   setShipped(shipped: { id: string; at: number } | null): void;
   zoomBy(factor: number): void;
@@ -268,6 +270,8 @@ export function createIsoView(
 
   /** The push or merge already cheered (or seen when it was old). */
   let shippedSeen: string | null = null;
+  /** The thanks already answered with hearts (or seen when it was old). */
+  let thanksSeen: string | null = null;
 
   return {
     setPeople(list: IsoPerson[]): void {
@@ -287,6 +291,14 @@ export function createIsoView(
     },
     setTurn(turn): void {
       effects.setTurn(turn);
+    },
+    setThanks(thanks: { id: string; at: number } | null): void {
+      const fresh =
+        thanks !== null &&
+        thanks.id !== thanksSeen &&
+        Date.now() - thanks.at < FRESH_MS;
+      thanksSeen = thanks?.id ?? null;
+      if (fresh) people.hearts();
     },
     setShipped(shipped: { id: string; at: number } | null): void {
       const fresh =

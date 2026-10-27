@@ -16,6 +16,7 @@ import {
 import {
   commitsMade,
   lastShipped,
+  lastThanks,
   latestTodoNotes,
   latestTurn,
 } from "@/systems/roomGimmicks";
@@ -87,6 +88,8 @@ export function IsoOffice({
   const commits = useMemo(() => commitsMade(eventLog), [eventLog]);
   // A long turn leaves empty cups on Claude's desk.
   const turn = useMemo(() => latestTurn(eventLog), [eventLog]);
+  // Thanking the office raises hearts beside everyone's head.
+  const thanks = useMemo(() => lastThanks(eventLog), [eventLog]);
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<IsoView | null>(null);
   /** The session snapshot the people on the floor were placed from. */
@@ -148,6 +151,10 @@ export function IsoOffice({
   useEffect(() => {
     viewRef.current?.setTurn(turn);
   }, [turn]);
+
+  useEffect(() => {
+    viewRef.current?.setThanks(thanks);
+  }, [thanks]);
 
   // Keep the people on the floor in step with the session.
   useEffect(() => {
