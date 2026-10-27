@@ -3,8 +3,9 @@
  * orange tabby with white socks that ambles or dashes on four legs, tail
  * up, hops onto its perches and, once there, curls up asleep, loafs, washes
  * a paw, dozes, eats, sniffs, scratches the post, sits looking about or
- * rubs against Claude's legs with a heart. It swats at the dog when the dog
- * comes sniffing. When work ships it leaps at the falling confetti, and
+ * rubs against Claude's legs with a heart, and a heart rises while I pat
+ * it. It leaps at the feathers when I dangle my teaser wand. It swats at
+ * the dog when the dog comes sniffing. When work ships it leaps at the falling confetti, and
  * when I say thanks a heart rises over it too.
  */
 
@@ -12,6 +13,7 @@ import * as THREE from "three";
 import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
 import {
   catAt,
+  pattedBy,
   stepOfficeCat,
   type CatPlan,
   type OfficeCat,
@@ -291,6 +293,7 @@ export class IsoCat {
     dog: PetSighting | null,
     play: CatPlan | null,
   ): void {
+    const { me } = inUse;
     if (this.pouncePending) {
       this.pouncePending = false;
       this.pounceFrom = now;
@@ -313,6 +316,7 @@ export class IsoCat {
         claude: inUse.claude,
         dog,
         play,
+        me,
         random: Math.random,
         findPath: findFloorPath,
         walkable: isFloorWalkable,
@@ -340,14 +344,16 @@ export class IsoCat {
       legs[1].visible = true;
       legs[1].rotation.x = -1.4 + 0.5 * Math.sin(seconds * 16);
     }
-    if (pounce !== null) {
+    // Leaping at confetti, or at the feathers on my wand.
+    const leap = pounce ?? (act === "play" ? seconds : null);
+    if (leap !== null) {
       // Up on its hind legs, front paws batting at the pieces.
       for (const leg of legs) leg.visible = true;
-      root.position.y += 0.35 * Math.abs(Math.sin(pounce * Math.PI * 2));
+      root.position.y += 0.35 * Math.abs(Math.sin(leap * Math.PI * 2));
       body.position.y = LEG;
       body.rotation.x = -0.55;
-      legs[0].rotation.x = -1.3 + 0.4 * Math.sin(pounce * 14);
-      legs[1].rotation.x = -1.3 - 0.4 * Math.sin(pounce * 14);
+      legs[0].rotation.x = -1.3 + 0.4 * Math.sin(leap * 14);
+      legs[1].rotation.x = -1.3 - 0.4 * Math.sin(leap * 14);
       legs[2].rotation.x = legs[3].rotation.x = 0.55;
     }
     const thanks =
@@ -357,7 +363,7 @@ export class IsoCat {
     const rise =
       thanks !== null
         ? (thanks * 0.8) % 1
-        : act === "rub" || act === "boop"
+        : act === "rub" || act === "boop" || pattedBy(me, this.cat)
           ? (seconds % RUB_HEART_SECONDS) / RUB_HEART_SECONDS
           : null;
     heart.visible = rise !== null;

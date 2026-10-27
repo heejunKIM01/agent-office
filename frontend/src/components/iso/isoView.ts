@@ -111,11 +111,11 @@ function createOffice(
     setWords: (words) => people.setWords(words.office),
     clear: () => people.clear(),
     update: (now, dt) => {
-      const inUse = people.update(now, dt);
-      effects.update(now / 1000, dt, inUse);
-      // Each pet sees where the other was a frame ago.
+      // Each pet sees where the other was a frame ago, and so do I.
       const catSeen = cat.sighting();
       const dogSeen = dog.sighting();
+      const inUse = people.update(now, dt, { cat: catSeen, dog: dogSeen });
+      effects.update(now / 1000, dt, inUse);
       play = stepPlay(play, {
         now,
         dt,

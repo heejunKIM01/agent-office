@@ -12,17 +12,29 @@ import { MAX_PILE } from "@/systems/roomGimmicks";
 
 /**
  * Something a person is up to besides its pose: a lounge pastime, waiting
- * on a command, scratching its head while typing, or cheering passed tests.
+ * on a command, scratching its head while typing, or cheering passed tests;
+ * or what I do up from my desk (officeMe.ts).
  */
 export type PoseAct =
-  LoungeAct | "watch" | "scratch" | "cheer" | "dismay" | "clap";
+  LoungeAct | "watch" | "scratch" | "cheer" | "dismay" | "clap" | MeAct;
 
-const isPastime = (act: PoseAct): act is LoungeAct =>
-  act !== "watch" &&
-  act !== "scratch" &&
-  act !== "cheer" &&
-  act !== "dismay" &&
-  act !== "clap";
+/** What I do up from my desk: stretch, throw the ball and call the dog, play, pat, look. */
+export type MeAct =
+  "stretch" | "throw" | "beckon" | "wand" | "pat" | "peek" | "look";
+
+const PASTIMES: readonly PoseAct[] = ["coffee", "phone", "book", "tv", "doze"];
+const ME_ACTS: readonly PoseAct[] = [
+  "stretch",
+  "throw",
+  "beckon",
+  "wand",
+  "pat",
+  "peek",
+  "look",
+];
+
+const isPastime = (act: PoseAct): act is LoungeAct => PASTIMES.includes(act);
+const isMeAct = (act: PoseAct): act is MeAct => ME_ACTS.includes(act);
 import type { Outfit, PersonKind } from "@/systems/officePeople";
 import { ISO_COLORS as C } from "./isoPalette";
 import { box, cylinder, material } from "./isoFurniture";
@@ -86,6 +98,8 @@ export interface CharacterRig {
   cloud: THREE.Group;
   /** Hearts rising beside its head when I say thanks. */
   hearts: THREE.Group;
+  /** A cat teaser wand in the right hand, its feathers at the end. */
+  wand: THREE.Group;
   /** Where the name chip hangs, just above the hair. */
   chipAnchor: THREE.Object3D;
 }
@@ -304,6 +318,20 @@ export function buildCharacter(
   hearts.visible = false;
   hips.add(hearts);
 
+  // Held on along the right arm, a bunch of feathers at the tip.
+  const wand = new THREE.Group();
+  wand.add(cylinder(0.03, 0.03, 1.1, C.wandStick, 0, -1.15, 0, 6));
+  const feathers = new THREE.Group();
+  feathers.position.y = -1.75;
+  C.wandFeather.forEach((color, i) => {
+    const feather = box(0.08, 0.3, 0.05, color, 0, -0.1, 0);
+    feather.rotation.z = (i - 1) * 0.5;
+    feathers.add(feather);
+  });
+  wand.add(feathers);
+  wand.visible = false;
+  arms[1].add(wand);
+
   // On the root, not the hips: a stride, hop, lean or rock leaves the chip
   // and bubble still (poseCharacter sets its height).
   const chipAnchor = new THREE.Object3D();
@@ -324,6 +352,7 @@ export function buildCharacter(
     sweat,
     cloud,
     hearts,
+    wand,
     chipAnchor,
   };
 }
@@ -516,7 +545,10 @@ function drip(sweat: THREE.Group, seconds: number): void {
  * crosses its arms and checks its watch; typing it scratches its head now
  * and then; when its tests pass it throws its arms up, and when they fail
  * it holds its head, rocking (stuck or not). When work ships it claps.
- * ``seconds`` drives the motion.
+ * Up from my desk I stretch, throw the ball (``progress`` through the
+ * throw) and call the dog, dangle the teaser wand, crouch to pat a pet,
+ * peek over a shoulder or look about (``poseMe``). ``seconds`` drives the
+ * motion.
  */
 export function poseCharacter(
   rig: CharacterRig,
@@ -525,6 +557,7 @@ export function poseCharacter(
   seconds: number,
   stuck = false,
   act: PoseAct | null = null,
+  progress = 0,
 ): void {
   const [legL, legR] = rig.legs;
   const [armL, armR] = rig.arms;
@@ -542,6 +575,8 @@ export function poseCharacter(
   rig.handset.visible = pastime === "phone";
   rig.phone.visible = pose === "phone";
   rig.hips.rotation.x = pastime ? loungeLean(pastime, seconds) : 0;
+  rig.hips.rotation.y = 0;
+  rig.wand.visible = pose !== "walk" && act === "wand" && !stuck;
   rig.hips.rotation.z = act === "dismay" ? 0.1 * Math.sin(seconds * 7) : 0;
   rig.sweat.visible = stuck;
   if (stuck) drip(rig.sweat, seconds);
@@ -588,6 +623,10 @@ export function poseCharacter(
     rig.hips.position.y = seated
       ? SEATED_HIP_HEIGHT
       : HIP_HEIGHT + 0.08 * Math.abs(Math.sin(seconds * 9));
+    return;
+  }
+  if (act !== null && isMeAct(act) && !stuck) {
+    poseMe(rig, act, seconds, progress, seated);
     return;
   }
   if (seated) {
@@ -641,4 +680,90 @@ export function poseCharacter(
   armL.rotation.x = left + breath;
   armR.rotation.x = right - breath;
   rig.hips.position.y = HIP_HEIGHT;
+}
+
+/** How far down a crouch takes the hips, and the legs' slant to reach the floor. */
+const CROUCH_DROP = 0.34;
+const CROUCH_LEGS = 1.05;
+
+/**
+ * Me up from my desk (or stretching in my chair): ``progress`` runs from 0
+ * to 1 through a throw.
+ */
+function poseMe(
+  rig: CharacterRig,
+  act: MeAct,
+  seconds: number,
+  progress: number,
+  seated: boolean,
+): void {
+  const [legL, legR] = rig.legs;
+  const [armL, armR] = rig.arms;
+  legL.rotation.x = seated ? -Math.PI / 2 : 0;
+  legR.rotation.x = seated ? -Math.PI / 2 : 0;
+  rig.hips.position.y = seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT;
+  armL.rotation.set(0, 0, 0);
+  armR.rotation.set(0, 0, 0);
+  switch (act) {
+    case "stretch": {
+      // Both arms up and out in a V, clear of the head, swaying; up on its toes.
+      const sway = 0.12 * Math.sin(seconds * 3);
+      armL.rotation.z = -2.45 + sway;
+      armR.rotation.z = 2.45 + sway;
+      if (!seated) rig.hips.position.y += 0.06;
+      return;
+    }
+    case "throw": {
+      // The right arm back and up, then over and forward; a step in.
+      const t = Math.min(1, Math.max(0, progress));
+      const back = 2.3;
+      const through = -2.1;
+      armR.rotation.x =
+        t < 0.4
+          ? back * (t / 0.4)
+          : t < 0.65
+            ? back + (through - back) * ((t - 0.4) / 0.25)
+            : through + (-0.5 - through) * ((t - 0.65) / 0.35);
+      armL.rotation.x = -0.8;
+      legL.rotation.x = -0.35;
+      legR.rotation.x = 0.35;
+      return;
+    }
+    case "beckon": {
+      // Bobbing, hands out low in front: here, come on!
+      const bob = Math.abs(Math.sin(seconds * 6));
+      armL.rotation.x = -0.9 + 0.3 * bob;
+      armR.rotation.x = -0.9 + 0.3 * bob;
+      rig.hips.position.y -= 0.07 * bob;
+      return;
+    }
+    case "wand":
+      // The wand held out and up, flicked about.
+      armR.rotation.x = -1.9 + 0.3 * Math.sin(seconds * 5);
+      armR.rotation.z = 0.15 * Math.sin(seconds * 3.1);
+      armL.rotation.x = -0.25;
+      rig.wand.children[1].rotation.x = 0.5 * Math.sin(seconds * 9);
+      return;
+    case "pat":
+      // Down on its heels, leaning in, the right hand stroking.
+      rig.hips.position.y -= CROUCH_DROP;
+      rig.hips.rotation.x = 0.25;
+      legL.rotation.x = -CROUCH_LEGS;
+      legR.rotation.x = CROUCH_LEGS * 0.6;
+      armR.rotation.x = -1.0 + 0.3 * Math.sin(seconds * 5);
+      armL.rotation.x = -0.5;
+      return;
+    case "peek":
+      // Leaning in for a look, hands behind its back.
+      rig.hips.rotation.x = 0.2;
+      armL.rotation.x = 0.45;
+      armR.rotation.x = 0.45;
+      return;
+    case "look":
+      // Hands on its hips, looking this way and that.
+      armL.rotation.set(-0.3, 0, -0.55);
+      armR.rotation.set(-0.3, 0, 0.55);
+      rig.hips.rotation.y = 0.45 * Math.sin(seconds * 0.9);
+      return;
+  }
 }

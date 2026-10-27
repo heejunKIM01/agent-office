@@ -9,6 +9,8 @@
  * against Claude's legs while Claude sits at its desk. When the dog sleeps
  * on its bed, the cat may curl up on its back. When Claude has waited on my
  * next prompt a while it heads for my keyboard and lies on it until I type.
+ * When I dangle a teaser wand near it (officeMe.ts) it dashes over, if it
+ * is up and about, and leaps at the feathers; while I pat it, it stays put.
  */
 
 import {
@@ -20,8 +22,11 @@ import {
   MY_SEAT,
 } from "@/constants/isoFloorPlan";
 import type { FloorPoint } from "./isoNavGrid";
+import type { MeSighting } from "./officeMe";
 import {
   PLAY_PREFIX,
+  besidePoint,
+  distance,
   openSpot,
   petAt,
   stepPet,
@@ -49,7 +54,8 @@ export type CatAct =
   | "look"
   | "snuggle"
   | "hunt"
-  | "boop";
+  | "boop"
+  | "play";
 
 export type CatPlan = PetPlan<CatAct>;
 export type OfficeCat = Pet<CatAct>;
@@ -61,6 +67,7 @@ export interface CatInput extends PetClock {
   dog: PetSighting | null;
   /** Its part in a game with the dog (systems/petPlay.ts), while one goes on. */
   play: CatPlan | null;
+  me: MeSighting | null;
 }
 
 /** An amble, slower than people, and a dash. */
@@ -246,18 +253,58 @@ function roam(cat: OfficeCat, input: CatInput): CatPlan | null {
   });
 }
 
+/** It sees my wand from this far, plays this far from me, and I pat it this close (m). */
+const WAND_SIGHT = 7;
+const PLAY_AT = 1.1;
+const PAT_REACH = 1.4;
+
+/** I stand dangling the teaser wand near it. */
+const wandBy = (me: MeSighting | null, cat: FloorPoint): me is MeSighting =>
+  me !== null &&
+  me.planId === "wand" &&
+  me.staying &&
+  distance(me, cat) < WAND_SIGHT;
+
+/** I crouch beside it patting it. */
+export const pattedBy = (me: MeSighting | null, cat: FloorPoint): boolean =>
+  me !== null &&
+  me.planId === "patCat" &&
+  me.staying &&
+  distance(me, cat) < PAT_REACH;
+
+/** By me, turned to the feathers on my wand: where it is if close enough, else at a dash. */
+function play(cat: OfficeCat, me: FloorPoint, input: CatInput): CatPlan {
+  const near = distance(cat, me) <= PLAY_AT * 1.5;
+  const at = near ? cat : (besidePoint(me, PLAY_AT, input) ?? cat);
+  return catPlan(
+    "wand",
+    { x: at.x, z: at.z, facing: towards(at, me) },
+    "play",
+    [0, 0],
+    { speed: CAT_DASH_SPEED, hold: true },
+  );
+}
+
 export const CAT_BRAIN: PetBrain<CatAct, CatInput> = {
   urgent: (cat, input) => {
     if (input.napping) {
       return cat.plan.id !== "keyboard" ? CAT_SPOTS.keyboard : null;
     }
-    return input.play && cat.plan.id !== input.play.id ? input.play : null;
+    if (input.play) return cat.plan.id !== input.play.id ? input.play : null;
+    // Up and about (not resting on a spot of its own), it comes to play.
+    const awake = !cat.plan.rest && cat.phase !== "hopUp";
+    if (awake && cat.plan.id !== "wand" && wandBy(input.me, cat)) {
+      return play(cat, input.me, input);
+    }
+    return null;
   },
   keeps: (cat, input) => {
     if (cat.plan.id.startsWith(PLAY_PREFIX)) {
       return input.play?.id === cat.plan.id;
     }
     switch (cat.plan.id) {
+      case "wand":
+        return wandBy(input.me, cat) && distance(input.me, cat.plan.floor) < 2;
       case "keyboard":
         return input.napping;
       case "claude":
@@ -287,6 +334,11 @@ export const catAt = (
   random: () => number,
 ): OfficeCat => petAt(CAT_SPOTS[spot], now, random);
 
-/** Move the cat on by ``input.dt``. */
-export const stepOfficeCat = (cat: OfficeCat, input: CatInput): OfficeCat =>
-  stepPet(cat, input, CAT_BRAIN);
+/** Move the cat on by ``input.dt``; patted, it stays where it is a while longer. */
+export function stepOfficeCat(cat: OfficeCat, input: CatInput): OfficeCat {
+  const still =
+    cat.phase === "stay" && pattedBy(input.me, cat)
+      ? { ...cat, until: Math.max(cat.until, input.now + 1000) }
+      : cat;
+  return stepPet(still, input, CAT_BRAIN);
+}

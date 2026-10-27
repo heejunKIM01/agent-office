@@ -4,7 +4,9 @@
  * errand rules in `update`. Claude sits at the front dev desk nearest my
  * desk, subagents and colleagues (other sessions' lead agents on this
  * floor, or on every floor) take the next free chairs, and I sit behind the reception
- * desk, typing for a moment each time I send a question. Claude rests on
+ * desk, typing for a moment each time I send a question. In between I get
+ * up and about as officeMe.ts decides: playing with the pets, looking over
+ * Claude's shoulder, having a coffee. Claude rests on
  * the lounge sofa between turns, passing the time with a coffee, its
  * phone, a book or the TV and dozing off after a long rest, and has a
  * coffee in the cafe while its conversation is compacted. `update` also
@@ -42,7 +44,11 @@ import {
   type IsoRoomId,
   type IsoWalker,
 } from "@/systems/isoErrands";
-import { findFloorPath, type FloorPoint } from "@/systems/isoNavGrid";
+import {
+  findFloorPath,
+  isFloorWalkable,
+  type FloorPoint,
+} from "@/systems/isoNavGrid";
 import { loungeAct } from "@/systems/loungeActs";
 import {
   CHEER_MS,
@@ -57,7 +63,17 @@ import {
   type BookPile,
 } from "@/systems/roomGimmicks";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
-import type { ClaudeAt } from "@/systems/officePets";
+import type { DogSighting } from "@/systems/officeDog";
+import {
+  ME_TYPING_MS,
+  THROW_MS,
+  meAt,
+  meSightingOf,
+  stepOfficeMe,
+  type MeSighting,
+  type OfficeMe,
+} from "@/systems/officeMe";
+import type { ClaudeAt, PetSighting } from "@/systems/officePets";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import { secondsSince } from "@/systems/officeRoster";
 import {
@@ -111,8 +127,12 @@ const DOOR_OPEN_RANGE = 2.2;
 const IN_CAB_DEPTH = 0.45;
 /** How long Claude holds the phone when it calls a subagent in (ms). */
 const CALL_MS = 3000;
-/** How long I type at my desk after sending a question (ms). */
-const ME_TYPING_MS = 4000;
+
+/** The pets as they were last frame, for me to play with. */
+export interface PetsSeen {
+  cat: PetSighting | null;
+  dog: DogSighting | null;
+}
 
 /** What the rooms should show this frame. */
 export interface RoomsInUse {
@@ -138,6 +158,8 @@ export interface RoomsInUse {
   catNap: boolean;
   /** Where Claude is, sitting at its desk or working in a room, for the pets. */
   claude: ClaudeAt | null;
+  /** Where I am and what I am up to, for the pets. */
+  me: MeSighting | null;
 }
 
 interface Placed {
@@ -210,6 +232,10 @@ export class IsoPeople {
   /** The chair and room spots each person last had, kept for the tab. */
   private readonly placeOf = rememberedPlaces();
   private callUntil = 0;
+  /** Me, getting about the office between questions. */
+  private me: OfficeMe | null = null;
+  /** Where Claude was last frame, for me. */
+  private claudeAt: ClaudeAt | null = null;
 
   private words: BubbleWords = {
     thinking: "",
@@ -309,8 +335,15 @@ export class IsoPeople {
     this.fresh = false;
   }
 
-  /** Move and pose everyone for this frame; ``dt`` in seconds. */
-  update(now: number, dt: number): RoomsInUse {
+  /**
+   * Move and pose everyone for this frame; ``dt`` in seconds, ``pets`` as
+   * they were last frame.
+   */
+  update(
+    now: number,
+    dt: number,
+    pets: PetsSeen = { cat: null, dog: null },
+  ): RoomsInUse {
     const inUse: RoomsInUse = {
       serverBusy: false,
       editingSeats: [],
@@ -323,6 +356,7 @@ export class IsoPeople {
       arriving: false,
       catNap: false,
       claude: null,
+      me: null,
     };
     if (this.callPending) {
       this.callPending = false;
@@ -346,19 +380,22 @@ export class IsoPeople {
     );
     for (const [id, placed] of this.placed) {
       const { activity, stuck, leaving } = placed.person;
-      const walker = stepIsoWalker(placed.walker, {
-        activity,
-        stuck,
-        seat: placed.seat,
-        spotIn: (room) => this.spotIn(id, room),
-        findPath: findFloorPath,
-        now,
-        dt,
-        leaving,
-        breakRoom: placed.person.breakRoom,
-        reportSpot: () => this.reportSpot(id),
-        elevator: ELEVATOR,
-      });
+      const walker =
+        placed.person.kind === "me"
+          ? this.stepMe(placed.person, now, dt, pets)
+          : stepIsoWalker(placed.walker, {
+              activity,
+              stuck,
+              seat: placed.seat,
+              spotIn: (room) => this.spotIn(id, room),
+              findPath: findFloorPath,
+              now,
+              dt,
+              leaving,
+              breakRoom: placed.person.breakRoom,
+              reportSpot: () => this.reportSpot(id),
+              elevator: ELEVATOR,
+            });
       for (const room of ROOMS) {
         if (walker.goal !== room) this.held[room].delete(id);
       }
@@ -368,7 +405,8 @@ export class IsoPeople {
         gone.push(id);
         continue;
       }
-      const act = this.actOf(placed, now);
+      const me = placed.person.kind === "me" ? this.me : null;
+      const act = this.actOf(placed, now) ?? (me && meAct(me, now));
       placed.rig.root.position.set(walker.x, 0, walker.z);
       // Waiting on a long command, or cheering on its feet in a room, it
       // turns from the rack or shelf to face the room.
@@ -385,13 +423,14 @@ export class IsoPeople {
         placed.rig,
         calling
           ? "phone"
-          : isTypingMe(placed.person, walker)
+          : me?.plan.id === "type" && me.phase === "stay"
             ? "type"
             : walker.pose,
         isRoom(walker.goal) ? walker.goal : null,
         now / 1000,
         stuck && !leaving,
         act,
+        act === "throw" && me?.thrown ? (now - me.thrown.at) / THROW_MS : 0,
       );
       // In the cab, behind its doors: no chip or bubble either.
       const inCab = walker.z < ELEVATOR_DOOR.z - IN_CAB_DEPTH;
@@ -436,6 +475,7 @@ export class IsoPeople {
           working: still && isRoom(walker.goal) && walker.pose === "work",
         };
       }
+      if (me) inUse.me = meSightingOf(me);
       if (
         kind === "claude" &&
         breakRoom === "lounge" &&
@@ -450,7 +490,42 @@ export class IsoPeople {
       this.departed.add(id);
       this.onLeft(id);
     }
+    this.claudeAt = inUse.claude;
     return inUse;
+  }
+
+  /**
+   * Move me on for this frame, as a walker for the rest of `update`. A
+   * question sent just before the office was drawn I am still typing out.
+   */
+  private stepMe(
+    person: IsoPerson,
+    now: number,
+    dt: number,
+    pets: PetsSeen,
+  ): IsoWalker {
+    const { typedAt } = person;
+    if (!this.me) {
+      const typing = typedAt !== null && Date.now() - typedAt < ME_TYPING_MS;
+      this.me = meAt(typing ? null : typedAt, now, Math.random);
+    }
+    const claude = [...this.placed.values()].find(
+      (placed) => placed.person.kind === "claude",
+    );
+    this.me = stepOfficeMe(this.me, {
+      now,
+      dt,
+      random: Math.random,
+      findPath: findFloorPath,
+      walkable: isFloorWalkable,
+      typedAt,
+      asked: claude?.person.activity === "asking",
+      party: now < this.partyUntil,
+      claude: this.claudeAt,
+      dog: pets.dog,
+      cat: pets.cat,
+    });
+    return meWalker(this.me);
   }
 
   /**
@@ -598,6 +673,8 @@ export class IsoPeople {
   clear(): void {
     for (const [id, placed] of this.placed) this.remove(id, placed);
     this.departed.clear();
+    this.me = null;
+    this.claudeAt = null;
     this.fresh = true;
     this.callPending = false;
     this.callUntil = 0;
@@ -697,14 +774,44 @@ export class IsoPeople {
   }
 }
 
-/** Me at my desk just after sending a question: typing it out. */
-function isTypingMe(person: IsoPerson, walker: IsoWalker): boolean {
-  return (
-    person.kind === "me" &&
-    walker.pose === "sit" &&
-    person.typedAt !== null &&
-    Date.now() - person.typedAt < ME_TYPING_MS
-  );
+/**
+ * Me as a walker: in my chair at my desk, on my feet with a mug in the
+ * cafe, walking, or standing wherever else I am.
+ */
+function meWalker(me: OfficeMe): IsoWalker {
+  const walking = me.phase === "walk";
+  const seated = me.plan.id === "desk" || me.plan.id === "type";
+  const coffee = me.plan.act === "coffee";
+  return {
+    x: me.x,
+    z: me.z,
+    facing: me.facing,
+    goal: coffee && !walking ? "cafe" : "seat",
+    path: walking ? me.path : null,
+    pose: walking ? "walk" : seated ? "sit" : coffee ? "work" : "stand",
+    lingerUntil: null,
+    trip: null,
+  };
+}
+
+/** What I am up to on my feet (or stretching in my chair), for posing me. */
+function meAct(me: OfficeMe, now: number): PoseAct | null {
+  if (me.phase === "stretch") return "stretch";
+  if (me.phase !== "stay") return null;
+  switch (me.plan.act) {
+    case "fetch":
+      return me.thrown && now - me.thrown.at < THROW_MS ? "throw" : "beckon";
+    case "wand":
+      return "wand";
+    case "pat":
+      return "pat";
+    case "peek":
+      return "peek";
+    case "look":
+      return "look";
+    default:
+      return null;
+  }
 }
 
 /** Beside Claude, telling it the result or saying goodbye. */
