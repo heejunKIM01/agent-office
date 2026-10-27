@@ -54,7 +54,8 @@ export function removeCollinearPoints(path: Position[]): Position[] {
 
 /**
  * Check if a straight line between two points is walkable.
- * Uses Bresenham-like line sampling.
+ * Samples the line every eighth of a tile, so a shortcut does not clip the
+ * corner of a blocked tile (a half-tile step can miss it).
  */
 function isLineWalkable(
   start: Position,
@@ -64,7 +65,7 @@ function isLineWalkable(
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  const steps = Math.ceil(distance / (TILE_SIZE / 2));
+  const steps = Math.ceil(distance / (TILE_SIZE / 8));
 
   if (steps === 0) return true;
 
