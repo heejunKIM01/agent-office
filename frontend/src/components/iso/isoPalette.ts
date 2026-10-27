@@ -110,6 +110,9 @@ export const ISO_COLORS = {
   watchFace: "#f2f4f7",
   coffee: "#6b4226",
   sweat: "#7cc4f2",
+  /** The rain cloud over someone whose tool keeps failing, and its rain. */
+  cloud: "#7b8494",
+  rain: "#5aa9e6",
   labelText: "#8e98a7",
   wallLabelText: "#4a5262",
   books: [

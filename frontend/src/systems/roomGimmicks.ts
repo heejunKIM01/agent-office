@@ -283,6 +283,33 @@ export function cupsFor(
   return Math.min(MAX_CUPS, Math.max(0, Math.floor(ran / CUP_EVERY_MS)));
 }
 
+/** This many failures in a row of the same tool bring a rain cloud over its head. */
+export const CLOUD_AFTER_FAILURES = 3;
+
+/**
+ * How many times in a row ``agentId``'s latest tool has failed (the log is
+ * newest first): counting stops at a tool that went through or another tool.
+ */
+export function failuresInARow(
+  eventLog: readonly {
+    type: string;
+    agentId: string;
+    detail?: { toolName?: string; errorType?: string };
+  }[],
+  agentId: string,
+): number {
+  let tool: string | null = null;
+  let count = 0;
+  for (const entry of eventLog) {
+    if (entry.type !== "post_tool_use" || entry.agentId !== agentId) continue;
+    const name = entry.detail?.toolName ?? "";
+    if (!entry.detail?.errorType || (tool !== null && name !== tool)) break;
+    tool = name;
+    count += 1;
+  }
+  return count;
+}
+
 /** The lamp over the elevator door stays lit this long after someone steps out (s). */
 export const LAMP_HOLD_SECONDS = 1.5;
 

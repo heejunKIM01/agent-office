@@ -17,7 +17,12 @@
  */
 
 import type { BreakRoomId } from "@/constants/isoFloorPlan";
-import { lastFailedTestId, lastPassedTestId } from "@/systems/roomGimmicks";
+import {
+  CLOUD_AFTER_FAILURES,
+  failuresInARow,
+  lastFailedTestId,
+  lastPassedTestId,
+} from "@/systems/roomGimmicks";
 import type { Activity, BubbleContent, StuckReason } from "@/types";
 import type {
   AgentAnimationState,
@@ -69,6 +74,8 @@ export interface IsoPerson {
   passedTest: string | null;
   /** The log id of its latest test command when it failed, to hold its head. */
   failedTest: string | null;
+  /** The same tool has failed it several times in a row: a rain cloud over its head. */
+  rainCloud: boolean;
   outfit: Outfit;
 }
 
@@ -258,6 +265,7 @@ export function officePeople(
       since: lastEventAt(state.eventLog, "main"),
       passedTest: lastPassedTestId(state.eventLog, "main"),
       failedTest: lastFailedTestId(state.eventLog, "main"),
+      rainCloud: failuresInARow(state.eventLog, "main") >= CLOUD_AFTER_FAILURES,
       outfit: "general",
     },
     {
@@ -279,6 +287,7 @@ export function officePeople(
       since: null,
       passedTest: null,
       failedTest: null,
+      rainCloud: false,
       outfit: "general",
     },
   ];
@@ -304,6 +313,8 @@ export function officePeople(
       since: lastEventAt(state.eventLog, agent.id),
       passedTest: lastPassedTestId(state.eventLog, agent.id),
       failedTest: lastFailedTestId(state.eventLog, agent.id),
+      rainCloud:
+        failuresInARow(state.eventLog, agent.id) >= CLOUD_AFTER_FAILURES,
       outfit: outfitOf(agent.agentType),
     });
   }
@@ -326,6 +337,7 @@ export function officePeople(
       since: colleague.since,
       passedTest: null,
       failedTest: null,
+      rainCloud: false,
       outfit: "general",
     });
   }

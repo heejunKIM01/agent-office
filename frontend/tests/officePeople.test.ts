@@ -354,6 +354,30 @@ describe("officePeople — breaks", () => {
     ]);
   });
 
+  it("puts a rain cloud over whoever's tool failed three times running", () => {
+    const failed = (n: number) =>
+      ({
+        id: `f${n}`,
+        type: "post_tool_use",
+        agentId: "main",
+        summary: "",
+        timestamp: new Date(n),
+        detail: { toolName: "Bash", errorType: "tool_error" },
+      }) as unknown as EventLogEntry;
+    const people = officePeople(
+      {
+        boss: boss(),
+        agents: new Map(),
+        eventLog: [failed(3), failed(2), failed(1)],
+      },
+      WORDS,
+    );
+    expect(people.map((p) => [p.id, p.rainCloud])).toEqual([
+      ["claude", true],
+      ["me", false],
+    ]);
+  });
+
   it("ends the coffee with the next event", () => {
     expect(isCompacting([])).toBe(false);
     expect(isCompacting([compaction("context_compaction")])).toBe(true);
