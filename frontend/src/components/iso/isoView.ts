@@ -1,6 +1,7 @@
 /**
  * The three.js side of the isometric office: renderer, orthographic camera,
- * lights, pan/zoom controls and the render loop.
+ * lights, pan/zoom controls and the render loop, around the place it shows
+ * (설정 「장소」): the office, or the airport.
  */
 
 import * as THREE from "three";
@@ -16,14 +17,16 @@ import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
 import type { IsoPerson } from "@/systems/officePeople";
 import { NO_PLAY, stepPlay } from "@/systems/petPlay";
 import { FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
+import type { Place } from "@/utils/place";
 import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
-import type { BubbleWords } from "./isoBubbles";
+import { createAirport } from "./airport/airportWorld";
 import { IsoCat } from "./isoCat";
 import { IsoDog } from "./isoDog";
 import { IsoEffects } from "./isoEffects";
 import { setNightView } from "./isoFurniture";
 import { IsoPeople } from "./isoPeople";
+import type { IsoWorld, PlaceWords } from "./isoWorld";
 
 /** The reference video uses a 2:1 isometric view: floor edges climb 1 in 2. */
 const CAMERA_AZIMUTH = THREE.MathUtils.degToRad(45);
@@ -39,7 +42,7 @@ const MAX_STEP_SECONDS = 0.1;
 
 export interface IsoView {
   setPeople(people: IsoPerson[]): void;
-  setBubbleWords(words: BubbleWords): void;
+  setWords(words: PlaceWords): void;
   setTheme(theme: Theme): void;
   /** Take everyone off the floor, to place them afresh. */
   clearPeople(): void;
@@ -86,8 +89,69 @@ function officeOutline(): THREE.Vector3[] {
   ];
 }
 
+/** The office: its floor, people, room effects and the cat and dog. */
+function createOffice(
+  scene: THREE.Scene,
+  onPersonLeft?: (id: string) => void,
+): IsoWorld {
+  const office = buildIsoOffice();
+  scene.add(office);
+  const people = new IsoPeople(scene, onPersonLeft);
+  const effects = new IsoEffects(office);
+  const cat = new IsoCat(office);
+  const dog = new IsoDog(office);
+  /** A game the cat and dog play together, while one goes on. */
+  let play = NO_PLAY;
+  return {
+    width: FLOOR_WIDTH,
+    depth: FLOOR_DEPTH,
+    center: FLOOR_CENTER,
+    outline: officeOutline,
+    sync: (list) => people.sync(list),
+    setWords: (words) => people.setWords(words.office),
+    clear: () => people.clear(),
+    update: (now, dt) => {
+      const inUse = people.update(now, dt);
+      effects.update(now / 1000, dt, inUse);
+      // Each pet sees where the other was a frame ago.
+      const catSeen = cat.sighting();
+      const dogSeen = dog.sighting();
+      play = stepPlay(play, {
+        now,
+        dt,
+        random: Math.random,
+        findPath: findFloorPath,
+        walkable: isFloorWalkable,
+        cat: catSeen,
+        dog: dogSeen,
+        napping: inUse.catNap,
+      });
+      cat.update(now, dt, inUse, dogSeen, play.date?.cat ?? null);
+      dog.update(now, dt, inUse, catSeen, play.date?.dog ?? null);
+    },
+    hearts: () => {
+      people.hearts();
+      cat.hearts();
+      dog.hearts();
+    },
+    ship: () => {
+      effects.burst();
+      people.party();
+      cat.pounce();
+      dog.party();
+    },
+    setNotes: (statuses) => effects.setNotes(statuses),
+    setCommits: (commits) => effects.setCommits(commits),
+    setTurn: (turn) => effects.setTurn(turn),
+    dispose: () => {
+      people.dispose();
+      effects.dispose();
+    },
+  };
+}
+
 /**
- * Bring the camera frustum to the container so the whole office fits inside
+ * Bring the camera frustum to the container so the whole place fits inside
  * the padding at zoom 1. The frustum is shifted rather than the camera, so
  * panning and the reset target stay on the floor centre.
  */
@@ -96,6 +160,7 @@ function fitFrustum(
   home: THREE.Vector3,
   width: number,
   height: number,
+  outline: THREE.Vector3[],
 ): void {
   const right = new THREE.Vector3(
     Math.cos(CAMERA_AZIMUTH),
@@ -111,7 +176,7 @@ function fitFrustum(
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
-  for (const point of officeOutline()) {
+  for (const point of outline) {
     const offset = point.sub(home);
     const x = offset.dot(right);
     const y = offset.dot(up);
@@ -152,7 +217,10 @@ const LIGHTING: Record<Theme, { color: string; ambient: number; sun: number }> =
  * as in the video: faces towards the lower left are the brightest, faces
  * towards the lower right a step darker. Shadows are kept faint.
  */
-function addLights(scene: THREE.Scene): {
+function addLights(
+  scene: THREE.Scene,
+  world: IsoWorld,
+): {
   ambient: THREE.AmbientLight;
   sun: THREE.DirectionalLight;
 } {
@@ -164,12 +232,13 @@ function addLights(scene: THREE.Scene): {
   const ambient = new THREE.AmbientLight(color, ambientIntensity);
   scene.add(ambient);
   const sun = new THREE.DirectionalLight(color, sunIntensity);
-  sun.position.set(FLOOR_CENTER.x + 4, 30, FLOOR_CENTER.z + 26);
-  sun.target.position.set(FLOOR_CENTER.x, 0, FLOOR_CENTER.z);
+  const { center } = world;
+  sun.position.set(center.x + 4, 30, center.z + 26);
+  sun.target.position.set(center.x, 0, center.z);
   sun.castShadow = true;
   sun.shadow.intensity = 0.35;
   sun.shadow.mapSize.set(2048, 2048);
-  const half = Math.max(FLOOR_WIDTH, FLOOR_DEPTH) * 0.8;
+  const half = Math.max(world.width, world.depth) * 0.8;
   sun.shadow.camera.left = -half;
   sun.shadow.camera.right = half;
   sun.shadow.camera.top = half;
@@ -181,9 +250,13 @@ function addLights(scene: THREE.Scene): {
   return { ambient, sun };
 }
 
-/** ``onPersonLeft`` hears of each subagent that rode the elevator away. */
+/**
+ * ``place`` is the office or the airport; ``onPersonLeft`` hears of each
+ * subagent that rode the elevator away (or landed and went).
+ */
 export function createIsoView(
   container: HTMLElement,
+  place: Place,
   onPersonLeft?: (id: string) => void,
 ): IsoView {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -204,18 +277,14 @@ export function createIsoView(
   container.appendChild(labels.domElement);
 
   const scene = new THREE.Scene();
-  const office = buildIsoOffice();
-  scene.add(office);
-  const lights = addLights(scene);
-  const people = new IsoPeople(scene, onPersonLeft);
-  const effects = new IsoEffects(office);
-  const cat = new IsoCat(office);
-  const dog = new IsoDog(office);
-  /** A game the cat and dog play together, while one goes on. */
-  let play = NO_PLAY;
+  const world =
+    place === "airport"
+      ? createAirport(scene, onPersonLeft ?? (() => undefined))
+      : createOffice(scene, onPersonLeft);
+  const lights = addLights(scene, world);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
-  const home = new THREE.Vector3(FLOOR_CENTER.x, 0, FLOOR_CENTER.z);
+  const home = new THREE.Vector3(world.center.x, 0, world.center.z);
   camera.position.copy(home).add(cameraOffset());
   camera.lookAt(home);
 
@@ -233,7 +302,7 @@ export function createIsoView(
   const resize = (): void => {
     const width = container.clientWidth || 1;
     const height = container.clientHeight || 1;
-    fitFrustum(camera, home, width, height);
+    fitFrustum(camera, home, width, height, world.outline());
     renderer.setSize(width, height);
     labels.setSize(width, height);
   };
@@ -270,23 +339,7 @@ export function createIsoView(
     lastFrame = now;
     stepReset(now);
     controls.update();
-    const inUse = people.update(now, dt);
-    effects.update(now / 1000, dt, inUse);
-    // Each pet sees where the other was a frame ago.
-    const catSeen = cat.sighting();
-    const dogSeen = dog.sighting();
-    play = stepPlay(play, {
-      now,
-      dt,
-      random: Math.random,
-      findPath: findFloorPath,
-      walkable: isFloorWalkable,
-      cat: catSeen,
-      dog: dogSeen,
-      napping: inUse.catNap,
-    });
-    cat.update(now, dt, inUse, dogSeen, play.date?.cat ?? null);
-    dog.update(now, dt, inUse, catSeen, play.date?.dog ?? null);
+    world.update(now, dt);
     renderer.render(scene, camera);
     labels.render(scene, camera);
     frame = requestAnimationFrame(loop);
@@ -300,22 +353,22 @@ export function createIsoView(
 
   return {
     setPeople(list: IsoPerson[]): void {
-      people.sync(list);
+      world.sync(list);
     },
-    setBubbleWords(words: BubbleWords): void {
-      people.setWords(words);
+    setWords(words: PlaceWords): void {
+      world.setWords(words);
     },
     clearPeople(): void {
-      people.clear();
+      world.clear();
     },
     setNotes(statuses: readonly NoteStatus[] | null): void {
-      effects.setNotes(statuses);
+      world.setNotes(statuses);
     },
     setCommits(commits): void {
-      effects.setCommits(commits);
+      world.setCommits(commits);
     },
     setTurn(turn): void {
-      effects.setTurn(turn);
+      world.setTurn(turn);
     },
     setThanks(thanks: { id: string; at: number } | null): void {
       const fresh =
@@ -323,10 +376,7 @@ export function createIsoView(
         thanks.id !== thanksSeen &&
         Date.now() - thanks.at < FRESH_MS;
       thanksSeen = thanks?.id ?? null;
-      if (!fresh) return;
-      people.hearts();
-      cat.hearts();
-      dog.hearts();
+      if (fresh) world.hearts();
     },
     setShipped(shipped: { id: string; at: number } | null): void {
       const fresh =
@@ -334,11 +384,7 @@ export function createIsoView(
         shipped.id !== shippedSeen &&
         Date.now() - shipped.at < FRESH_MS;
       shippedSeen = shipped?.id ?? null;
-      if (!fresh) return;
-      effects.burst();
-      people.party();
-      cat.pounce();
-      dog.party();
+      if (fresh) world.ship();
     },
     setTheme(theme: Theme): void {
       const { color, ambient, sun } = LIGHTING[theme];
@@ -362,8 +408,7 @@ export function createIsoView(
       observer.disconnect();
       renderer.domElement.removeEventListener("dblclick", resetView);
       controls.dispose();
-      people.dispose();
-      effects.dispose();
+      world.dispose();
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
           object.geometry.dispose();

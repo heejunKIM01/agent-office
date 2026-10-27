@@ -9,6 +9,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { locales, type Locale } from "@/i18n";
 import { ConnectTab } from "@/components/settings/ConnectTab";
 import { themes, type Theme } from "@/utils/theme";
+import { places, type Place } from "@/utils/place";
 
 // ============================================================================
 // TYPES
@@ -24,6 +25,11 @@ interface SettingsModalProps {
 
 const sectionLabel =
   "block text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-2.5";
+
+const PLACE_ICONS: Record<Place, string> = {
+  office: "🏢",
+  airport: "✈️",
+};
 
 const THEME_ICONS: Record<Theme, ReactNode> = {
   light: <Sun size={14} aria-hidden="true" />,
@@ -159,6 +165,8 @@ export default function SettingsModal({
   const setLanguage = usePreferencesStore((s) => s.setLanguage);
   const theme = usePreferencesStore((s) => s.theme);
   const setTheme = usePreferencesStore((s) => s.setTheme);
+  const place = usePreferencesStore((s) => s.place);
+  const setPlace = usePreferencesStore((s) => s.setPlace);
   const setAutoFollowNewSessions = usePreferencesStore(
     (s) => s.setAutoFollowNewSessions,
   );
@@ -241,6 +249,29 @@ export default function SettingsModal({
               }))}
               value={theme}
               onChange={(value) => void setTheme(value)}
+              className="grid grid-cols-2 gap-2"
+            />
+          </div>
+
+          {/* Place */}
+          <div>
+            <label className={sectionLabel}>{t("settings.place")}</label>
+            <p className="text-slate-500 dark:text-slate-400 text-[11px] -mt-1 mb-2.5">
+              {t("settings.placeDesc")}
+            </p>
+            <RadioButtons
+              label={t("settings.place")}
+              options={places.map((value) => ({
+                value,
+                label: (
+                  <>
+                    <span aria-hidden="true">{PLACE_ICONS[value]}</span>
+                    {t(`settings.place.${value}`)}
+                  </>
+                ),
+              }))}
+              value={place}
+              onChange={(value) => void setPlace(value)}
               className="grid grid-cols-2 gap-2"
             />
           </div>
