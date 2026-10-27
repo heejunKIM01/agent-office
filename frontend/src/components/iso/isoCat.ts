@@ -19,6 +19,7 @@ import {
   type PetSighting,
 } from "@/systems/officePets";
 import { HEARTS_MS, PARTY_MS } from "@/systems/roomGimmicks";
+import { petSnore } from "./isoBubbles";
 import { heartGeometry } from "./isoCharacters";
 import { box, material } from "./isoFurniture";
 import { ISO_COLORS } from "./isoPalette";
@@ -39,6 +40,8 @@ const COLORS = {
 const FACE_CAMERA = Math.PI / 4;
 /** Rubbing, a heart rises over it this often (s). */
 const RUB_HEART_SECONDS = 2;
+/** Its 💤 shows this high over its feet, in its own space. */
+const SNORE_HEIGHT = 0.5;
 /** A dog sniffing this close gets a swat, unless the cat sleeps (m). */
 const SWAT_REACH = 1.8;
 
@@ -223,6 +226,7 @@ function poseCat(rig: CatRig, act: CatPose, seconds: number): void {
 
 export class IsoCat {
   private readonly rig = buildCat();
+  private readonly snore = petSnore(this.rig.root, SNORE_HEIGHT);
   private cat: OfficeCat | null = null;
   /** When it last leapt at confetti and when I last said thanks (ms). */
   private pouncePending = false;
@@ -292,6 +296,7 @@ export class IsoCat {
     root.rotation.y = this.cat.facing;
     poseCat(this.rig, pounce === null ? act : "walk", seconds);
     const awake = act !== "sleep" && act !== "doze" && act !== "snuggle";
+    this.snore(pounce === null && !awake);
     const pestered =
       dog !== null &&
       this.cat.y === 0 &&
