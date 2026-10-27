@@ -6,7 +6,9 @@
  * writes on the meeting room whiteboard. The elevator doors open while
  * someone steps in or out, and paper confetti falls over the office when work
  * ships (a push or merge). Each commit drops a sheet into the tray on
- * Claude's desk, its message's first line shown over it for a moment.
+ * Claude's desk, its message's first line shown over it for a moment. And
+ * while Claude waits on my next prompt a while, the office cat curls up on
+ * my keyboard.
  */
 
 import * as THREE from "three";
@@ -14,6 +16,7 @@ import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import {
   CLAUDE_SEAT,
   FLOOR_DEPTH,
+  MY_SEAT,
   FLOOR_WIDTH,
   type Furniture,
   type IsoSpot,
@@ -52,6 +55,43 @@ const CONFETTI_COLORS = [
 const SHEET_DROP_SECONDS = 0.35;
 const SHEET_NOTE_SECONDS = 4;
 const SHEET_THICKNESS = 0.018;
+/** The cat lies on my desk this far in front of my chair (m), turned to the room. */
+const CAT_REACH = 0.95;
+const CAT_DESK_HEIGHT = 1.01;
+const CAT_TURN = -0.6;
+/** It hops up onto the desk in this long (s). */
+const CAT_HOP_SECONDS = 0.35;
+const CAT_COLORS = {
+  fur: "#f2994a",
+  stripe: "#c96f24",
+  ear: "#e07f2e",
+  eye: "#1f2937",
+  nose: "#f472b6",
+};
+
+/** A loaf of an orange tabby, facing +z, with a tail to sway. */
+function buildCat(): { cat: THREE.Group; tail: THREE.Group } {
+  const cat = new THREE.Group();
+  cat.add(box(0.38, 0.22, 0.5, CAT_COLORS.fur));
+  cat.add(box(0.39, 0.03, 0.08, CAT_COLORS.stripe, 0, 0.2, -0.1));
+  cat.add(box(0.39, 0.03, 0.08, CAT_COLORS.stripe, 0, 0.2, 0.08));
+  const head = new THREE.Group();
+  head.position.set(0, 0.1, 0.3);
+  head.add(box(0.3, 0.24, 0.24, CAT_COLORS.fur));
+  head.add(box(0.07, 0.09, 0.05, CAT_COLORS.ear, -0.09, 0.24, -0.02));
+  head.add(box(0.07, 0.09, 0.05, CAT_COLORS.ear, 0.09, 0.24, -0.02));
+  head.add(box(0.04, 0.05, 0.01, CAT_COLORS.eye, -0.07, 0.12, 0.12));
+  head.add(box(0.04, 0.05, 0.01, CAT_COLORS.eye, 0.07, 0.12, 0.12));
+  head.add(box(0.04, 0.03, 0.01, CAT_COLORS.nose, 0, 0.07, 0.125));
+  cat.add(head);
+  const tail = new THREE.Group();
+  tail.position.set(0.12, 0.06, -0.24);
+  tail.add(box(0.07, 0.07, 0.36, CAT_COLORS.stripe, 0, 0, -0.18));
+  cat.add(tail);
+  cat.visible = false;
+  return { cat, tail };
+}
+
 /** How far the code scrolls per second, in screen heights. */
 const CODE_SCROLL_SPEED = 0.25;
 /** Seconds of planning to fill the whiteboard's writing rows. */
@@ -249,8 +289,23 @@ export class IsoEffects {
   private sheetSeen: string | null = null;
   private dropPending = false;
   private dropStart: number | null = null;
+  /** The office cat on my keyboard, and when it hopped up (s). */
+  private readonly cat: THREE.Group;
+  private readonly catTail: THREE.Group;
+  private catSince: number | null = null;
 
   constructor(office: THREE.Object3D) {
+    const { cat, tail } = buildCat();
+    this.cat = cat;
+    this.catTail = tail;
+    this.cat.position.set(
+      MY_SEAT.x + CAT_REACH * Math.sin(MY_SEAT.facing),
+      CAT_DESK_HEIGHT,
+      MY_SEAT.z + CAT_REACH * Math.cos(MY_SEAT.facing),
+    );
+    this.cat.rotation.y = CAT_TURN;
+    office.add(this.cat);
+
     this.tray.add(box(0.66, 0.04, 0.48, "#475569"));
     this.tray.add(box(0.66, 0.12, 0.03, "#475569", 0, 0, -0.23));
     for (let i = 0; i < MAX_SHEETS; i++) {
@@ -395,6 +450,22 @@ export class IsoEffects {
     if (!this.sheetNote.visible) this.dropStart = null;
   }
 
+  /** The cat hops onto my keyboard and naps there, tail swaying, until I type. */
+  private nap(seconds: number, napping: boolean): void {
+    if (!napping) {
+      this.cat.visible = false;
+      this.catSince = null;
+      return;
+    }
+    this.catSince ??= seconds;
+    const t = seconds - this.catSince;
+    this.cat.visible = true;
+    this.cat.position.y =
+      CAT_DESK_HEIGHT + 0.5 * Math.max(0, 1 - t / CAT_HOP_SECONDS);
+    this.cat.scale.y = 1 + 0.04 * Math.sin(seconds * 2.4);
+    this.catTail.rotation.y = 0.5 * Math.sin(seconds * 1.8);
+  }
+
   /** Work just shipped: let paper confetti fall over the office. */
   burst(): void {
     this.confettiPending = true;
@@ -445,6 +516,7 @@ export class IsoEffects {
   update(seconds: number, dt: number, inUse: RoomsInUse): void {
     this.fall(seconds);
     this.drop(seconds);
+    this.nap(seconds, inUse.catNap);
     const speed = inUse.serverBusy ? LED_BUSY_SPEED : LED_IDLE_SPEED;
     for (const led of this.leds) {
       led.mesh.visible = Math.sin(seconds * speed + led.phase) > -0.35;

@@ -242,6 +242,14 @@ export function commitsMade(
   return { count, last };
 }
 
+/** Waiting on my prompt this long, the office cat curls up on my keyboard (ms). */
+export const CAT_AFTER_MS = 3 * 60_000;
+
+/** Whether the cat is on my keyboard: Claude's turn has been over ``waitingMs``. */
+export function catOnKeyboard(waitingMs: number | null): boolean {
+  return waitingMs !== null && waitingMs >= CAT_AFTER_MS;
+}
+
 /** The lamp over the elevator door stays lit this long after someone steps out (s). */
 export const LAMP_HOLD_SECONDS = 1.5;
 

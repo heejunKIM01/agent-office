@@ -48,6 +48,7 @@ import {
   CHEER_MS,
   DISMAY_MS,
   PARTY_MS,
+  catOnKeyboard,
   NO_PILE,
   bookPile,
   scratchesHead,
@@ -127,6 +128,8 @@ export interface RoomsInUse {
   browsing: boolean;
   /** A newcomer is stepping out of the elevator. */
   arriving: boolean;
+  /** Claude has waited on my next prompt a while: the cat is on my keyboard. */
+  catNap: boolean;
 }
 
 interface Placed {
@@ -314,6 +317,7 @@ export class IsoPeople {
       tvOn: false,
       browsing: false,
       arriving: false,
+      catNap: false,
     };
     if (this.callPending) {
       this.callPending = false;
@@ -400,6 +404,14 @@ export class IsoPeople {
       }
       if (usesElevator(walker)) inUse.elevatorOpen = true;
       if (walker.trip?.kind === "arrive") inUse.arriving = true;
+      const { kind, breakRoom, idleSince } = placed.person;
+      if (
+        kind === "claude" &&
+        breakRoom === "lounge" &&
+        catOnKeyboard(idleSince === null ? null : Date.now() - idleSince)
+      ) {
+        inUse.catNap = true;
+      }
     }
     for (const id of gone) {
       const placed = this.placed.get(id);

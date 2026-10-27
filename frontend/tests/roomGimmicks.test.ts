@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  CAT_AFTER_MS,
   LAMP_HOLD_SECONDS,
+  catOnKeyboard,
   lampLit,
   SCRATCH_EVERY_MS,
   SCRATCH_MS,
@@ -246,5 +248,13 @@ describe("commitsMade", () => {
       ]),
     ).toEqual({ count: 2, last: { id: "30", title: "two", at: 30_000 } });
     expect(commitsMade([])).toEqual({ count: 0, last: null });
+  });
+});
+
+describe("catOnKeyboard", () => {
+  it("curls up on my keyboard once Claude has waited a few minutes", () => {
+    expect(catOnKeyboard(null)).toBe(false);
+    expect(catOnKeyboard(CAT_AFTER_MS - 1)).toBe(false);
+    expect(catOnKeyboard(CAT_AFTER_MS)).toBe(true);
   });
 });
