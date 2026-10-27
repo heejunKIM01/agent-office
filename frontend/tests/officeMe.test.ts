@@ -153,6 +153,20 @@ describe("meChoices", () => {
     const tower = catAt("tower", 0, dice(0.5));
     expect(ids({ ...awake, cat: sightingOf(tower) })).not.toContain("wand");
     expect(ids({ ...awake, cat: sightingOf(tower) })).not.toContain("patCat");
+    // Playing a game together, they are left to it.
+    const together = { ...meInput(0), claude: SEATED };
+    const playing = (pet: ReturnType<typeof sightingOf>) => ({
+      ...pet,
+      planId: "play:3:boop",
+    });
+    const gameIds = ids({
+      ...together,
+      dog: { ...playing(sightingOf(dogAt(0, dice(0.5)))), y: 0, ball: null },
+      cat: playing(sightingOf(catAt("bowl", 0, dice(0.5)))),
+    });
+    for (const id of ["fetch", "wand", "patDog", "patCat"]) {
+      expect(gameIds).not.toContain(id);
+    }
     const bowl = catAt("bowl", 0, dice(0.5));
     expect(ids({ ...awake, cat: sightingOf(bowl) })).toContain("wand");
     expect(ids({ ...awake, cat: sightingOf(bowl) })).toContain("patCat");
@@ -278,7 +292,7 @@ describe("playing with the pets", () => {
       ...wand.floor,
     };
     cat = stepOfficeCat(cat, catInput(100, { me: meSightingOf(me) }));
-    expect(cat.plan.id).toBe("play");
+    expect(cat.plan.id).toBe("wand");
     for (let now = 200; now < 5_000; now += 100) {
       cat = stepOfficeCat(cat, catInput(now, { me: meSightingOf(me) }));
     }
@@ -288,7 +302,7 @@ describe("playing with the pets", () => {
     expect(petActOf(cat)).toBe("play");
     const gone = { ...meSightingOf(me), planId: "coffee" };
     cat = stepOfficeCat(cat, catInput(5_100, { me: gone }));
-    expect(cat.plan.id).not.toBe("play");
+    expect(cat.plan.id).not.toBe("wand");
   });
 
   it("the cat up and about a few metres off dashes over to my wand", () => {
@@ -305,7 +319,7 @@ describe("playing with the pets", () => {
     for (let now = 100; now < 6_000; now += 100) {
       cat = stepOfficeCat(cat, catInput(now, { me: meSightingOf(me) }));
     }
-    expect(cat.plan.id).toBe("play");
+    expect(cat.plan.id).toBe("wand");
     expect(petActOf(cat)).toBe("play");
     expect(distance(cat, me)).toBeLessThan(1.5);
     // Asleep on its tower it does not come.

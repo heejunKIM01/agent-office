@@ -86,6 +86,9 @@ describe("stepPlay", () => {
       { dog: greeting },
       { napping: true },
       { dog: sight(38, 29) },
+      // Playing with me: fetch for the dog, my wand for the cat.
+      { dog: sight(22, 15.5, { act: "play", planId: "bring" }) },
+      { cat: sight(20, 15, { act: "play", planId: "wand" }) },
     ]) {
       expect(start(0.6, over).date).toBeNull();
     }

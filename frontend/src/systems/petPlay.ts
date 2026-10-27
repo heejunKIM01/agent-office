@@ -20,6 +20,7 @@
 import type { FloorPoint } from "./isoNavGrid";
 import { CAT_DASH_SPEED, CAT_SPOTS, catPlan, type CatPlan } from "./officeCat";
 import { dogPlan, type DogPlan } from "./officeDog";
+import { FETCH_PLANS } from "./officeMe";
 import {
   PLAY_PREFIX,
   besidePoint,
@@ -93,13 +94,17 @@ const SIDE_ON = [(3 * Math.PI) / 4, -Math.PI / 4];
 /** The dog chases a little slower than the cat flees, so stays behind (m/s). */
 const CHASE_SPEED = 3.3;
 
-/** Up and about on the floor: not asleep, perched or called elsewhere. */
+/**
+ * Up and about on the floor: not asleep, perched, called elsewhere or
+ * playing with me (officeMe.ts).
+ */
 function catFree(cat: PetSighting | null): cat is PetSighting {
   return (
     cat !== null &&
     cat.y === 0 &&
     cat.phase !== "stretch" &&
-    !["sleep", "doze", "snuggle", "keyboard", "hop"].includes(cat.act)
+    !["sleep", "doze", "snuggle", "keyboard", "hop"].includes(cat.act) &&
+    cat.planId !== "wand"
   );
 }
 
@@ -109,7 +114,8 @@ function dogFree(dog: PetSighting | null): dog is PetSighting {
     dog.y === 0 &&
     dog.phase !== "stretch" &&
     dog.act !== "sleep" &&
-    !["myChair", "comfort", "greet", "zoomies"].includes(dog.planId)
+    !["myChair", "comfort", "greet", "zoomies"].includes(dog.planId) &&
+    !FETCH_PLANS.has(dog.planId)
   );
 }
 

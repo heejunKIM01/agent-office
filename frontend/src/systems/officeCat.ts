@@ -277,7 +277,7 @@ function play(cat: OfficeCat, me: FloorPoint, input: CatInput): CatPlan {
   const near = distance(cat, me) <= PLAY_AT * 1.5;
   const at = near ? cat : (besidePoint(me, PLAY_AT, input) ?? cat);
   return catPlan(
-    "play",
+    "wand",
     { x: at.x, z: at.z, facing: towards(at, me) },
     "play",
     [0, 0],
@@ -293,7 +293,7 @@ export const CAT_BRAIN: PetBrain<CatAct, CatInput> = {
     if (input.play) return cat.plan.id !== input.play.id ? input.play : null;
     // Up and about (not resting on a spot of its own), it comes to play.
     const awake = !cat.plan.rest && cat.phase !== "hopUp";
-    if (awake && cat.plan.id !== "play" && wandBy(input.me, cat)) {
+    if (awake && cat.plan.id !== "wand" && wandBy(input.me, cat)) {
       return play(cat, input.me, input);
     }
     return null;
@@ -303,7 +303,7 @@ export const CAT_BRAIN: PetBrain<CatAct, CatInput> = {
       return input.play?.id === cat.plan.id;
     }
     switch (cat.plan.id) {
-      case "play":
+      case "wand":
         return wandBy(input.me, cat) && distance(input.me, cat.plan.floor) < 2;
       case "keyboard":
         return input.napping;

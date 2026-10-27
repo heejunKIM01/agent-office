@@ -31,6 +31,7 @@ import {
   type PetClock,
   type PetPlan,
   type PetSighting,
+  PLAY_PREFIX,
 } from "./officePets";
 
 /** What I do once there. */
@@ -150,9 +151,14 @@ const PAT_HEIGHT = 0.8;
 /** I give up on a pet or Claude this far from where I meant to find them (m). */
 const LOST_REACH = 2.4;
 
+/** The two pets play a game together (petPlay.ts): I leave them to it. */
+const together = (pet: PetSighting): boolean =>
+  pet.planId.startsWith(PLAY_PREFIX);
+
 const dogPlays = (dog: DogSighting | null): dog is DogSighting =>
   dog !== null &&
   dog.y === 0 &&
+  !together(dog) &&
   !DOG_BUSY.has(dog.planId) &&
   dog.planId !== "bed";
 
@@ -161,7 +167,8 @@ const catPlays = (cat: PetSighting | null): cat is PetSighting =>
   cat !== null &&
   cat.y === 0 &&
   cat.phase === "stay" &&
-  !CAT_RESTING.has(cat.planId);
+  !CAT_RESTING.has(cat.planId) &&
+  !together(cat);
 
 const stays = (pet: PetSighting | null): pet is PetSighting =>
   pet !== null && pet.phase === "stay";
@@ -188,7 +195,7 @@ function pat(
   pet: PetSighting | null,
   input: MeInput,
 ): MePlan | null {
-  if (!stays(pet) || pet.y > PAT_HEIGHT) return null;
+  if (!stays(pet) || pet.y > PAT_HEIGHT || together(pet)) return null;
   if (id === "patDog" && (DOG_BUSY.has(pet.planId) || pet.y > 0.3)) {
     return null;
   }
