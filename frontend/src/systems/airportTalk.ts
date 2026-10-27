@@ -4,12 +4,25 @@
  * flight records, editing is amending the flight plan, commands are ground
  * work, the web and outside tools are the weather and outside calls,
  * planning is the operations plan, and a question for me is a call to the
- * gate. A thinking summary or a reply shows for a while after it comes,
- * and a failed tool shows as trouble. Pure, so the scene and the tests
- * share it.
+ * gate. The rules (thoughts, replies, trouble) are systems/placeTalk.ts',
+ * shared with the other places.
  */
 
-import type { Activity, BubbleContent } from "@/types";
+import type { Activity } from "@/types";
+import {
+  talkLine as placeLine,
+  type PlaceTalk,
+  type TalkInput,
+  type TalkLine,
+} from "./placeTalk";
+
+export {
+  myQuestion,
+  RECENT_TALK_MS,
+  secondsBetween,
+  type TalkInput,
+  type TalkLine,
+} from "./placeTalk";
 
 /** Words the airport needs, already translated. */
 export interface AirportWords {
@@ -46,91 +59,21 @@ export const ACTIVITY_ICONS: Record<Activity, string> = {
   asking: "📞",
 };
 
-/** One line of a data tag: an icon, what is going on and on what. */
-export interface TalkLine {
-  icon: string;
-  text: string;
-  detail: string | null;
-  tone: "work" | "think" | "say" | "alert";
+/** The airport's way of saying what someone is doing. */
+function airportTalk(words: AirportWords): PlaceTalk {
+  return {
+    words,
+    icons: ACTIVITY_ICONS,
+    thinkIcon: "🎧",
+    thinking: words.thinking,
+    trouble: words.trouble,
+  };
 }
 
-export interface TalkInput {
-  activity: Activity | null;
-  bubble: Pick<BubbleContent, "type" | "text" | "icon" | "persistent"> | null;
-  /** How long ago that bubble came (ms). */
-  bubbleAgeMs: number | null;
-  stuck: boolean;
-  /** Seconds it has been thinking, or null when it is not. */
-  thinkingSeconds: number | null;
-}
-
-/** How long a thinking summary or a reply stays up after it comes (ms). */
-export const RECENT_TALK_MS = 8000;
-
-/** Thinking summaries from the transcript carry this icon. */
-const THINKING_ICON = "💭";
-/**
- * The lead agent's speech carries this icon both for my question (at the
- * start of a turn) and for its reply (when the turn ends); only the reply
- * stays, so a passing one is my question, not the agent speaking.
- */
-const PHONE_ICON = "📞";
-
-/** My question, when the bubble is it rather than the agent's own words. */
-export function myQuestion(
-  bubble: Pick<BubbleContent, "type" | "text" | "icon" | "persistent"> | null,
-): string | null {
-  return bubble?.type === "speech" &&
-    bubble.icon === PHONE_ICON &&
-    !bubble.persistent
-    ? bubble.text
-    : null;
-}
-
-/** The line a tag shows now, or null for none. */
+/** The line an airport tag shows now, or null for none. */
 export function talkLine(
   input: TalkInput,
   words: AirportWords,
 ): TalkLine | null {
-  const { activity, bubble, bubbleAgeMs, stuck, thinkingSeconds } = input;
-  const recent = bubbleAgeMs !== null && bubbleAgeMs < RECENT_TALK_MS;
-  if (stuck) {
-    return {
-      icon: "⚠️",
-      text: words.trouble,
-      detail: bubble?.text ?? null,
-      tone: "alert",
-    };
-  }
-  if (activity) {
-    const target =
-      bubble?.type === "thought" && bubble.icon !== THINKING_ICON
-        ? bubble.text
-        : null;
-    return {
-      icon: ACTIVITY_ICONS[activity],
-      text: words[activity],
-      detail: target,
-      tone: "work",
-    };
-  }
-  if (bubble?.type === "thought" && bubble.icon === THINKING_ICON && recent) {
-    return { icon: "🎧", text: bubble.text, detail: null, tone: "think" };
-  }
-  if (bubble?.type === "speech" && recent && myQuestion(bubble) === null) {
-    return { icon: "💬", text: bubble.text, detail: null, tone: "say" };
-  }
-  if (thinkingSeconds !== null) {
-    return {
-      icon: "🎧",
-      text: words.thinking(thinkingSeconds),
-      detail: null,
-      tone: "think",
-    };
-  }
-  return null;
+  return placeLine(input, airportTalk(words));
 }
-
-/** Whole seconds from ``at`` to ``now`` (ms), never below zero. */
-export const secondsBetween = (at: number, now: number): number =>
-  Math.max(0, Math.floor((now - at) / 1000));
