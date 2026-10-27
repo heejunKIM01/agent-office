@@ -132,6 +132,8 @@ export interface RoomsInUse {
   arriving: boolean;
   /** Claude has waited on my next prompt a while: the cat is on my keyboard. */
   catNap: boolean;
+  /** Claude sits at its desk: the cat may come and rub against its legs. */
+  claudeSeated: boolean;
 }
 
 interface Placed {
@@ -315,6 +317,7 @@ export class IsoPeople {
       browsing: false,
       arriving: false,
       catNap: false,
+      claudeSeated: false,
     };
     if (this.callPending) {
       this.callPending = false;
@@ -416,6 +419,9 @@ export class IsoPeople {
       if (usesElevator(walker)) inUse.elevatorOpen = true;
       if (walker.trip?.kind === "arrive") inUse.arriving = true;
       const { kind, breakRoom, idleSince } = placed.person;
+      if (kind === "claude" && walker.goal === "seat" && !walker.path) {
+        inUse.claudeSeated = true;
+      }
       if (
         kind === "claude" &&
         breakRoom === "lounge" &&

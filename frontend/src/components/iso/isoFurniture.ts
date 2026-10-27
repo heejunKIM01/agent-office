@@ -606,6 +606,30 @@ function windowPane(): THREE.Group {
   return g;
 }
 
+/**
+ * A carpeted cat tower: a sisal post with a step half way up, a cushion bed
+ * on top and a pompom hanging off the top's front corner.
+ */
+function catTower(): THREE.Group {
+  return group(
+    box(1.1, 0.07, 1.1, C.catCarpet, 0, 0, 0),
+    cylinder(0.14, 0.14, 1.44, C.catSisal, 0, 0.07, 0, 12),
+    box(0.62, 0.06, 0.62, C.catCarpet, 0.16, 0.72, 0.16),
+    box(1.0, 0.07, 1.0, C.catCarpet, 0, 1.5, 0),
+    cylinder(0.46, 0.4, 0.1, C.catBed, 0, 1.57, 0, 20),
+    box(0.014, 0.36, 0.014, "#64748b", 0.44, 1.14, 0.44),
+    box(0.12, 0.12, 0.12, C.heart, 0.44, 1.04, 0.44),
+  );
+}
+
+/** A blue bowl of kibble. */
+function catBowl(): THREE.Group {
+  return group(
+    cylinder(0.3, 0.23, 0.13, "#60a5fa", 0, 0, 0, 20),
+    cylinder(0.25, 0.25, 0.02, "#a16207", 0, 0.1, 0, 20),
+  );
+}
+
 /** Build one piece of furniture; ``seed`` varies books, LEDs and leaves. */
 export function buildFurniture(kind: FurnitureKind, seed = 0): THREE.Group {
   switch (kind) {
@@ -665,5 +689,9 @@ export function buildFurniture(kind: FurnitureKind, seed = 0): THREE.Group {
       return clock();
     case "window":
       return windowPane();
+    case "catTower":
+      return catTower();
+    case "catBowl":
+      return catBowl();
   }
 }
