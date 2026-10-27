@@ -4,6 +4,9 @@ import {
   lampLit,
   SCRATCH_EVERY_MS,
   SCRATCH_MS,
+  commitTitle,
+  commitsMade,
+  isCommitCommand,
   isShipCommand,
   isTestCommand,
   lastShipped,
@@ -207,5 +210,41 @@ describe("lastShipped", () => {
       lastShipped([post("git push", 20, "tool_error"), post("git push", 10)]),
     ).toBeNull();
     expect(lastShipped([post("npm test", 10)])).toBeNull();
+  });
+});
+
+describe("commitsMade", () => {
+  const post = (command: string, id: number, errorType?: string) => ({
+    id: String(id),
+    type: "post_tool_use",
+    timestamp: new Date(id * 1000),
+    detail: { toolInput: { command }, ...(errorType ? { errorType } : {}) },
+  });
+
+  it("reads a commit message's first line", () => {
+    expect(commitTitle('git commit -m "fix: keep the tray"')).toBe(
+      "fix: keep the tray",
+    );
+    expect(commitTitle("git commit -m 'docs: notes'")).toBe("docs: notes");
+    expect(
+      commitTitle(
+        "git commit -m \"$(cat <<'EOF'\nfeat(office): file commits\n\nCo-Authored-By: x\nEOF\n)\"",
+      ),
+    ).toBe("feat(office): file commits");
+    expect(commitTitle("git commit --amend --no-edit")).toBe("");
+    expect(isCommitCommand("git add a && git commit -m x")).toBe(true);
+    expect(isCommitCommand("git log --oneline")).toBe(false);
+  });
+
+  it("counts the commits that went through and names the latest", () => {
+    expect(
+      commitsMade([
+        post('git commit -m "two"', 30),
+        post('git commit -m "nope"', 20, "tool_error"),
+        post("git status", 15),
+        post('git commit -m "one"', 10),
+      ]),
+    ).toEqual({ count: 2, last: { id: "30", title: "two", at: 30_000 } });
+    expect(commitsMade([])).toEqual({ count: 0, last: null });
   });
 });

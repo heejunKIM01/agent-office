@@ -164,8 +164,8 @@ export function lastFailedTestId(
 
 /** How long the office claps after a push or merge (ms). */
 export const PARTY_MS = 3_000;
-/** A push or merge older than this is not cheered when the page first sees it (ms). */
-export const PARTY_FRESH_MS = 60_000;
+/** A push, merge or commit older than this is not acted out when the page first sees it (ms). */
+export const FRESH_MS = 60_000;
 
 /** A shell command that ships work: a push, or merging a pull request. */
 export function isShipCommand(command: unknown): boolean {
@@ -196,6 +196,50 @@ export function lastShipped(
       : { id: entry.id, at: entry.timestamp.getTime() };
   }
   return null;
+}
+
+/** The tray on Claude's desk holds this many sheets. */
+export const MAX_SHEETS = 8;
+
+/** A shell command that makes a commit. */
+export function isCommitCommand(command: unknown): boolean {
+  return typeof command === "string" && /\bgit\s+commit\b/.test(command);
+}
+
+/** The first line of a commit command's message (``-m`` or a heredoc), or "". */
+export function commitTitle(command: string): string {
+  const heredoc = /<<-?\s*['"]?\w+['"]?\s*\n\s*([^\n]*)/.exec(command);
+  if (heredoc) return heredoc[1].trim();
+  const quoted = /-m\s+(["'])([\s\S]*?)\1/.exec(command);
+  return quoted ? quoted[2].split("\n")[0].trim() : "";
+}
+
+/**
+ * The session's commits that went through: how many, and the latest one's
+ * log id, first line and when it came (ms).
+ */
+export function commitsMade(
+  eventLog: readonly {
+    id: string;
+    type: string;
+    timestamp: Date;
+    detail?: { toolInput?: unknown; errorType?: string };
+  }[],
+): { count: number; last: { id: string; title: string; at: number } | null } {
+  let count = 0;
+  let last: { id: string; title: string; at: number } | null = null;
+  for (const entry of eventLog) {
+    if (entry.type !== "post_tool_use" || entry.detail?.errorType) continue;
+    const input = entry.detail?.toolInput as { command?: unknown } | undefined;
+    if (!isCommitCommand(input?.command)) continue;
+    count += 1;
+    last ??= {
+      id: entry.id,
+      title: commitTitle(input?.command as string),
+      at: entry.timestamp.getTime(),
+    };
+  }
+  return { count, last };
 }
 
 /** The lamp over the elevator door stays lit this long after someone steps out (s). */

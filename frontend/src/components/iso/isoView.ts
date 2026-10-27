@@ -13,7 +13,7 @@ import {
   WALL_HEIGHT,
 } from "@/constants/isoFloorPlan";
 import type { IsoPerson } from "@/systems/officePeople";
-import { PARTY_FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
+import { FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
 import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
 import type { BubbleWords } from "./isoBubbles";
@@ -41,6 +41,11 @@ export interface IsoView {
   clearPeople(): void;
   /** Stick a whiteboard note per to-do (null: the board's plain notes). */
   setNotes(statuses: readonly NoteStatus[] | null): void;
+  /** The session's commits: a sheet each in the tray on Claude's desk. */
+  setCommits(commits: {
+    count: number;
+    last: { id: string; title: string; at: number } | null;
+  }): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
   setShipped(shipped: { id: string; at: number } | null): void;
   zoomBy(factor: number): void;
@@ -275,11 +280,14 @@ export function createIsoView(
     setNotes(statuses: readonly NoteStatus[] | null): void {
       effects.setNotes(statuses);
     },
+    setCommits(commits): void {
+      effects.setCommits(commits);
+    },
     setShipped(shipped: { id: string; at: number } | null): void {
       const fresh =
         shipped !== null &&
         shipped.id !== shippedSeen &&
-        Date.now() - shipped.at < PARTY_FRESH_MS;
+        Date.now() - shipped.at < FRESH_MS;
       shippedSeen = shipped?.id ?? null;
       if (!fresh) return;
       effects.burst();

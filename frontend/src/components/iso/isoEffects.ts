@@ -5,18 +5,27 @@
  * faster while a command runs, and planning
  * writes on the meeting room whiteboard. The elevator doors open while
  * someone steps in or out, and paper confetti falls over the office when work
- * ships (a push or merge).
+ * ships (a push or merge). Each commit drops a sheet into the tray on
+ * Claude's desk, its message's first line shown over it for a moment.
  */
 
 import * as THREE from "three";
+import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import {
+  CLAUDE_SEAT,
   FLOOR_DEPTH,
   FLOOR_WIDTH,
   type Furniture,
   type IsoSpot,
 } from "@/constants/isoFloorPlan";
-import { globeSpeed, lampLit, type NoteStatus } from "@/systems/roomGimmicks";
-import { material } from "./isoFurniture";
+import {
+  FRESH_MS,
+  MAX_SHEETS,
+  globeSpeed,
+  lampLit,
+  type NoteStatus,
+} from "@/systems/roomGimmicks";
+import { box, material } from "./isoFurniture";
 import { ISO_COLORS } from "./isoPalette";
 import type { RoomsInUse } from "./isoPeople";
 
@@ -39,6 +48,10 @@ const CONFETTI_COLORS = [
   "#a78bfa",
   "#f472b6",
 ];
+/** A commit's sheet falls into the tray this fast (s), and its line shows this long (s). */
+const SHEET_DROP_SECONDS = 0.35;
+const SHEET_NOTE_SECONDS = 4;
+const SHEET_THICKNESS = 0.018;
 /** How far the code scrolls per second, in screen heights. */
 const CODE_SCROLL_SPEED = 0.25;
 /** Seconds of planning to fill the whiteboard's writing rows. */
@@ -226,8 +239,39 @@ export class IsoEffects {
   private readonly confetti = new THREE.Group();
   private confettiPending = false;
   private confettiStart: number | null = null;
+  /** The tray beside Claude's iMac, its sheets, the one falling in and its note. */
+  private readonly tray = new THREE.Group();
+  private readonly sheets: THREE.Mesh[] = [];
+  private readonly dropping: THREE.Mesh;
+  private readonly sheetNote: CSS2DObject;
+  private readonly sheetText: HTMLDivElement;
+  private sheetCount = 0;
+  private sheetSeen: string | null = null;
+  private dropPending = false;
+  private dropStart: number | null = null;
 
   constructor(office: THREE.Object3D) {
+    this.tray.add(box(0.66, 0.04, 0.48, "#475569"));
+    this.tray.add(box(0.66, 0.12, 0.03, "#475569", 0, 0, -0.23));
+    for (let i = 0; i < MAX_SHEETS; i++) {
+      const sheet = box(0.54, SHEET_THICKNESS * 0.8, 0.38, "#f8fafc");
+      sheet.position.y = 0.05 + i * SHEET_THICKNESS;
+      sheet.rotation.y = ((i * 37) % 7) * 0.03 - 0.09;
+      sheet.visible = false;
+      this.sheets.push(sheet);
+      this.tray.add(sheet);
+    }
+    this.dropping = box(0.54, SHEET_THICKNESS * 0.8, 0.38, "#f8fafc");
+    this.dropping.visible = false;
+    this.tray.add(this.dropping);
+    this.sheetText = document.createElement("div");
+    this.sheetText.className =
+      "line-clamp-2 max-w-[220px] rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium leading-snug text-slate-800 shadow-md dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100";
+    this.sheetNote = new CSS2DObject(this.sheetText);
+    this.sheetNote.position.set(0, 1.1, 0);
+    this.sheetNote.visible = false;
+    this.tray.add(this.sheetNote);
+
     const piece = new THREE.PlaneGeometry(0.32, 0.2);
     for (let i = 0; i < CONFETTI_PIECES; i++) {
       const mesh = new THREE.Mesh(
@@ -273,6 +317,13 @@ export class IsoEffects {
       const item = object.userData.furniture as Furniture | undefined;
       if (item?.kind === "whiteboard") found.whiteboard = object;
       if (item?.kind === "imac") {
+        // Claude's iMac has the commit tray beside it.
+        if (
+          placeKey(item.x, item.z) ===
+          placeKey(CLAUDE_SEAT.x, CLAUDE_SEAT.z - SEAT_TO_SCREEN)
+        ) {
+          this.tray.position.set(item.x + 0.85, item.y ?? 0, item.z + 0.05);
+        }
         const screen = object.children.find((c) => c.userData.imacScreen);
         if (screen instanceof THREE.Mesh) {
           this.screens.set(placeKey(item.x, item.z), {
@@ -283,6 +334,7 @@ export class IsoEffects {
       }
     });
     if (found.whiteboard) this.board = makeBoard(found.whiteboard);
+    office.add(this.tray);
     this.setNotes(null);
   }
 
@@ -297,6 +349,48 @@ export class IsoEffects {
       note.visible = status !== undefined;
       if (status) note.material = material(NOTE_COLORS[status]);
     });
+  }
+
+  /**
+   * Fill the tray with a sheet per commit. A new commit made just now drops
+   * its sheet in and shows its message's first line over the tray.
+   */
+  setCommits(commits: {
+    count: number;
+    last: { id: string; title: string; at: number } | null;
+  }): void {
+    const { last } = commits;
+    const fresh =
+      last !== null &&
+      last.id !== this.sheetSeen &&
+      Date.now() - last.at < FRESH_MS;
+    this.sheetSeen = last?.id ?? null;
+    this.sheetCount = Math.min(commits.count, MAX_SHEETS);
+    this.sheets.forEach((sheet, i) => {
+      // The falling one joins the pile when it lands.
+      sheet.visible = i < this.sheetCount - (fresh ? 1 : 0);
+    });
+    if (!fresh) return;
+    this.sheetText.textContent = `📄 ${last.title}`.trim();
+    this.dropPending = true;
+  }
+
+  /** The newest sheet falling into the tray, its line shown a while after. */
+  private drop(seconds: number): void {
+    if (this.dropPending) {
+      this.dropPending = false;
+      this.dropStart = seconds;
+    }
+    if (this.dropStart === null) return;
+    const t = seconds - this.dropStart;
+    const top = Math.max(0, this.sheetCount - 1);
+    const landed = t >= SHEET_DROP_SECONDS;
+    this.dropping.visible = !landed;
+    this.dropping.position.y =
+      0.05 + top * SHEET_THICKNESS + (landed ? 0 : 1 - t / SHEET_DROP_SECONDS);
+    if (landed && this.sheets[top]) this.sheets[top].visible = true;
+    this.sheetNote.visible = t < SHEET_NOTE_SECONDS;
+    if (!this.sheetNote.visible) this.dropStart = null;
   }
 
   /** Work just shipped: let paper confetti fall over the office. */
@@ -348,6 +442,7 @@ export class IsoEffects {
   /** Bring the rooms up to date for this frame; ``seconds`` is the clock. */
   update(seconds: number, dt: number, inUse: RoomsInUse): void {
     this.fall(seconds);
+    this.drop(seconds);
     const speed = inUse.serverBusy ? LED_BUSY_SPEED : LED_IDLE_SPEED;
     for (const led of this.leds) {
       led.mesh.visible = Math.sin(seconds * speed + led.phase) > -0.35;

@@ -13,7 +13,11 @@ import {
   type Colleague,
   type PeopleWords,
 } from "@/systems/officePeople";
-import { lastShipped, latestTodoNotes } from "@/systems/roomGimmicks";
+import {
+  commitsMade,
+  lastShipped,
+  latestTodoNotes,
+} from "@/systems/roomGimmicks";
 import type { BubbleWords } from "./isoBubbles";
 import { createIsoView, type IsoView } from "./isoView";
 
@@ -78,6 +82,8 @@ export function IsoOffice({
   const notes = useMemo(() => latestTodoNotes(eventLog), [eventLog]);
   // A push or merge that just went through sets off confetti and claps.
   const shipped = useMemo(() => lastShipped(eventLog), [eventLog]);
+  // Each commit files a sheet in the tray on Claude's desk.
+  const commits = useMemo(() => commitsMade(eventLog), [eventLog]);
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<IsoView | null>(null);
   /** The session snapshot the people on the floor were placed from. */
@@ -131,6 +137,10 @@ export function IsoOffice({
   useEffect(() => {
     viewRef.current?.setShipped(shipped);
   }, [shipped]);
+
+  useEffect(() => {
+    viewRef.current?.setCommits(commits);
+  }, [commits]);
 
   // Keep the people on the floor in step with the session.
   useEffect(() => {
