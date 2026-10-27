@@ -427,9 +427,10 @@ export function poseCharacter(
   }
   const seated = pose === "sit" || pose === "type" || pose === "phone";
   if (act === "dismay") {
-    // Both hands up on its head, elbows out.
-    armL.rotation.set(-2.75, 0, 0.5);
-    armR.rotation.set(-2.75, 0, -0.5);
+    // Both hands up at the sides of its head, clutching it.
+    const clutch = 0.06 * Math.sin(seconds * 14);
+    armL.rotation.set(-0.5, 0, -2.55 + clutch);
+    armR.rotation.set(-0.5, 0, 2.55 - clutch);
     legL.rotation.x = seated ? -Math.PI / 2 : 0;
     legR.rotation.x = seated ? -Math.PI / 2 : 0;
     rig.hips.position.y = seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT;

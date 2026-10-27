@@ -349,8 +349,7 @@ export class IsoPeople {
       // Waiting on a long command, or cheering on its feet in a room, it
       // turns from the rack or shelf to face the room.
       const facesRoom =
-        act === "watch" ||
-        ((act === "cheer" || act === "dismay") && walker.pose === "work");
+        act === "watch" || (act === "cheer" && walker.pose === "work");
       placed.rig.root.rotation.y = facesRoom
         ? walker.facing + Math.PI
         : walker.facing;
