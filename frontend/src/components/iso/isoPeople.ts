@@ -55,6 +55,7 @@ import {
 import { liftLabels, type LabelBox, type Lift } from "@/systems/labelLift";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
+import { secondsSince } from "@/systems/officeRoster";
 import {
   choosePlace,
   placeKey,
@@ -495,7 +496,7 @@ export class IsoPeople {
             thinkingSeconds:
               placed.thinkingSince === null
                 ? null
-                : Math.max(0, Math.floor((now - placed.thinkingSince) / 1000)),
+                : secondsSince(placed.thinkingSince, now),
           }));
     const key = bubbleKey(bubble);
     if (key === placed.bubbleKey) return;

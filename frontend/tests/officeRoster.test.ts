@@ -4,9 +4,11 @@ import type { IsoPerson } from "@/systems/officePeople";
 import {
   logLines,
   rosterRows,
+  secondsSince,
   startedTasks,
   toolCounts,
   toolTargets,
+  untilNextSecond,
   type RosterWords,
 } from "@/systems/officeRoster";
 
@@ -257,5 +259,30 @@ describe("logLines", () => {
       "8",
       "7",
     ]);
+  });
+});
+
+describe("secondsSince", () => {
+  it("counts whole seconds, as the thinking bubble does", () => {
+    expect(secondsSince(1000, 1999)).toBe(0);
+    expect(secondsSince(1000, 2000)).toBe(1);
+    expect(secondsSince(1000, 35_900)).toBe(34);
+    // A start the clock has not reached yet counts as just now.
+    expect(secondsSince(5000, 4000)).toBe(0);
+  });
+});
+
+describe("untilNextSecond", () => {
+  it("waits for the row whose count goes up first", () => {
+    expect(untilNextSecond([0], 2300)).toBe(700);
+    expect(untilNextSecond([0, 1900], 2300)).toBe(600);
+    expect(untilNextSecond([2300], 2300)).toBe(1000);
+  });
+
+  it("waits at most a second", () => {
+    expect(untilNextSecond([], 2300)).toBe(1000);
+    // A start ahead of this clock (another machine's time) counts from there.
+    expect(untilNextSecond([2500], 2300)).toBe(200);
+    expect(untilNextSecond([9000], 2300)).toBe(1000);
   });
 });
