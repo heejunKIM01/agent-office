@@ -284,6 +284,17 @@ def test_session_list_says_which_sessions_wait_for_the_next_prompt():
     assert idle[delegating] is False
 
 
+def test_session_list_says_which_sessions_did_anything():
+    """A terminal opened and left waiting has done no work; one prompted has."""
+    opened, prompted = _seed_session(), _seed_session()
+    _send(opened, EventType.NOTIFICATION, message="Claude is waiting for your input")
+    _seed_prompts(prompted, "Fix the login timeout")
+
+    worked = {s["id"]: s["hasWork"] for s in client.get("/api/v1/sessions").json()}
+    assert worked[opened] is False
+    assert worked[prompted] is True
+
+
 def _seed_prompts(session_id: str, *prompts: str) -> None:
     for prompt in prompts:
         event = EventAdapter.validate_python(
