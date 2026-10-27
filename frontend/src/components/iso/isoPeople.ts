@@ -71,6 +71,7 @@ import {
   bubbleHolder,
   bubbleKey,
   drawBubble,
+  SNORE,
   type BubbleWords,
 } from "./isoBubbles";
 import {
@@ -498,7 +499,7 @@ export class IsoPeople {
       person.breakRoom === "cafe"
         ? { kind: "speech", text: this.words.compacting }
         : act === "doze"
-          ? { kind: "speech", text: "💤" }
+          ? SNORE
           : undefined;
     const bubble =
       onTrip !== undefined

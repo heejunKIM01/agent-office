@@ -1,9 +1,12 @@
 /**
  * Bubbles over the people of the isometric office, drawn as HTML so the text
  * stays sharp (see systems/officeBubbles.ts for which one shows). Text from
- * the session goes in through textContent only.
+ * the session goes in through textContent only. The office pets snore in
+ * the same bubble a person dozing on the sofa does.
  */
 
+import type * as THREE from "three";
+import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import type { IsoBubble } from "@/systems/officeBubbles";
 
 /** Words the bubbles need, already translated. */
@@ -34,11 +37,17 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-/** The empty holder a person's bubble is drawn into. */
-export function bubbleHolder(): HTMLDivElement {
+/** A bubble with words in it: thought, said or gone wrong. */
+type SaidBubble = Extract<IsoBubble, { kind: "thought" | "speech" | "failed" }>;
+
+/** Asleep, a person on the sofa or a pet snores. */
+export const SNORE: SaidBubble = { kind: "speech", text: "💤" };
+
+/** The empty holder a bubble is drawn into, with room under it for a name chip or not. */
+export function bubbleHolder(overChip = true): HTMLDivElement {
   return el(
     "div",
-    `pointer-events-none flex flex-col items-center ${ABOVE_CHIP}`,
+    `pointer-events-none flex flex-col items-center ${overChip ? ABOVE_CHIP : ""}`,
   );
 }
 
@@ -112,6 +121,11 @@ export function drawBubble(
     holder.append(box);
     return;
   }
+  drawSaid(holder, bubble);
+}
+
+/** Something thought, said or gone wrong, in a rounded box with a tail. */
+function drawSaid(holder: HTMLElement, bubble: SaidBubble): void {
   const styles: Record<"thought" | "speech" | "failed", string> = {
     thought:
       "border-violet-200 bg-violet-50/95 text-slate-700 dark:border-violet-400/40 dark:bg-[#231d3a] dark:text-violet-100",
@@ -132,4 +146,27 @@ export function drawBubble(
     `-mt-[5px] h-2.5 w-2.5 rotate-45 border-b border-r ${styles[bubble.kind]}`,
   );
   holder.append(box, tail);
+}
+
+/**
+ * A pet's snore: 「💤」 ``height`` up off ``parent`` (just over its head, in
+ * its own space) while it sleeps. It has no name chip under it. Call the
+ * returned function each frame with whether it sleeps.
+ */
+export function petSnore(
+  parent: THREE.Object3D,
+  height: number,
+): (asleep: boolean) => void {
+  const holder = bubbleHolder(false);
+  const label = new CSS2DObject(holder);
+  label.center.set(0.5, 1);
+  label.position.y = height;
+  parent.add(label);
+  let shown = false;
+  return (asleep) => {
+    if (asleep === shown) return;
+    shown = asleep;
+    holder.replaceChildren();
+    if (asleep) drawSaid(holder, SNORE);
+  };
 }

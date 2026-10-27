@@ -19,6 +19,7 @@ import {
 } from "@/systems/officeDog";
 import { petActOf, sightingOf, type PetSighting } from "@/systems/officePets";
 import { HEARTS_MS, PARTY_MS } from "@/systems/roomGimmicks";
+import { petSnore } from "./isoBubbles";
 import { heartGeometry } from "./isoCharacters";
 import { box, material } from "./isoFurniture";
 import { ISO_COLORS } from "./isoPalette";
@@ -40,6 +41,8 @@ const COLORS = {
 /** The camera looks from 45°: turned this way the heart faces it. */
 const FACE_CAMERA = Math.PI / 4;
 const BALL_RADIUS = 0.15;
+/** Its 💤 shows this high over its feet, in its own space. */
+const SNORE_HEIGHT = 0.6;
 /** Where its ball sits in its mouth, in its head's own space. */
 const IN_MOUTH = new THREE.Vector3(0, 0.03, 0.34);
 
@@ -249,6 +252,7 @@ function poseDog(
 
 export class IsoDog {
   private readonly rig = buildDog();
+  private readonly snore = petSnore(this.rig.root, SNORE_HEIGHT);
   private readonly ball: THREE.Mesh;
   private readonly office: THREE.Object3D;
   private dog: OfficeDog | null = null;
@@ -323,7 +327,9 @@ export class IsoDog {
         : null;
     root.position.set(this.dog.x, this.dog.y, this.dog.z);
     root.rotation.y = this.dog.facing;
-    poseDog(this.rig, petActOf(this.dog), seconds, thanks === null ? 9 : 22);
+    const act = petActOf(this.dog);
+    poseDog(this.rig, act, seconds, thanks === null ? 9 : 22);
+    this.snore(act === "sleep");
 
     // Its ball: on the floor where it left it, or in its mouth.
     const { ball } = this.dog;
