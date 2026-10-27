@@ -265,8 +265,6 @@ export function createIsoView(
     effects.update(now / 1000, dt, people.update(now, dt));
     renderer.render(scene, camera);
     labels.render(scene, camera);
-    const view = labels.getSize();
-    people.liftCrowdedLabels(camera, view.width, view.height);
     frame = requestAnimationFrame(loop);
   };
   frame = requestAnimationFrame(loop);

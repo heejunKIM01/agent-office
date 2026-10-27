@@ -59,6 +59,8 @@ const OUTFIT_LOOKS: Record<Exclude<Outfit, "general">, Look> = {
 const SCALE = 1.1;
 const HIP_HEIGHT = 0.75;
 const SEATED_HIP_HEIGHT = 0.52;
+/** How far over the hips the name chip sits. */
+const CHIP_OVER_HIPS = 2.2;
 const STRIDE_RATE = 9;
 
 export interface CharacterRig {
@@ -302,9 +304,11 @@ export function buildCharacter(
   hearts.visible = false;
   hips.add(hearts);
 
+  // On the root, not the hips: a stride, hop, lean or rock leaves the chip
+  // and bubble still (poseCharacter sets its height).
   const chipAnchor = new THREE.Object3D();
-  chipAnchor.position.set(0, 2.2, 0);
-  hips.add(chipAnchor);
+  chipAnchor.position.set(0, HIP_HEIGHT + CHIP_OVER_HIPS, 0);
+  root.add(chipAnchor);
 
   return {
     root,
@@ -527,6 +531,9 @@ export function poseCharacter(
   const pastime =
     pose === "sit" && !stuck && act !== null && isPastime(act) ? act : null;
   const waiting = pose === "work" && !stuck && act === "watch";
+  const seated = pose === "sit" || pose === "type" || pose === "phone";
+  rig.chipAnchor.position.y =
+    (seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT) + CHIP_OVER_HIPS;
   rig.watch.visible = waiting;
   rig.book.visible =
     (pose === "work" && room === "library" && !stuck) || pastime === "book";
@@ -551,7 +558,6 @@ export function poseCharacter(
       HIP_HEIGHT + 0.05 * Math.abs(Math.cos(seconds * STRIDE_RATE));
     return;
   }
-  const seated = pose === "sit" || pose === "type" || pose === "phone";
   if (act === "dismay") {
     // Both hands up at the sides of its head, clutching it.
     const clutch = 0.06 * Math.sin(seconds * 14);
