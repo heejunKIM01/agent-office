@@ -11,9 +11,10 @@
  * is done stays listed as leaving, so it can report and go home. Explore
  * wears green and Plan purple (작성자 댓글).
  *
- * Other sessions working on the same floor send their lead agent in as a
- * colleague: it takes a free dev chair and walks to the rooms its own
- * session works in.
+ * Other sessions working on the same floor (or on every floor, when the
+ * office has them all) send their lead agent in as a colleague: it takes a
+ * free chair and walks to the rooms its own session works in. Its chip then
+ * starts with its floor, 「3F · Claude · 작업 제목」.
  */
 
 import type { BreakRoomId } from "@/constants/isoFloorPlan";
@@ -77,14 +78,18 @@ export interface IsoPerson {
   /** The same tool has failed it several times in a row: a rain cloud over its head. */
   rainCloud: boolean;
   outfit: Outfit;
+  /** A colleague's floor, when the office has every floor. */
+  floor: number | null;
 }
 
-/** Another session's lead agent on this floor, as `/ws/overview` reports it. */
+/** Another session's lead agent in the office, as `/ws/overview` reports it. */
 export interface Colleague {
   sessionId: string;
   /** Its lead agent's name and its session's title, for the chip. */
   agentName: string;
   title: string;
+  /** Its floor's number, shown when the office has every floor. */
+  floor: number | null;
   activity: Activity | null;
   stuck: StuckReason | null;
   bubble: BubbleContent | null;
@@ -267,6 +272,7 @@ export function officePeople(
       failedTest: lastFailedTestId(state.eventLog, "main"),
       rainCloud: failuresInARow(state.eventLog, "main") >= CLOUD_AFTER_FAILURES,
       outfit: "general",
+      floor: null,
     },
     {
       id: "me",
@@ -289,6 +295,7 @@ export function officePeople(
       failedTest: null,
       rainCloud: false,
       outfit: "general",
+      floor: null,
     },
   ];
   for (const agent of state.agents.values()) {
@@ -316,13 +323,20 @@ export function officePeople(
       rainCloud:
         failuresInARow(state.eventLog, agent.id) >= CLOUD_AFTER_FAILURES,
       outfit: outfitOf(agent.agentType),
+      floor: null,
     });
   }
   for (const colleague of colleagues) {
     people.push({
       id: `colleague:${colleague.sessionId}`,
       kind: "colleague",
-      label: `${colleague.agentName} · ${colleague.title}`,
+      label: [
+        colleague.floor === null ? null : `${colleague.floor}F`,
+        colleague.agentName,
+        colleague.title,
+      ]
+        .filter(Boolean)
+        .join(" · "),
       title: colleague.title,
       typeLabel: colleague.agentName,
       ...doing(colleague.activity, colleague.stuck),
@@ -339,6 +353,7 @@ export function officePeople(
       failedTest: null,
       rainCloud: false,
       outfit: "general",
+      floor: colleague.floor,
     });
   }
   return people;

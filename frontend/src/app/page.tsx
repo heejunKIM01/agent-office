@@ -26,14 +26,14 @@ import {
   useGameStore,
 } from "@/stores/gameStore";
 import {
-  selectShowFloorColleagues,
+  selectOfficeView,
   selectTheme,
   usePreferencesStore,
 } from "@/stores/preferencesStore";
 import {
   buildFloors,
-  floorColleagues,
   floorOfSession,
+  officeColleagues,
   sessionTitle,
 } from "@/systems/floors";
 import { initApiKeyFromBrowser } from "@/utils/api";
@@ -77,12 +77,12 @@ export default function IsoOfficePage(): React.ReactNode {
   const now = useNow(15_000);
   const floors = useMemo(() => buildFloors(sessions, now), [sessions, now]);
   const floor = floorOfSession(floors, sessionId);
-  // Other sessions working on this floor send their lead agent in too,
-  // unless the office is set to show only the chosen session.
-  const together = usePreferencesStore(selectShowFloorColleagues);
+  // Other sessions working on this floor (or on every floor) send their
+  // lead agent in too, unless the office shows only the chosen session.
+  const view = usePreferencesStore(selectOfficeView);
   const colleagueSessions = useMemo(
-    () => (together ? floorColleagues(floor, sessionId, now) : []),
-    [together, floor, sessionId, now],
+    () => officeColleagues(floors, sessionId, view, now),
+    [floors, sessionId, view, now],
   );
   const leadName = useCodingAgentName();
   const colleagues = useFloorColleagues(colleagueSessions, leadName);

@@ -11,9 +11,9 @@ const en = {
   "settings.autoFollow": "Auto-follow new sessions",
   "settings.autoFollowDesc":
     "Automatically switch to new sessions in the current project",
-  "settings.floorTogether": "Show the floor's other sessions",
-  "settings.floorTogetherDesc":
-    "Claude from other sessions working on the same floor joins the office. Off shows only the chosen session.",
+  "settings.officeView": "Show in the office",
+  "settings.officeViewDesc":
+    "Claude from other sessions working now joins the office. All floors brings every project into one office.",
   "settings.language": "Language",
   "settings.theme": "Theme",
   "settings.theme.light": "Light",
@@ -76,6 +76,7 @@ const en = {
   "iso.panel.tools": "{count} tools · {seconds}s",
   "iso.panel.tools_one": "{count} tool · {seconds}s",
   "iso.panel.colleague": "Another session on this floor · {seconds}s",
+  "iso.panel.colleagueOn": "Another session on {floor}F · {seconds}s",
   "iso.panel.tools_other": "{count} tools · {seconds}s",
   "iso.panel.log": "Activity log",
   "iso.panel.logTime": "{h}:{m}:{s}",
@@ -107,7 +108,9 @@ const en = {
   "iso.floor.sessions_other": "{count} sessions",
   "iso.floor.activeNow": "Active now",
   "iso.floor.follow": "Follow the latest session",
-  "iso.floor.together": "Show the floor's other sessions",
+  "iso.floor.view.session": "Session",
+  "iso.floor.view.floor": "Floor",
+  "iso.floor.view.building": "All floors",
   "iso.floor.untitled": "Untitled session · {id}",
   "iso.floor.moreIdle": "{count} more quiet floors",
   "iso.floor.moreIdle_one": "{count} more quiet floor",

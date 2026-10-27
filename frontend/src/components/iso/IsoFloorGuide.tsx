@@ -3,8 +3,9 @@
 /**
  * The left-hand 「층별 안내」 of the isometric office (docs/plan/spec.md
  * 「화면 재설계」, after the video): a card per floor (project) top floor
- * first, the floor being viewed open with 「최근 세션 자동으로 따라가기」 and
- * its sessions (past ones folded under 「지난 세션 N개 더 보기」), and the
+ * first, the floor being viewed open with 「최근 세션 자동으로 따라가기」,
+ * whose lead agents the office shows (세션만 · 같은 층 · 모든 층) and its
+ * sessions (past ones folded under 「지난 세션 N개 더 보기」), and the
  * quiet floors folded under 「오래 쉰 층 N개 더 보기」.
  * ``className`` places it: a column beside the office, or a sheet on phones.
  */
@@ -15,12 +16,13 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { dateFnsLocaleFor } from "@/i18n/dateLocale";
 import {
   selectAutoFollowNewSessions,
-  selectShowFloorColleagues,
+  selectOfficeView,
   usePreferencesStore,
 } from "@/stores/preferencesStore";
 import {
   floorOfSession,
   isActiveNow,
+  OFFICE_VIEWS,
   sessionTitle,
   splitFloors,
   splitSessions,
@@ -63,8 +65,8 @@ export function IsoFloorGuide({
   const { t, language } = useTranslation();
   const autoFollow = usePreferencesStore(selectAutoFollowNewSessions);
   const setAutoFollow = usePreferencesStore((s) => s.setAutoFollowNewSessions);
-  const together = usePreferencesStore(selectShowFloorColleagues);
-  const setTogether = usePreferencesStore((s) => s.setShowFloorColleagues);
+  const view = usePreferencesStore(selectOfficeView);
+  const setView = usePreferencesStore((s) => s.setOfficeView);
   const [showIdle, setShowIdle] = useState(false);
   const [showPast, setShowPast] = useState(false);
 
@@ -171,25 +173,39 @@ export function IsoFloorGuide({
                       </span>
                       {t("iso.floor.follow")}
                     </button>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={together}
-                      onClick={() => void setTogether(!together)}
-                      className={`mb-0.5 flex w-full items-center gap-1 rounded-md px-1 py-1 text-left text-[10.5px] hover:bg-slate-50 dark:hover:bg-slate-800 ${
-                        together
-                          ? "text-slate-600 dark:text-slate-300"
-                          : "text-slate-400 dark:text-slate-500"
-                      }`}
+                    <div
+                      role="radiogroup"
+                      aria-label="office view"
+                      title={t("settings.officeView")}
+                      className="mb-1 flex items-center gap-1 px-1 py-0.5"
                     >
                       <span
                         aria-hidden="true"
-                        className={together ? "" : "opacity-40 grayscale"}
+                        className={
+                          view === "session" ? "opacity-40 grayscale" : ""
+                        }
                       >
                         👥
                       </span>
-                      {t("iso.floor.together")}
-                    </button>
+                      <span className="flex min-w-0 flex-1 rounded-md bg-slate-100 p-0.5 dark:bg-slate-800">
+                        {OFFICE_VIEWS.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            role="radio"
+                            aria-checked={view === option}
+                            onClick={() => void setView(option)}
+                            className={`flex-auto whitespace-nowrap rounded px-1 py-0.5 text-[10px] ${
+                              view === option
+                                ? "bg-white font-bold text-slate-800 shadow-sm dark:bg-slate-600 dark:text-white"
+                                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                            }`}
+                          >
+                            {t(`iso.floor.view.${option}`)}
+                          </button>
+                        ))}
+                      </span>
+                    </div>
                     <ul className="-mr-1 flex max-h-[42vh] flex-col overflow-y-auto pr-1">
                       {(showPast ? floor.sessions : recent).map((session) => {
                         const here = session.id === sessionId;

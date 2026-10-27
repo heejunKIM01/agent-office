@@ -125,7 +125,7 @@ export function IsoSidePanel({
   className,
 }: {
   session: Session | undefined;
-  /** Other sessions' lead agents working on this floor. */
+  /** Other sessions' lead agents working on this floor, or on every floor. */
   colleagues: Colleague[];
   className: string;
 }): React.ReactNode {
@@ -259,9 +259,14 @@ export function IsoSidePanel({
                 <p className="text-[10px] text-slate-400">
                   {/* Its tools are logged in its own session, not this one. */}
                   {row.kind === "colleague"
-                    ? t("iso.panel.colleague", {
-                        seconds: seconds.get(row.id) ?? 0,
-                      })
+                    ? row.floor === null
+                      ? t("iso.panel.colleague", {
+                          seconds: seconds.get(row.id) ?? 0,
+                        })
+                      : t("iso.panel.colleagueOn", {
+                          floor: row.floor,
+                          seconds: seconds.get(row.id) ?? 0,
+                        })
                     : t("iso.panel.tools", {
                         count: row.tools,
                         seconds: seconds.get(row.id) ?? 0,

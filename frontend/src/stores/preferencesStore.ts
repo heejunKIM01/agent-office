@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { isLocale, type Locale } from "@/i18n";
+import { OFFICE_VIEWS, type OfficeView } from "@/systems/floors";
 import { apiFetch } from "@/utils/api";
 import {
   DEFAULT_THEME,
@@ -17,8 +18,8 @@ import {
 
 export interface PreferencesState {
   autoFollowNewSessions: boolean;
-  /** The office also shows the floor's other working sessions (off: only the chosen one). */
-  showFloorColleagues: boolean;
+  /** Whose lead agents the office shows besides the chosen session's. */
+  officeView: OfficeView;
   language: Locale;
   theme: Theme;
   isLoaded: boolean;
@@ -26,7 +27,7 @@ export interface PreferencesState {
   // Actions
   loadPreferences: () => Promise<void>;
   setAutoFollowNewSessions: (enabled: boolean) => Promise<void>;
-  setShowFloorColleagues: (enabled: boolean) => Promise<void>;
+  setOfficeView: (view: OfficeView) => Promise<void>;
   setLanguage: (language: Locale) => Promise<void>;
   setTheme: (theme: Theme) => Promise<void>;
 }
@@ -38,7 +39,7 @@ export interface PreferencesState {
 const PREFS_PATH = "/api/v1/preferences";
 
 const DEFAULT_AUTO_FOLLOW_NEW_SESSIONS = true;
-const DEFAULT_SHOW_FLOOR_COLLEAGUES = true;
+const DEFAULT_OFFICE_VIEW: OfficeView = "floor";
 const DEFAULT_LANGUAGE: Locale = "en";
 
 // ============================================================================
@@ -55,6 +56,19 @@ async function fetchPreferences(): Promise<Record<string, string>> {
     console.warn("[preferences] Failed to fetch:", err);
   }
   return {};
+}
+
+const isOfficeView = (value: string | undefined): value is OfficeView =>
+  (OFFICE_VIEWS as readonly (string | undefined)[]).includes(value);
+
+/**
+ * The saved view, else the one the old 「같은 층 세션 함께 보기」 switch
+ * (`show_floor_colleagues`) stands for.
+ */
+function savedOfficeView(prefs: Record<string, string>): OfficeView {
+  if (isOfficeView(prefs.office_view)) return prefs.office_view;
+  if (prefs.show_floor_colleagues === "false") return "session";
+  return DEFAULT_OFFICE_VIEW;
 }
 
 async function setPreference(key: string, value: string): Promise<void> {
@@ -75,7 +89,7 @@ async function setPreference(key: string, value: string): Promise<void> {
 
 export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
   autoFollowNewSessions: DEFAULT_AUTO_FOLLOW_NEW_SESSIONS,
-  showFloorColleagues: DEFAULT_SHOW_FLOOR_COLLEAGUES,
+  officeView: DEFAULT_OFFICE_VIEW,
   language: DEFAULT_LANGUAGE,
   // This browser's last theme until the saved preference arrives.
   theme: readStoredTheme() ?? DEFAULT_THEME,
@@ -89,11 +103,6 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
       autoFollowRaw === undefined
         ? DEFAULT_AUTO_FOLLOW_NEW_SESSIONS
         : autoFollowRaw === "true";
-    const colleaguesRaw = prefs.show_floor_colleagues;
-    const showFloorColleagues =
-      colleaguesRaw === undefined
-        ? DEFAULT_SHOW_FLOOR_COLLEAGUES
-        : colleaguesRaw === "true";
     const language = prefs.language || DEFAULT_LANGUAGE;
     // No saved theme yet: keep the one this browser used.
     const theme = isTheme(prefs.theme) ? prefs.theme : get().theme;
@@ -101,7 +110,7 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
 
     set({
       autoFollowNewSessions,
-      showFloorColleagues,
+      officeView: savedOfficeView(prefs),
       language: isLocale(language) ? language : DEFAULT_LANGUAGE,
       theme,
       isLoaded: true,
@@ -113,9 +122,9 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
     await setPreference("auto_follow_new_sessions", String(enabled));
   },
 
-  setShowFloorColleagues: async (enabled) => {
-    set({ showFloorColleagues: enabled });
-    await setPreference("show_floor_colleagues", String(enabled));
+  setOfficeView: async (view) => {
+    set({ officeView: view });
+    await setPreference("office_view", view);
   },
 
   setLanguage: async (language) => {
@@ -136,8 +145,7 @@ export const usePreferencesStore = create<PreferencesState>()((set, get) => ({
 
 export const selectAutoFollowNewSessions = (state: PreferencesState) =>
   state.autoFollowNewSessions;
-export const selectShowFloorColleagues = (state: PreferencesState) =>
-  state.showFloorColleagues;
+export const selectOfficeView = (state: PreferencesState) => state.officeView;
 export const selectLanguage = (state: PreferencesState) => state.language;
 export const selectTheme = (state: PreferencesState) => state.theme;
 export const selectIsLoaded = (state: PreferencesState) => state.isLoaded;

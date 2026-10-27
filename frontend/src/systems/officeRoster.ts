@@ -35,6 +35,8 @@ export interface RosterRow {
   tools: number;
   /** When its latest event came (ms); null when the page cannot tell. */
   since: number | null;
+  /** A colleague's floor, when the office has every floor. */
+  floor: number | null;
 }
 
 /** Whole seconds from ``at`` to ``now`` (ms), as the thinking bubble counts them. */
@@ -138,6 +140,7 @@ export function rosterRows(
         doingInFull: doingInFull ?? doing,
         tools: counts.get(logId(person)) ?? 0,
         since: person.since,
+        floor: person.floor,
       };
     });
 }

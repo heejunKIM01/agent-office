@@ -13,9 +13,9 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.autoFollow": "Seguir novas sessões automaticamente",
   "settings.autoFollowDesc":
     "Alternar automaticamente para novas sessões no projeto atual",
-  "settings.floorTogether": "Ver as outras sessões do andar",
-  "settings.floorTogetherDesc":
-    "O Claude de outras sessões trabalhando no mesmo andar entra no escritório. Desligado, só aparece a sessão escolhida.",
+  "settings.officeView": "Ver no escritório",
+  "settings.officeViewDesc":
+    "O Claude de outras sessões trabalhando agora entra no escritório. Todos reúne todos os projetos em um só escritório.",
   "settings.language": "Idioma",
   "settings.theme": "Tema",
   "settings.theme.light": "Claro",
@@ -79,6 +79,7 @@ const ptBR: Record<TranslationKey, string> = {
   "iso.panel.tools": "{count} ferramentas · {seconds}s",
   "iso.panel.tools_one": "{count} ferramenta · {seconds}s",
   "iso.panel.colleague": "Outra sessão deste andar · {seconds}s",
+  "iso.panel.colleagueOn": "Outra sessão do {floor}F · {seconds}s",
   "iso.panel.tools_other": "{count} ferramentas · {seconds}s",
   "iso.panel.log": "Registro de atividade",
   "iso.panel.logTime": "{h}:{m}:{s}",
@@ -110,7 +111,9 @@ const ptBR: Record<TranslationKey, string> = {
   "iso.floor.sessions_other": "{count} sessões",
   "iso.floor.activeNow": "Ativo agora",
   "iso.floor.follow": "Seguir a sessão mais recente",
-  "iso.floor.together": "Ver as outras sessões do andar",
+  "iso.floor.view.session": "Sessão",
+  "iso.floor.view.floor": "Andar",
+  "iso.floor.view.building": "Todos",
   "iso.floor.untitled": "Sessão sem título · {id}",
   "iso.floor.moreIdle": "Mais {count} andares parados",
   "iso.floor.moreIdle_one": "Mais {count} andar parado",
