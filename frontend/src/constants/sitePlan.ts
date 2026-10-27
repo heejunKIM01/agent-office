@@ -129,3 +129,81 @@ export const DETOURS = [
 
 /** Where the camera looks when the view is reset. */
 export const SITE_CENTER = { x: SITE_WIDTH / 2, z: SITE_DEPTH / 2 };
+
+/**
+ * The construction hoist at the building's front-left corner. Workers who
+ * edit code wait at its foot, ride its cage up the scaffold and step off
+ * on the roof; on their way anywhere else they ride it down again.
+ */
+export const HOIST = { x: BUILDING.x - 1, z: BUILDING.z + BUILDING.d + 0.6 };
+export const HOIST_FOOT = { x: HOIST.x, z: HOIST.z + 1.8 };
+export const HOIST_TOP = {
+  x: BUILDING.x + 1.2,
+  z: BUILDING.z + BUILDING.d - 1.2,
+};
+/** How fast the hoist's cage climbs (m/s). */
+export const HOIST_SPEED = 2.4;
+
+/** Editing workers on the roof, one over each scaffold spot. */
+export const ROOF_SPOTS: SiteSpot[] = WORK_SPOTS.build.map(({ x }) => ({
+  x,
+  z: BUILDING.z + BUILDING.d - 2.2,
+  facing: FACING_BACK,
+}));
+
+/** Where the excavator digs, and where it heaps the earth with no truck by. */
+export const DIG_PIT = { x: EXCAVATOR.x - 4.5, z: EXCAVATOR.z };
+export const DIRT_HEAP = { x: EXCAVATOR.x - 4, z: EXCAVATOR.z - 4.5 };
+
+/** A leg of a truck's drive: to a point, forwards or backing up. */
+export interface DriveLeg {
+  x: number;
+  z: number;
+  reverse?: boolean;
+}
+
+const IN_LANE = GATE.x - 2;
+const OUT_LANE = GATE.x + 2;
+const OUTSIDE_Z = SITE_DEPTH + 3.5;
+
+/** Trucks come in up the left of the gate and leave down its right. */
+export const TRUCK_START = { x: IN_LANE, z: OUTSIDE_Z, heading: Math.PI };
+
+/**
+ * The concrete mixer backs up to the building's right side to pour, and
+ * the dump truck backs up beside the excavator to be loaded.
+ */
+export const MIXER_STOP = {
+  x: BUILDING.x + BUILDING.w + 2.5,
+  z: BUILDING.z + 8,
+};
+export const DUMP_STOP = { x: EXCAVATOR.x + 3.5, z: EXCAVATOR.z - 5 };
+
+export const TRUCK_ROUTES: Record<
+  "mixer" | "dump",
+  { in: DriveLeg[]; out: DriveLeg[] }
+> = {
+  mixer: {
+    in: [
+      { x: IN_LANE, z: BUILDING.z + BUILDING.d + 5 },
+      { x: MIXER_STOP.x, z: BUILDING.z + BUILDING.d + 5 },
+      { x: MIXER_STOP.x, z: MIXER_STOP.z, reverse: true },
+    ],
+    out: [
+      { x: MIXER_STOP.x, z: BUILDING.z + BUILDING.d + 5 },
+      { x: OUT_LANE, z: BUILDING.z + BUILDING.d + 5.5 },
+      { x: OUT_LANE, z: OUTSIDE_Z },
+    ],
+  },
+  dump: {
+    in: [
+      { x: IN_LANE, z: DUMP_STOP.z },
+      { x: DUMP_STOP.x, z: DUMP_STOP.z, reverse: true },
+    ],
+    out: [
+      { x: IN_LANE + 1, z: DUMP_STOP.z },
+      { x: OUT_LANE, z: DUMP_STOP.z + 6 },
+      { x: OUT_LANE, z: OUTSIDE_Z },
+    ],
+  },
+};

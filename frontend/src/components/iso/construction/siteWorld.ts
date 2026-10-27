@@ -9,12 +9,14 @@
  * People walk to the spot their tool calls for (systems/siteWalk.ts):
  * the plan table to read, the building's scaffold to edit, the excavator
  * to run commands, the yard for the web and outside tools, the schedule
- * board for plans, and me for a question. Between turns the manager sits
+ * board for plans, and me for a question. Workers who edit ride the
+ * hoist up and work on the roof. Between turns the manager sits
  * in the rest tent, with a coffee while the conversation is compacted,
  * and nods off after a long rest. A new worker comes in through the gate
  * and a finished one walks out through it. Each commit has the crane lift
- * a slab onto the roof, one more floor; the schedule board shows the
- * to-do list.
+ * a slab onto the roof, one more floor, and a concrete mixer comes to
+ * pour; the excavator digs while someone runs a command, and a dump truck
+ * comes for the earth. The schedule board shows the to-do list.
  */
 
 import * as THREE from "three";
@@ -22,6 +24,10 @@ import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import {
   BUILDING,
   GATE,
+  HOIST,
+  HOIST_FOOT,
+  HOIST_TOP,
+  ROOF_SPOTS,
   MAX_FLOORS,
   FLOOR_HEIGHT,
   FOUNDATION_HEIGHT,
@@ -37,6 +43,7 @@ import {
 } from "@/constants/sitePlan";
 import { myQuestion, secondsBetween, type TalkLine } from "@/systems/placeTalk";
 import type { NoteStatus } from "@/systems/roomGimmicks";
+import { rideSeconds } from "@/systems/siteMachines";
 import { siteLine, type SiteWords } from "@/systems/siteTalk";
 import {
   floorsFor,
@@ -95,6 +102,12 @@ interface Placed {
   ghost: boolean;
   /** What it says on its way out, read as it leaves. */
   report: string | null;
+  /** On the ground or up on the roof. */
+  level: "ground" | "roof";
+  /** The hoist ride to take once the walk ends, up or down. */
+  board: "up" | "down" | null;
+  /** In the hoist's cage: from what height, which way, since when (ms). */
+  ride: { from: number; up: boolean; start: number } | null;
 }
 
 /** A worker's hard-hat colour and the letter of its crew. */
@@ -157,6 +170,8 @@ class Site implements IsoWorld {
   /** The next commit count is a snapshot: the building just stands at it. */
   private commitsFresh = true;
   private targetFloors = 1;
+  /** The hoist's cage: where its last rider left it. */
+  private cageY = 0;
   private readonly sign: CSS2DObject;
   private readonly signText: HTMLSpanElement;
 
@@ -268,31 +283,36 @@ class Site implements IsoWorld {
       thinkingSince: null,
       ghost: false,
       report: null,
+      level: "ground",
+      board: null,
+      ride: null,
     };
     this.placed.set(person.id, placed);
     this.name(placed);
     if (person.kind === "me") return;
-    // A snapshot finds everyone at work already; a worker made while the
-    // site is watched comes in through the gate.
+    // A snapshot finds everyone at work already (editing workers up on the
+    // roof); a worker made while the site is watched comes in through the gate.
     const inSnapshot = this.fresh || performance.now() < this.snapshotUntil;
     const goal = this.goalFor(placed);
-    const target = this.targetOf(person.id, goal);
+    placed.goal = goal;
     if (inSnapshot || !works) {
+      const target = this.targetOf(placed, goal);
       placed.walker = {
         x: target.x,
         z: target.z,
         facing: target.facing,
         path: [],
       };
+      if (this.onRoof(placed, goal)) placed.level = "roof";
     } else {
       placed.walker = {
         x: OUTSIDE.x,
         z: OUTSIDE.z,
         facing: OUTSIDE.facing,
-        path: [GATE_INSIDE, ...routeTo(GATE_INSIDE, target)],
+        path: [],
       };
+      this.plan(placed);
     }
-    placed.goal = goal;
   }
 
   /** The code and title on a tag: 소장, 건축주 or a worker's number. */
@@ -343,13 +363,59 @@ class Site implements IsoWorld {
     return slot;
   }
 
-  private targetOf(id: string, goal: Goal): SiteSpot {
+  /** Workers who edit code work up on the roof; the manager points from below. */
+  private onRoof(placed: Placed, goal: Goal): boolean {
+    return (
+      goal.kind === "spot" &&
+      goal.spot === "build" &&
+      placed.person.kind !== "claude"
+    );
+  }
+
+  private targetOf(placed: Placed, goal: Goal): SiteSpot {
+    if (this.onRoof(placed, goal) && goal.kind === "spot")
+      return ROOF_SPOTS[goal.slot];
     if (goal.kind === "spot") return WORK_SPOTS[goal.spot][goal.slot];
     if (goal.kind === "exit") return OUTSIDE;
-    const placed = this.placed.get(id);
-    return placed
-      ? { x: placed.walker.x, z: placed.walker.z, facing: placed.walker.facing }
-      : OWNER_SPOT;
+    const { walker } = placed;
+    return { x: walker.x, z: walker.z, facing: walker.facing };
+  }
+
+  /**
+   * Lay out the walk to the goal from where the person is: on the ground
+   * by way of the gate when outside, round the building, and by the hoist
+   * to get on or off the roof.
+   */
+  private plan(placed: Placed): void {
+    const { goal, walker } = placed;
+    const roofWork = this.onRoof(placed, goal);
+    placed.board = null;
+    if (placed.level === "roof") {
+      if (roofWork) {
+        walker.path = [this.targetOf(placed, goal)];
+      } else {
+        walker.path = [HOIST_TOP, HOIST];
+        placed.board = "down";
+      }
+      return;
+    }
+    const here = { x: walker.x, z: walker.z };
+    // Coming in from outside, or stepping out of the hoist's cage.
+    const lead: Point[] =
+      here.z > SITE_DEPTH
+        ? [GATE_INSIDE]
+        : Math.hypot(here.x - HOIST.x, here.z - HOIST.z) < 0.5
+          ? [HOIST_FOOT]
+          : [];
+    const from = lead[0] ?? here;
+    if (roofWork) {
+      walker.path = [...lead, ...routeTo(from, HOIST_FOOT), HOIST];
+      placed.board = "up";
+    } else if (goal.kind === "exit") {
+      walker.path = [...lead, ...routeTo(from, GATE_INSIDE), OUTSIDE];
+    } else {
+      walker.path = [...lead, ...routeTo(from, this.targetOf(placed, goal))];
+    }
   }
 
   update(now: number, dt: number): void {
@@ -363,19 +429,32 @@ class Site implements IsoWorld {
     const busy =
       manager !== undefined &&
       (manager.person.activity !== null || manager.person.thinking);
-    this.field.crane.update(now, busy, this.field.building.roofY);
+    const { crane, building, excavator, hoist, traffic } = this.field;
+    crane.update(now, busy, building.roofY);
+    // The excavator digs while someone runs a command at it.
+    const digging = [...this.placed.values()].some(
+      (p) =>
+        p.person.activity === "running" &&
+        p.goal.kind === "spot" &&
+        p.goal.spot === "machines" &&
+        p.walker.path.length === 0,
+    );
+    const dumps = excavator.update(dt, digging, traffic.loading);
+    if (traffic.loading) traffic.loaded(dumps);
+    traffic.update(now, dt, digging);
     const gone: string[] = [];
     for (const [id, placed] of this.placed) {
       if (placed.person.kind === "me") {
         this.tendOwner(placed, now, manager?.person ?? null);
         continue;
       }
-      if (this.move(placed, dt)) {
+      if (this.move(placed, dt, now)) {
         gone.push(id);
         continue;
       }
       this.work(placed, now);
     }
+    hoist.update(building.roofY, this.cageY);
     for (const id of gone) {
       const placed = this.placed.get(id);
       if (!placed) continue;
@@ -388,7 +467,7 @@ class Site implements IsoWorld {
   }
 
   /** Walk a person towards its goal; true when it has walked out of the gate. */
-  private move(placed: Placed, dt: number): boolean {
+  private move(placed: Placed, dt: number, now: number): boolean {
     const goal = this.goalFor(placed);
     const changed =
       goal.kind !== placed.goal.kind ||
@@ -397,19 +476,46 @@ class Site implements IsoWorld {
         (goal.spot !== placed.goal.spot || goal.slot !== placed.goal.slot));
     if (changed) {
       placed.goal = goal;
-      const here = { x: placed.walker.x, z: placed.walker.z };
-      placed.walker.path =
-        goal.kind === "exit"
-          ? [...routeTo(here, GATE_INSIDE), OUTSIDE]
-          : routeTo(here, this.targetOf(placed.person.id, goal));
+      // A rider finishes the ride first and plans from where it gets off.
+      if (!placed.ride) this.plan(placed);
+    }
+    const { figure } = placed;
+    const roofY = this.field.building.roofY;
+    if (placed.ride) {
+      const { from, up, start } = placed.ride;
+      const to = up ? roofY : 0;
+      const k = Math.min(1, (now - start) / (rideSeconds(to - from) * 1000));
+      const y = from + (to - from) * k;
+      this.cageY = y;
+      figure.root.position.set(HOIST.x, y, HOIST.z);
+      if (k >= 1) {
+        placed.ride = null;
+        placed.level = up ? "roof" : "ground";
+        placed.walker = { ...placed.walker, x: HOIST.x, z: HOIST.z, path: [] };
+        this.plan(placed);
+      }
+      return false;
     }
     placed.walker = stepWalk(placed.walker, dt);
-    const { walker, figure } = placed;
-    figure.root.position.set(walker.x, 0, walker.z);
-    if (walker.path.length === 0) {
-      if (goal.kind === "exit") return true;
-      const target = this.targetOf(placed.person.id, goal);
-      walker.facing = target.facing;
+    const { walker } = placed;
+    if (walker.path.length === 0 && placed.board) {
+      // At the cage: ride it up to the roof or down to the ground.
+      placed.ride = {
+        from: placed.level === "roof" ? roofY : 0,
+        up: placed.board === "up",
+        start: now,
+      };
+      placed.board = null;
+      walker.facing = 0;
+    }
+    figure.root.position.set(
+      walker.x,
+      placed.level === "roof" ? roofY : 0,
+      walker.z,
+    );
+    if (walker.path.length === 0 && !placed.ride) {
+      if (goal.kind === "exit") return placed.level === "ground";
+      walker.facing = this.targetOf(placed, goal).facing;
     }
     figure.root.rotation.y = walker.facing;
     return false;
@@ -430,7 +536,13 @@ class Site implements IsoWorld {
         detail: null,
         tone: "say",
       };
-      pose = walker.path.length > 0 ? "walk" : "wave";
+      pose = placed.ride
+        ? "stand"
+        : walker.path.length > 0 || placed.board
+          ? "walk"
+          : "wave";
+    } else if (placed.ride) {
+      pose = "stand";
     } else if (walker.path.length === 0 && goal.kind === "spot") {
       pose = this.poseAt(goal.spot, manager);
       if (goal.spot === "rest" && manager) {
@@ -565,7 +677,9 @@ class Site implements IsoWorld {
       this.showFloors();
       return;
     }
-    // A slab a commit: the crane sets each one on the roof in turn.
+    // A slab a commit: the crane sets each one on the roof in turn, and a
+    // mixer comes in to pour.
+    if (target > before) this.field.traffic.pour();
     for (let floor = before; floor < target; floor++) {
       crane.lift(() => {
         building.setFloors(
@@ -626,6 +740,7 @@ class Site implements IsoWorld {
 
   dispose(): void {
     this.clear();
+    this.field.traffic.dispose();
     this.sign.removeFromParent();
   }
 
