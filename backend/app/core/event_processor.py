@@ -764,12 +764,28 @@ class EventProcessor:
 
         Used by the ``/ws/overview`` connect path so the initial snapshot reads a
         consistent registry (no concurrent resize) without the caller touching
-        the private lock directly.
+        the private lock directly. Open sessions that are not in memory (lost
+        to a backend restart) are first rebuilt from the DB, so the office
+        knows what their lead is doing before their next event.
         """
         from app.core.overview import build_overview
 
+        for session_id in await self._open_sessions_not_in_memory():
+            await self._restore_session(session_id)
         async with self._sessions_lock:
             return build_overview(self.sessions)
+
+    async def _open_sessions_not_in_memory(self) -> list[str]:
+        """Open sessions missing from memory that idle eviction would still keep."""
+        cutoff = datetime.now(UTC) - timedelta(seconds=get_settings().SESSION_IDLE_EVICT_SECONDS)
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(SessionRecord.id).where(
+                    SessionRecord.status == "active", SessionRecord.updated_at >= cutoff
+                )
+            )
+            open_ids = result.scalars().all()
+        return [sid for sid in open_ids if sid not in self.sessions]
 
     # ------------------------------------------------------------------
     # DB helpers

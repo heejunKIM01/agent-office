@@ -6,15 +6,16 @@ session from its stored events. The arriving event must be applied once,
 and stored timestamps must come back as the same UTC instant.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.core.event_processor import EventProcessor
 from app.db import database
-from app.db.models import EventRecord
+from app.db.models import EventRecord, SessionRecord
+from app.models.agents import Activity
 from app.models.events import AnyEvent, EventAdapter, EventType
 
 
@@ -197,3 +198,54 @@ async def test_stored_timestamps_read_back_as_the_same_utc_instant() -> None:
 
     assert stored == seoul
     assert stored.tzinfo == UTC
+
+
+async def _reading(session_id: str) -> None:
+    ep = EventProcessor()
+    await ep.process_event(_event(EventType.SESSION_START, session_id))
+    await ep.process_event(_event(EventType.USER_PROMPT_SUBMIT, session_id, prompt="go"))
+    await ep.process_event(
+        _event(
+            EventType.PRE_TOOL_USE,
+            session_id,
+            tool_name="Read",
+            tool_use_id="t1",
+            tool_input={"file_path": "src/auth.py"},
+        )
+    )
+
+
+@pytest.mark.asyncio
+async def test_overview_after_restart_knows_what_open_sessions_are_doing() -> None:
+    # A colleague reading in the library goes on reading when the backend
+    # comes back, instead of walking to its desk until its next event.
+    sid = "restore-overview-open"
+    await _reading(sid)
+
+    overview = await EventProcessor().build_overview_snapshot()
+
+    entry = next(e for e in overview.entries if e.session_id == sid)
+    assert entry.activity == Activity.READING
+    assert entry.bubble is not None and "auth.py" in entry.bubble.text
+
+
+@pytest.mark.asyncio
+async def test_overview_after_restart_leaves_out_ended_and_long_idle_sessions() -> None:
+    ended, idle = "restore-overview-ended", "restore-overview-idle"
+    await _reading(ended)
+    await EventProcessor().process_event(_event(EventType.SESSION_END, ended))
+    await _reading(idle)
+    async with database.AsyncSessionLocal() as db:
+        await db.execute(
+            update(SessionRecord)
+            .where(SessionRecord.id == idle)
+            .values(updated_at=datetime.now(UTC) - timedelta(days=1))
+        )
+        await db.commit()
+
+    restarted = EventProcessor()
+    overview = await restarted.build_overview_snapshot()
+
+    shown = {e.session_id for e in overview.entries}
+    assert ended not in shown and idle not in shown
+    assert ended not in restarted.sessions and idle not in restarted.sessions
