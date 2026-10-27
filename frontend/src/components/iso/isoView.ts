@@ -18,6 +18,7 @@ import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
 import type { BubbleWords } from "./isoBubbles";
 import { IsoCat } from "./isoCat";
+import { IsoDog } from "./isoDog";
 import { IsoEffects } from "./isoEffects";
 import { setNightView } from "./isoFurniture";
 import { IsoPeople } from "./isoPeople";
@@ -207,6 +208,7 @@ export function createIsoView(
   const people = new IsoPeople(scene, onPersonLeft);
   const effects = new IsoEffects(office);
   const cat = new IsoCat(office);
+  const dog = new IsoDog(office);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
   const home = new THREE.Vector3(FLOOR_CENTER.x, 0, FLOOR_CENTER.z);
@@ -266,7 +268,10 @@ export function createIsoView(
     controls.update();
     const inUse = people.update(now, dt);
     effects.update(now / 1000, dt, inUse);
-    cat.update(now, dt, inUse);
+    // Each pet sees where the other was a frame ago.
+    const catSeen = cat.sighting();
+    cat.update(now, dt, inUse, dog.sighting());
+    dog.update(now, dt, inUse, catSeen);
     renderer.render(scene, camera);
     labels.render(scene, camera);
     frame = requestAnimationFrame(loop);
@@ -306,6 +311,7 @@ export function createIsoView(
       if (!fresh) return;
       people.hearts();
       cat.hearts();
+      dog.hearts();
     },
     setShipped(shipped: { id: string; at: number } | null): void {
       const fresh =
@@ -317,6 +323,7 @@ export function createIsoView(
       effects.burst();
       people.party();
       cat.pounce();
+      dog.party();
     },
     setTheme(theme: Theme): void {
       const { color, ambient, sun } = LIGHTING[theme];

@@ -42,7 +42,7 @@ import {
   type IsoRoomId,
   type IsoWalker,
 } from "@/systems/isoErrands";
-import { findFloorPath } from "@/systems/isoNavGrid";
+import { findFloorPath, type FloorPoint } from "@/systems/isoNavGrid";
 import { loungeAct } from "@/systems/loungeActs";
 import {
   CHEER_MS,
@@ -57,6 +57,7 @@ import {
   type BookPile,
 } from "@/systems/roomGimmicks";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
+import type { ClaudeAt } from "@/systems/officePets";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import { secondsSince } from "@/systems/officeRoster";
 import {
@@ -120,6 +121,8 @@ export interface RoomsInUse {
   editingSeats: IsoSpot[];
   /** Seats of people whose tests just failed: their screens flash red. */
   alarmSeats: IsoSpot[];
+  /** Where someone whose tests just failed is, for the dog to come and sit by. */
+  upset: FloorPoint | null;
   /** Someone is planning at the whiteboard. */
   planning: boolean;
   /** Someone is stepping into or out of the elevator. */
@@ -132,8 +135,8 @@ export interface RoomsInUse {
   arriving: boolean;
   /** Claude has waited on my next prompt a while: the cat is on my keyboard. */
   catNap: boolean;
-  /** Claude sits at its desk: the cat may come and rub against its legs. */
-  claudeSeated: boolean;
+  /** Where Claude is, sitting at its desk or working in a room, for the pets. */
+  claude: ClaudeAt | null;
 }
 
 interface Placed {
@@ -311,13 +314,14 @@ export class IsoPeople {
       serverBusy: false,
       editingSeats: [],
       alarmSeats: [],
+      upset: null,
       planning: false,
       elevatorOpen: false,
       tvOn: false,
       browsing: false,
       arriving: false,
       catNap: false,
-      claudeSeated: false,
+      claude: null,
     };
     if (this.callPending) {
       this.callPending = false;
@@ -412,15 +416,24 @@ export class IsoPeople {
       if (act === "tv") inUse.tvOn = true;
       if (activity === "browsing") inUse.browsing = true;
       if (walker.pose === "type") inUse.editingSeats.push(placed.seat);
-      if (act === "dismay") inUse.alarmSeats.push(placed.seat);
+      if (act === "dismay") {
+        inUse.alarmSeats.push(placed.seat);
+        inUse.upset ??= { x: walker.x, z: walker.z };
+      }
       if (walker.goal === "meeting" && walker.pose === "work") {
         inUse.planning = true;
       }
       if (usesElevator(walker)) inUse.elevatorOpen = true;
       if (walker.trip?.kind === "arrive") inUse.arriving = true;
       const { kind, breakRoom, idleSince } = placed.person;
-      if (kind === "claude" && walker.goal === "seat" && !walker.path) {
-        inUse.claudeSeated = true;
+      if (kind === "claude") {
+        const still = walker.path === null;
+        inUse.claude = {
+          x: walker.x,
+          z: walker.z,
+          seated: still && walker.goal === "seat",
+          working: still && isRoom(walker.goal) && walker.pose === "work",
+        };
       }
       if (
         kind === "claude" &&
