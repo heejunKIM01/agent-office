@@ -52,6 +52,7 @@ import {
   watchesTheClock,
   type BookPile,
 } from "@/systems/roomGimmicks";
+import { liftLabels, type LabelBox, type Lift } from "@/systems/labelLift";
 import { pickBubble, type IsoBubble } from "@/systems/officeBubbles";
 import type { IsoPerson, PersonKind } from "@/systems/officePeople";
 import {
@@ -149,6 +150,10 @@ interface Placed {
   seat: IsoSpot;
   /** What it tells Claude when its work is done, read when it gets there. */
   report: string | null;
+  /** How far its chip and bubble are lifted clear of a nearer person's (px). */
+  lift: number;
+  /** Which of its chip and bubble a crowd leaves room for. */
+  shown: Lift["show"];
 }
 
 function nameChip(color: string): {
@@ -184,6 +189,8 @@ export class IsoPeople {
   /** The chair and room spots each person last had, kept for the tab. */
   private readonly placeOf = rememberedPlaces();
   private callUntil = 0;
+  /** Where a chip is on the screen, worked out each frame. */
+  private readonly onScreen = new THREE.Vector3();
 
   private words: BubbleWords = {
     thinking: "",
@@ -276,6 +283,8 @@ export class IsoPeople {
         walker: this.firstWalker(person, arriving, seat),
         seat,
         report: null,
+        lift: 0,
+        shown: "all",
       });
     }
     this.fresh = false;
@@ -380,6 +389,49 @@ export class IsoPeople {
       this.onLeft(id);
     }
     return inUse;
+  }
+
+  /**
+   * Lift the chips and bubbles that would cover a nearer person's (see
+   * systems/labelLift.ts). Call once the labels are drawn for the frame, on
+   * a ``width`` × ``height`` px view.
+   */
+  liftCrowdedLabels(camera: THREE.Camera, width: number, height: number): void {
+    const boxes: LabelBox[] = [];
+    for (const [id, placed] of this.placed) {
+      if (!placed.chip.visible) continue;
+      placed.chip.getWorldPosition(this.onScreen).project(camera);
+      const chip = placed.chip.element;
+      const said = placed.bubbleHolder.firstElementChild as HTMLElement | null;
+      boxes.push({
+        id,
+        x: ((this.onScreen.x + 1) * width) / 2,
+        y: ((1 - this.onScreen.y) * height) / 2,
+        chip: { width: chip.offsetWidth, height: chip.offsetHeight },
+        bubble: said
+          ? {
+              width: said.offsetWidth,
+              height: placed.bubbleHolder.offsetHeight,
+            }
+          : null,
+      });
+    }
+    const lifts = liftLabels(boxes);
+    for (const [id, placed] of this.placed) {
+      const { by, show } = lifts.get(id) ?? { by: 0, show: "all" };
+      if (by !== placed.lift) {
+        placed.lift = by;
+        const translate = by ? `0 ${-by}px` : "";
+        placed.chip.element.style.translate = translate;
+        placed.bubbleHolder.style.translate = translate;
+      }
+      if (show !== placed.shown) {
+        placed.shown = show;
+        // Hidden, not removed: they are still measured next frame.
+        placed.bubbleHolder.style.visibility = show === "all" ? "" : "hidden";
+        placed.chip.element.style.visibility = show === "none" ? "hidden" : "";
+      }
+    }
   }
 
   /**
