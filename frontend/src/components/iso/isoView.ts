@@ -12,7 +12,9 @@ import {
   FLOOR_WIDTH,
   WALL_HEIGHT,
 } from "@/constants/isoFloorPlan";
+import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
 import type { IsoPerson } from "@/systems/officePeople";
+import { NO_PLAY, stepPlay } from "@/systems/petPlay";
 import { FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
 import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
@@ -209,6 +211,8 @@ export function createIsoView(
   const effects = new IsoEffects(office);
   const cat = new IsoCat(office);
   const dog = new IsoDog(office);
+  /** A game the cat and dog play together, while one goes on. */
+  let play = NO_PLAY;
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
   const home = new THREE.Vector3(FLOOR_CENTER.x, 0, FLOOR_CENTER.z);
@@ -270,8 +274,19 @@ export function createIsoView(
     effects.update(now / 1000, dt, inUse);
     // Each pet sees where the other was a frame ago.
     const catSeen = cat.sighting();
-    cat.update(now, dt, inUse, dog.sighting());
-    dog.update(now, dt, inUse, catSeen);
+    const dogSeen = dog.sighting();
+    play = stepPlay(play, {
+      now,
+      dt,
+      random: Math.random,
+      findPath: findFloorPath,
+      walkable: isFloorWalkable,
+      cat: catSeen,
+      dog: dogSeen,
+      napping: inUse.catNap,
+    });
+    cat.update(now, dt, inUse, dogSeen, play.date?.cat ?? null);
+    dog.update(now, dt, inUse, catSeen, play.date?.dog ?? null);
     renderer.render(scene, camera);
     labels.render(scene, camera);
     frame = requestAnimationFrame(loop);

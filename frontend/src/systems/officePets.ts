@@ -85,9 +85,15 @@ export interface PetSighting {
   x: number;
   y: number;
   z: number;
+  facing: number;
   planId: string;
   phase: PetPhase;
+  /** What it is doing (petActOf). */
+  act: string;
 }
+
+/** Plans the two pets are given to play together (systems/petPlay.ts) start so. */
+export const PLAY_PREFIX = "play:";
 
 export interface PetBrain<A extends string, I extends PetClock> {
   /** Somewhere it must go now, dropping what it does; null when nothing calls. */
@@ -372,7 +378,9 @@ export function sightingOf<A extends string>(pet: Pet<A>): PetSighting {
     x: pet.x,
     y: pet.y,
     z: pet.z,
+    facing: pet.facing,
     planId: pet.plan.id,
     phase: pet.phase,
+    act: petActOf(pet),
   };
 }

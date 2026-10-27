@@ -29,6 +29,7 @@ const input = (now: number, over: Partial<CatInput> = {}): CatInput => ({
   napping: false,
   claude: null,
   dog: null,
+  play: null,
   // Never roams: picks the middle spot and stays half as long as it might.
   random: dice(0.5),
   findPath: findFloorPath,
@@ -56,8 +57,10 @@ const DOG_ASLEEP: PetSighting = {
   x: 4.6,
   y: 0,
   z: 30,
+  facing: 0,
   planId: "bed",
   phase: "stay",
+  act: "sleep",
 };
 
 describe("the office cat's spots", () => {

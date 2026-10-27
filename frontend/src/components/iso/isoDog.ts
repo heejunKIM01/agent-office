@@ -15,6 +15,7 @@ import {
   dogAt,
   stepOfficeDog,
   type DogAct,
+  type DogPlan,
   type OfficeDog,
 } from "@/systems/officeDog";
 import { petActOf, sightingOf, type PetSighting } from "@/systems/officePets";
@@ -188,6 +189,30 @@ function poseDog(
       backL.visible = backR.visible = false;
       tail.rotation.set(0, 0.6 * Math.sin(seconds * wag * 0.5), 0);
       return;
+    case "tease":
+      // Lying down, swishing its tail wide and fast for the cat to catch.
+      body.position.y = 0.02;
+      frontL.rotation.x = frontR.rotation.x = -Math.PI / 2;
+      backL.visible = backR.visible = false;
+      tail.rotation.set(0.2, 0.9 * Math.sin(seconds * wag * 0.9), 0);
+      head.rotation.y = 0.35 * Math.sin(seconds * 1.2);
+      return;
+    case "lookUp":
+      // Sitting at the foot of the tower, looking up at the cat, wagging.
+      body.position.y = LEG * 0.8;
+      body.rotation.x = -0.55;
+      backL.visible = backR.visible = false;
+      frontL.rotation.x = frontR.rotation.x = 0.55;
+      head.rotation.x = -0.2;
+      tongue.visible = true;
+      tail.rotation.set(-0.3, 0.7 * Math.sin(seconds * wag), 0);
+      return;
+    case "boop":
+      // Nose out to the cat's, tail going.
+      head.position.set(0, 0.16, 0.46);
+      head.rotation.x = 0.3;
+      tail.rotation.set(0.7, 0.6 * Math.sin(seconds * wag * 1.3), 0);
+      return;
     case "sit":
     case "comfort":
       // Sitting up, its tail sweeping the floor; beside someone sad it
@@ -289,13 +314,15 @@ export class IsoDog {
 
   /**
    * Move and pose it for this frame; ``now`` in ms, ``dt`` in seconds,
-   * ``cat`` as the cat was last frame.
+   * ``cat`` as the cat was last frame and ``play`` its part in a game with
+   * the cat, if one goes on (systems/petPlay.ts).
    */
   update(
     now: number,
     dt: number,
     inUse: RoomsInUse,
     cat: PetSighting | null,
+    play: DogPlan | null,
   ): void {
     if (this.partyPending) {
       this.partyPending = false;
@@ -315,6 +342,7 @@ export class IsoDog {
       arriving: inUse.arriving,
       upset: inUse.upset,
       party: this.partyFrom !== null && now - this.partyFrom < PARTY_MS,
+      play,
       random: Math.random,
       findPath: findFloorPath,
       walkable: isFloorWalkable,
@@ -345,9 +373,15 @@ export class IsoDog {
       this.ball.position.copy(IN_MOUTH);
     }
 
-    heart.visible = thanks !== null;
-    if (thanks !== null) {
-      const rise = (thanks * 0.8) % 1;
+    // A heart over it when I say thanks, and while it boops the cat.
+    const rise =
+      thanks !== null
+        ? (thanks * 0.8) % 1
+        : act === "boop"
+          ? (seconds % 2) / 2
+          : null;
+    heart.visible = rise !== null;
+    if (rise !== null) {
       heart.position.set(0, 0.95 + 0.4 * rise, 0.2);
       heart.rotation.y = FACE_CAMERA - root.rotation.y;
       heart.scale.setScalar(0.5 * Math.min(1, rise * 4));

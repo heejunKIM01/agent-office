@@ -20,6 +20,7 @@ import {
 } from "@/constants/isoFloorPlan";
 import type { FloorPoint } from "./isoNavGrid";
 import {
+  PLAY_PREFIX,
   besidePoint,
   distance,
   openSpot,
@@ -45,7 +46,10 @@ export type DogAct =
   | "sniff"
   | "greet"
   | "comfort"
-  | "pant";
+  | "pant"
+  | "lookUp"
+  | "tease"
+  | "boop";
 
 export type DogPlan = PetPlan<DogAct>;
 
@@ -65,6 +69,8 @@ export interface DogInput extends PetClock {
   upset: FloorPoint | null;
   /** Work just shipped: confetti is falling. */
   party: boolean;
+  /** Its part in a game with the cat (systems/petPlay.ts), while one goes on. */
+  play: DogPlan | null;
 }
 
 /** A walk, a trot and a run (m/s). */
@@ -74,7 +80,8 @@ export const DOG_RUN_SPEED = 4.6;
 /** Where its ball lies when the office opens: by its bed. */
 export const DOG_BALL_START: FloorPoint = { x: 6.6, z: 29.9 };
 
-const plan = (
+/** A plan for the dog: ``floor`` to walk to, what to do there and how long. */
+export const dogPlan = (
   id: string,
   floor: FloorPoint & { facing: number },
   act: DogAct,
@@ -113,18 +120,24 @@ const AT_CLAUDES_FEET: FloorPoint = {
 /** Its own spots. */
 export const DOG_SPOTS = {
   // Up onto its bed and stretched out on its side.
-  bed: plan("bed", facingTo(BESIDE_BED, DOG_BED), "sleep", [20_000, 35_000], {
-    perch: { ...DOG_BED, y: DOG_BED_TOP, facing: Math.PI / 2 },
-    rest: true,
-  }),
-  water: plan(
+  bed: dogPlan(
+    "bed",
+    facingTo(BESIDE_BED, DOG_BED),
+    "sleep",
+    [20_000, 35_000],
+    {
+      perch: { ...DOG_BED, y: DOG_BED_TOP, facing: Math.PI / 2 },
+      rest: true,
+    },
+  ),
+  water: dogPlan(
     "water",
     { x: DOG_WATER.x, z: DOG_WATER.z - 1, facing: 0 },
     "drink",
     [4_000, 7_000],
   ),
   // Sitting by the elevator, watching the door.
-  watch: plan(
+  watch: dogPlan(
     "watch",
     facingTo(GREET_AT, ELEVATOR_DOOR),
     "sit",
@@ -134,7 +147,7 @@ export const DOG_SPOTS = {
 
 /** Plans it is called to, wherever it is. */
 export const DOG_CALLS = {
-  greet: plan(
+  greet: dogPlan(
     "greet",
     facingTo(GREET_AT, ELEVATOR_DOOR),
     "greet",
@@ -143,12 +156,12 @@ export const DOG_CALLS = {
       speed: DOG_RUN_SPEED,
     },
   ),
-  myChair: plan("myChair", facingTo(BY_MY_CHAIR, MY_SEAT), "lie", [0, 0], {
+  myChair: dogPlan("myChair", facingTo(BY_MY_CHAIR, MY_SEAT), "lie", [0, 0], {
     rest: true,
     hold: true,
   }),
   // Lying beside Claude's chair, side on to the camera.
-  feet: plan(
+  feet: dogPlan(
     "feet",
     { ...AT_CLAUDES_FEET, facing: -Math.PI / 4 },
     "lie",
@@ -180,7 +193,7 @@ function zoomies(dog: OfficeDog, input: DogInput): DogPlan | null {
     from = point;
   }
   const end = via.pop() as FloorPoint;
-  return plan(
+  return dogPlan(
     "zoomies",
     { ...end, facing: dog.facing },
     "pant",
@@ -195,7 +208,7 @@ function zoomies(dog: OfficeDog, input: DogInput): DogPlan | null {
 function comfort(upset: FloorPoint, input: DogInput): DogPlan | null {
   const by = besidePoint(upset, 1.25, input);
   if (!by) return null;
-  return plan("comfort", facingTo(by, upset), "comfort", [5_000, 8_000], {
+  return dogPlan("comfort", facingTo(by, upset), "comfort", [5_000, 8_000], {
     speed: DOG_RUN_SPEED,
   });
 }
@@ -203,13 +216,13 @@ function comfort(upset: FloorPoint, input: DogInput): DogPlan | null {
 function follow(claude: ClaudeAt, input: DogInput): DogPlan | null {
   const by = besidePoint(claude, 1.1, input);
   if (!by) return null;
-  return plan("follow", facingTo(by, claude), "sit", [6_000, 12_000]);
+  return dogPlan("follow", facingTo(by, claude), "sit", [6_000, 12_000]);
 }
 
 function fetchBall(ball: FloorPoint, input: DogInput): DogPlan | null {
   const by = besidePoint(ball, 0.8, input);
   if (!by) return null;
-  return plan("ball", facingTo(by, ball), "play", [3_000, 5_000], {
+  return dogPlan("ball", facingTo(by, ball), "play", [3_000, 5_000], {
     speed: DOG_RUN_SPEED,
   });
 }
@@ -219,15 +232,21 @@ function visit(cat: PetSighting | null, input: DogInput): DogPlan | null {
   if (!cat || cat.y > 0 || cat.phase !== "stay") return null;
   const by = besidePoint(cat, VISIT_REACH, input);
   if (!by) return null;
-  return plan("visit", facingTo(by, cat), "visit", [3_000, 5_000]);
+  return dogPlan("visit", facingTo(by, cat), "visit", [3_000, 5_000]);
 }
 
 function roam(dog: OfficeDog, input: DogInput): DogPlan | null {
   const to = openSpot(dog, input);
   if (!to) return null;
-  return plan("roam", { ...to, facing: dog.facing }, "sniff", [2_000, 4_000], {
-    speed: input.random() < 0.5 ? DOG_WALK_SPEED : DOG_TROT_SPEED,
-  });
+  return dogPlan(
+    "roam",
+    { ...to, facing: dog.facing },
+    "sniff",
+    [2_000, 4_000],
+    {
+      speed: input.random() < 0.5 ? DOG_WALK_SPEED : DOG_TROT_SPEED,
+    },
+  );
 }
 
 /** The plans it may go to now, other than ``from``. */
@@ -256,10 +275,13 @@ export const DOG_BRAIN: PetBrain<DogAct, DogInput> = {
     if (input.arriving && id !== "greet" && id !== "comfort") {
       return DOG_CALLS.greet;
     }
-    if (input.napping && id !== "myChair") return DOG_CALLS.myChair;
-    return null;
+    if (input.napping) return id !== "myChair" ? DOG_CALLS.myChair : null;
+    return input.play && id !== input.play.id ? input.play : null;
   },
   keeps: (dog, input) => {
+    if (dog.plan.id.startsWith(PLAY_PREFIX)) {
+      return input.play?.id === dog.plan.id;
+    }
     switch (dog.plan.id) {
       case "myChair":
         return input.napping;

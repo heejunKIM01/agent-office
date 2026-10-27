@@ -10,8 +10,14 @@
 
 import * as THREE from "three";
 import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
-import { catAt, stepOfficeCat, type OfficeCat } from "@/systems/officeCat";
 import {
+  catAt,
+  stepOfficeCat,
+  type CatPlan,
+  type OfficeCat,
+} from "@/systems/officeCat";
+import {
+  PLAY_PREFIX,
   distance,
   petActOf,
   sightingOf,
@@ -214,6 +220,26 @@ function poseCat(rig: CatRig, act: CatPose, seconds: number): void {
       head.rotation.x = 0.45 + 0.06 * Math.sin(seconds * 16);
       tail.rotation.x = 0.8;
       return;
+    case "hunt": {
+      // Crouched low behind the dog's tail, rump wiggling, then a pounce.
+      const t = seconds % 2.2;
+      const leap = t > 1.6 ? Math.sin(((t - 1.6) / 0.6) * Math.PI) : 0;
+      body.position.y = LEG * 0.45 + 0.25 * leap;
+      body.position.z = 0.35 * leap;
+      body.rotation.x = 0.12 - 0.3 * leap;
+      body.rotation.z = leap > 0 ? 0 : 0.1 * Math.sin(seconds * 18);
+      frontL.rotation.x = frontR.rotation.x = -0.4 - 0.8 * leap;
+      backL.rotation.x = backR.rotation.x = 0.5;
+      head.rotation.x = -0.15;
+      tail.rotation.set(0.15, 0.6 * Math.sin(seconds * 9), 0);
+      return;
+    }
+    case "boop":
+      // Reaching its nose out to the dog's, tail up.
+      head.position.set(0, 0.12, 0.34);
+      head.rotation.x = 0.15;
+      tail.rotation.set(1.3, 0, 0.12 * Math.sin(seconds * 5));
+      return;
     case "rub":
       // Leaning into the legs it rubs, side to side, tail straight up.
       body.rotation.z = 0.14 * Math.sin(seconds * 4);
@@ -255,13 +281,15 @@ export class IsoCat {
 
   /**
    * Move and pose it for this frame; ``now`` in ms, ``dt`` in seconds,
-   * ``dog`` as the dog was last frame.
+   * ``dog`` as the dog was last frame and ``play`` its part in a game with
+   * the dog, if one goes on (systems/petPlay.ts).
    */
   update(
     now: number,
     dt: number,
     inUse: RoomsInUse,
     dog: PetSighting | null,
+    play: CatPlan | null,
   ): void {
     if (this.pouncePending) {
       this.pouncePending = false;
@@ -284,6 +312,7 @@ export class IsoCat {
         napping: inUse.catNap,
         claude: inUse.claude,
         dog,
+        play,
         random: Math.random,
         findPath: findFloorPath,
         walkable: isFloorWalkable,
@@ -302,6 +331,8 @@ export class IsoCat {
       this.cat.y === 0 &&
       this.cat.phase === "stay" &&
       awake &&
+      // Playing together it does not swat.
+      !this.cat.plan.id.startsWith(PLAY_PREFIX) &&
       distance(this.cat, dog) < SWAT_REACH;
     if (pounce === null && pestered) {
       // Turned on the dog, one front paw batting at its nose.
@@ -326,7 +357,7 @@ export class IsoCat {
     const rise =
       thanks !== null
         ? (thanks * 0.8) % 1
-        : act === "rub"
+        : act === "rub" || act === "boop"
           ? (seconds % RUB_HEART_SECONDS) / RUB_HEART_SECONDS
           : null;
     heart.visible = rise !== null;
