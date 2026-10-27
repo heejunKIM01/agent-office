@@ -8,7 +8,8 @@
  * ships (a push or merge). Each commit drops a sheet into the tray on
  * Claude's desk, its message's first line shown over it for a moment. And
  * while Claude waits on my next prompt a while, the office cat curls up on
- * my keyboard.
+ * my keyboard. A long turn leaves an empty cup on Claude's desk each half
+ * hour.
  */
 
 import * as THREE from "three";
@@ -23,12 +24,14 @@ import {
 } from "@/constants/isoFloorPlan";
 import {
   FRESH_MS,
+  MAX_CUPS,
   MAX_SHEETS,
+  cupsFor,
   globeSpeed,
   lampLit,
   type NoteStatus,
 } from "@/systems/roomGimmicks";
-import { box, material } from "./isoFurniture";
+import { box, cylinder, material } from "./isoFurniture";
 import { ISO_COLORS } from "./isoPalette";
 import type { RoomsInUse } from "./isoPeople";
 
@@ -294,8 +297,20 @@ export class IsoEffects {
   private readonly cat: THREE.Group;
   private readonly catTail: THREE.Group;
   private catSince: number | null = null;
+  /** Empty cups on Claude's desk, and the turn that drank them. */
+  private readonly cups: THREE.Group[] = [];
+  private turn: { start: number; end: number | null } | null = null;
 
   constructor(office: THREE.Object3D) {
+    for (let i = 0; i < MAX_CUPS; i++) {
+      const cup = new THREE.Group();
+      cup.add(cylinder(0.09, 0.075, 0.2, "#f8fafc", 0, 0, 0, 16));
+      cup.add(cylinder(0.078, 0.078, 0.01, "#8b5a3c", 0, 0.192, 0, 16));
+      cup.add(box(0.03, 0.11, 0.07, "#f8fafc", 0.1, 0.05, 0));
+      cup.rotation.y = i * 1.3;
+      cup.visible = false;
+      this.cups.push(cup);
+    }
     const { cat, tail } = buildCat();
     this.cat = cat;
     this.catTail = tail;
@@ -382,6 +397,14 @@ export class IsoEffects {
           placeKey(CLAUDE_SEAT.x, CLAUDE_SEAT.z - SEAT_TO_SCREEN)
         ) {
           this.tray.position.set(item.x + 0.85, item.y ?? 0, item.z + 0.05);
+          // The cups line up on the other side of the iMac.
+          this.cups.forEach((cup, i) =>
+            cup.position.set(
+              item.x - 0.75 - i * 0.26,
+              item.y ?? 0,
+              item.z + 0.12,
+            ),
+          );
         }
         const screen = object.children.find((c) => c.userData.imacScreen);
         if (screen instanceof THREE.Mesh) {
@@ -393,7 +416,7 @@ export class IsoEffects {
       }
     });
     if (found.whiteboard) this.board = makeBoard(found.whiteboard);
-    office.add(this.tray);
+    office.add(this.tray, ...this.cups);
     this.setNotes(null);
   }
 
@@ -450,6 +473,11 @@ export class IsoEffects {
     if (landed && this.sheets[top]) this.sheets[top].visible = true;
     this.sheetNote.visible = t < SHEET_NOTE_SECONDS;
     if (!this.sheetNote.visible) this.dropStart = null;
+  }
+
+  /** The session's latest turn: its length puts empty cups on Claude's desk. */
+  setTurn(turn: { start: number; end: number | null } | null): void {
+    this.turn = turn;
   }
 
   /** The cat hops onto my keyboard and naps there, tail swaying, until I type. */
@@ -519,6 +547,10 @@ export class IsoEffects {
     this.fall(seconds);
     this.drop(seconds);
     this.nap(seconds, inUse.catNap);
+    const cups = cupsFor(this.turn, Date.now());
+    this.cups.forEach((cup, i) => {
+      cup.visible = i < cups;
+    });
     const speed = inUse.serverBusy ? LED_BUSY_SPEED : LED_IDLE_SPEED;
     for (const led of this.leds) {
       led.mesh.visible = Math.sin(seconds * speed + led.phase) > -0.35;

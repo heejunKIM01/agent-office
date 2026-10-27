@@ -250,6 +250,39 @@ export function catOnKeyboard(waitingMs: number | null): boolean {
   return waitingMs !== null && waitingMs >= CAT_AFTER_MS;
 }
 
+/** Every this long a turn runs, Claude leaves another empty cup on its desk (ms). */
+export const CUP_EVERY_MS = 30 * 60_000;
+export const MAX_CUPS = 3;
+
+/**
+ * The latest turn, from the event log (newest first): when my prompt came
+ * and when Claude first stopped after it (null while it still runs), in ms.
+ */
+export function latestTurn(
+  eventLog: readonly { type: string; agentId: string; timestamp: Date }[],
+): { start: number; end: number | null } | null {
+  let end: number | null = null;
+  for (const entry of eventLog) {
+    if (entry.type === "stop" && entry.agentId === "main") {
+      end = entry.timestamp.getTime();
+    }
+    if (entry.type === "user_prompt_submit") {
+      return { start: entry.timestamp.getTime(), end };
+    }
+  }
+  return null;
+}
+
+/** Empty cups on Claude's desk: one per half hour the latest turn ran, up to three. */
+export function cupsFor(
+  turn: { start: number; end: number | null } | null,
+  now: number,
+): number {
+  if (!turn) return 0;
+  const ran = (turn.end ?? now) - turn.start;
+  return Math.min(MAX_CUPS, Math.max(0, Math.floor(ran / CUP_EVERY_MS)));
+}
+
 /** The lamp over the elevator door stays lit this long after someone steps out (s). */
 export const LAMP_HOLD_SECONDS = 1.5;
 

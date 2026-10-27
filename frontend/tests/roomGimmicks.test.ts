@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   CAT_AFTER_MS,
+  CUP_EVERY_MS,
+  cupsFor,
+  latestTurn,
   LAMP_HOLD_SECONDS,
   catOnKeyboard,
   lampLit,
@@ -256,5 +259,39 @@ describe("catOnKeyboard", () => {
     expect(catOnKeyboard(null)).toBe(false);
     expect(catOnKeyboard(CAT_AFTER_MS - 1)).toBe(false);
     expect(catOnKeyboard(CAT_AFTER_MS)).toBe(true);
+  });
+});
+
+describe("cupsFor", () => {
+  const at = (minutes: number) => new Date(minutes * 60_000);
+  const entry = (type: string, minutes: number, agentId = "main") => ({
+    type,
+    agentId,
+    timestamp: at(minutes),
+  });
+
+  it("finds the latest turn and when Claude first stopped after it", () => {
+    expect(
+      latestTurn([
+        entry("stop", 90),
+        entry("pre_tool_use", 80),
+        entry("stop", 70),
+        entry("stop", 65, "sub"),
+        entry("user_prompt_submit", 10),
+        entry("user_prompt_submit", 1),
+      ]),
+    ).toEqual({ start: 600_000, end: 4_200_000 });
+    expect(
+      latestTurn([entry("pre_tool_use", 5), entry("user_prompt_submit", 1)]),
+    ).toEqual({ start: 60_000, end: null });
+    expect(latestTurn([entry("session_start", 0)])).toBeNull();
+  });
+
+  it("leaves a cup per half hour the turn ran, up to three", () => {
+    expect(cupsFor(null, 0)).toBe(0);
+    expect(cupsFor({ start: 0, end: null }, CUP_EVERY_MS - 1)).toBe(0);
+    expect(cupsFor({ start: 0, end: null }, 2 * CUP_EVERY_MS)).toBe(2);
+    expect(cupsFor({ start: 0, end: CUP_EVERY_MS }, 9 * CUP_EVERY_MS)).toBe(1);
+    expect(cupsFor({ start: 0, end: null }, 9 * CUP_EVERY_MS)).toBe(3);
   });
 });

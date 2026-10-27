@@ -46,6 +46,8 @@ export interface IsoView {
     count: number;
     last: { id: string; title: string; at: number } | null;
   }): void;
+  /** The session's latest turn: a long one leaves empty cups on Claude's desk. */
+  setTurn(turn: { start: number; end: number | null } | null): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
   setShipped(shipped: { id: string; at: number } | null): void;
   zoomBy(factor: number): void;
@@ -282,6 +284,9 @@ export function createIsoView(
     },
     setCommits(commits): void {
       effects.setCommits(commits);
+    },
+    setTurn(turn): void {
+      effects.setTurn(turn);
     },
     setShipped(shipped: { id: string; at: number } | null): void {
       const fresh =

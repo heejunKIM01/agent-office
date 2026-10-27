@@ -17,6 +17,7 @@ import {
   commitsMade,
   lastShipped,
   latestTodoNotes,
+  latestTurn,
 } from "@/systems/roomGimmicks";
 import type { BubbleWords } from "./isoBubbles";
 import { createIsoView, type IsoView } from "./isoView";
@@ -84,6 +85,8 @@ export function IsoOffice({
   const shipped = useMemo(() => lastShipped(eventLog), [eventLog]);
   // Each commit files a sheet in the tray on Claude's desk.
   const commits = useMemo(() => commitsMade(eventLog), [eventLog]);
+  // A long turn leaves empty cups on Claude's desk.
+  const turn = useMemo(() => latestTurn(eventLog), [eventLog]);
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<IsoView | null>(null);
   /** The session snapshot the people on the floor were placed from. */
@@ -141,6 +144,10 @@ export function IsoOffice({
   useEffect(() => {
     viewRef.current?.setCommits(commits);
   }, [commits]);
+
+  useEffect(() => {
+    viewRef.current?.setTurn(turn);
+  }, [turn]);
 
   // Keep the people on the floor in step with the session.
   useEffect(() => {
