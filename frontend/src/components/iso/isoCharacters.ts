@@ -80,6 +80,8 @@ export interface CharacterRig {
   phone: THREE.Object3D;
   /** Cold sweat beside the head while a failed tool keeps it stuck. */
   sweat: THREE.Group;
+  /** A little rain cloud over its head after the same tool failed again and again. */
+  cloud: THREE.Group;
   /** Where the name chip hangs, just above the hair. */
   chipAnchor: THREE.Object3D;
 }
@@ -274,6 +276,20 @@ export function buildCharacter(
   sweat.visible = false;
   hips.add(sweat);
 
+  // Over the head and off to its side, clear of the name chip above it.
+  const cloud = new THREE.Group();
+  cloud.position.set(0.95, 2.15, 0.1);
+  for (const [x, y, r] of CLOUD_PUFFS) {
+    cloud.add(sphere(r, C.cloud, x, y, 0, [14, 10]));
+  }
+  for (let i = 0; i < RAIN_DROPS; i++) {
+    const drop = box(0.035, 0.14, 0.035, C.rain, -0.2 + i * 0.2, 0, 0);
+    drop.userData.rainPhase = i / RAIN_DROPS;
+    cloud.add(drop);
+  }
+  cloud.visible = false;
+  hips.add(cloud);
+
   const chipAnchor = new THREE.Object3D();
   chipAnchor.position.set(0, 2.2, 0);
   hips.add(chipAnchor);
@@ -290,8 +306,37 @@ export function buildCharacter(
     pile,
     phone,
     sweat,
+    cloud,
     chipAnchor,
   };
+}
+
+/** The rain cloud's puffs (x, y, radius), and its drops. */
+const CLOUD_PUFFS: [number, number, number][] = [
+  [0, 0, 0.28],
+  [-0.26, -0.05, 0.2],
+  [0.27, -0.04, 0.21],
+  [0.06, 0.15, 0.2],
+];
+const RAIN_DROPS = 3;
+/** How long a drop takes to fall from the cloud (s), and how far (m). */
+const RAIN_FALL_SECONDS = 0.6;
+const RAIN_FALL = 0.75;
+
+/** Show the rain cloud while ``raining``, its drops falling one after another. */
+export function rainOn(
+  rig: CharacterRig,
+  raining: boolean,
+  seconds: number,
+): void {
+  rig.cloud.visible = raining;
+  if (!raining) return;
+  for (const drop of rig.cloud.children) {
+    const phase = drop.userData.rainPhase;
+    if (typeof phase !== "number") continue;
+    const t = (seconds / RAIN_FALL_SECONDS + phase) % 1;
+    drop.position.y = -0.2 - RAIN_FALL * t;
+  }
 }
 
 /** Where the sweat drops start, beside the head (x, y, z in the hips' frame). */

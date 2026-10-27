@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CAT_AFTER_MS,
+  failuresInARow,
   CUP_EVERY_MS,
   cupsFor,
   latestTurn,
@@ -293,5 +294,35 @@ describe("cupsFor", () => {
     expect(cupsFor({ start: 0, end: null }, 2 * CUP_EVERY_MS)).toBe(2);
     expect(cupsFor({ start: 0, end: CUP_EVERY_MS }, 9 * CUP_EVERY_MS)).toBe(1);
     expect(cupsFor({ start: 0, end: null }, 9 * CUP_EVERY_MS)).toBe(3);
+  });
+});
+
+describe("failuresInARow", () => {
+  const post = (agentId: string, toolName: string, failed: boolean) => ({
+    type: "post_tool_use",
+    agentId,
+    detail: { toolName, ...(failed ? { errorType: "tool_error" } : {}) },
+  });
+
+  it("counts the latest tool's failures until one went through", () => {
+    const log = [
+      post("main", "Bash", true),
+      post("sub", "Read", false),
+      post("main", "Bash", true),
+      post("main", "Bash", true),
+      post("main", "Bash", false),
+      post("main", "Bash", true),
+    ];
+    expect(failuresInARow(log, "main")).toBe(3);
+    expect(failuresInARow(log, "sub")).toBe(0);
+  });
+
+  it("stops at another tool", () => {
+    const log = [
+      post("main", "Bash", true),
+      post("main", "Edit", true),
+      post("main", "Bash", true),
+    ];
+    expect(failuresInARow(log, "main")).toBe(1);
   });
 });

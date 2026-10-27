@@ -77,6 +77,7 @@ import {
   poseCharacter,
   type CharacterRig,
   type PoseAct,
+  rainOn,
 } from "./isoCharacters";
 import { OUTFIT_COLORS } from "./isoPalette";
 
@@ -383,6 +384,7 @@ export class IsoPeople {
       );
       // In the cab, behind its doors: no chip or bubble either.
       const inCab = walker.z < ELEVATOR_DOOR.z - IN_CAB_DEPTH;
+      rainOn(placed.rig, placed.person.rainCloud && !inCab, now / 1000);
       placed.chip.visible = !inCab;
       placed.bubble.visible = !inCab;
       this.showBubble(
