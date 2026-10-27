@@ -187,7 +187,6 @@ export default function SettingsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      dismissible={false}
       title={t("settings.title")}
       footer={
         <button
