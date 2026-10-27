@@ -34,6 +34,7 @@ const input = (now: number, over: Partial<DogInput> = {}): DogInput => ({
   arriving: false,
   upset: null,
   party: false,
+  play: null,
   random: CALM,
   findPath: findFloorPath,
   walkable: isFloorWalkable,
@@ -169,8 +170,10 @@ describe("stepOfficeDog", () => {
       x: 34.3,
       y: 0,
       z: 6.7,
+      facing: 0,
       planId: "server",
       phase: "stay",
+      act: "doze",
     };
     const plans = Array.from(
       { length: 6 },

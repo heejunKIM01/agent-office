@@ -21,6 +21,7 @@ import {
 } from "@/constants/isoFloorPlan";
 import type { FloorPoint } from "./isoNavGrid";
 import {
+  PLAY_PREFIX,
   openSpot,
   petAt,
   stepPet,
@@ -46,7 +47,9 @@ export type CatAct =
   | "scratch"
   | "box"
   | "look"
-  | "snuggle";
+  | "snuggle"
+  | "hunt"
+  | "boop";
 
 export type CatPlan = PetPlan<CatAct>;
 export type OfficeCat = Pet<CatAct>;
@@ -56,6 +59,8 @@ export interface CatInput extends PetClock {
   napping: boolean;
   claude: ClaudeAt | null;
   dog: PetSighting | null;
+  /** Its part in a game with the dog (systems/petPlay.ts), while one goes on. */
+  play: CatPlan | null;
 }
 
 /** An amble, slower than people, and a dash. */
@@ -76,7 +81,8 @@ const CLAUDE_RUB: FloorPoint = {
 };
 const TOWER_FOOT: FloorPoint = { x: CAT_TOWER.x, z: CAT_TOWER.z + 1.3 };
 
-const plan = (
+/** A plan for the cat: ``floor`` to walk to, what to do there and how long. */
+export const catPlan = (
   id: string,
   floor: FloorPoint & { facing: number },
   act: CatAct,
@@ -94,7 +100,7 @@ const plan = (
 
 /** Its favourite spots. */
 export const CAT_SPOTS = {
-  tower: plan(
+  tower: catPlan(
     "tower",
     { ...TOWER_FOOT, facing: Math.PI },
     "sleep",
@@ -110,14 +116,14 @@ export const CAT_SPOTS = {
     },
   ),
   // Up on its hind legs, clawing the tower's post.
-  scratch: plan(
+  scratch: catPlan(
     "scratch",
     { ...TOWER_FOOT, facing: Math.PI },
     "scratch",
     [4_000, 6_000],
   ),
   // The armrest at the sofa's left end, beside whoever rests there.
-  sofa: plan(
+  sofa: catPlan(
     "sofa",
     { x: 2.75, z: 22.75, facing: Math.PI / 2 },
     "loaf",
@@ -127,7 +133,7 @@ export const CAT_SPOTS = {
       rest: true,
     },
   ),
-  library: plan(
+  library: catPlan(
     "library",
     { x: 7.6, z: 7.6, facing: -2.4 },
     "groom",
@@ -137,7 +143,7 @@ export const CAT_SPOTS = {
     },
   ),
   // On the floor in front of the racks, where the air is warm.
-  server: plan(
+  server: catPlan(
     "server",
     { x: 34.3, z: 6.7, facing: THREE_QUARTER },
     "doze",
@@ -147,7 +153,7 @@ export const CAT_SPOTS = {
     },
   ),
   // Into the cardboard box, only its head showing.
-  box: plan(
+  box: catPlan(
     "box",
     { x: CAT_BOX.x, z: CAT_BOX.z + 1.15, facing: Math.PI },
     "box",
@@ -157,27 +163,27 @@ export const CAT_SPOTS = {
       rest: true,
     },
   ),
-  bowl: plan(
+  bowl: catPlan(
     "bowl",
     { x: CAT_BOWL.x, z: CAT_BOWL.z - 0.6, facing: 0 },
     "eat",
     [6_000, 9_000],
   ),
   // The plant in the corner of the search room.
-  plant: plan(
+  plant: catPlan(
     "plant",
     { ...SNIFF_AT, facing: towards(SNIFF_AT, SEARCH_PLANT) },
     "sniff",
     [3_000, 5_000],
   ),
-  claude: plan(
+  claude: catPlan(
     "claude",
     { ...CLAUDE_RUB, facing: towards(CLAUDE_RUB, CLAUDE_SEAT) },
     "rub",
     [5_000, 8_000],
   ),
   // Curled up on the sleeping dog's back.
-  snuggle: plan(
+  snuggle: catPlan(
     "snuggle",
     { x: DOG_BED.x - 1.1, z: DOG_BED.z, facing: Math.PI / 2 },
     "snuggle",
@@ -188,7 +194,7 @@ export const CAT_SPOTS = {
     },
   ),
   // Behind my desk, then up onto the keyboard in front of my chair.
-  keyboard: plan(
+  keyboard: catPlan(
     "keyboard",
     { x: 17.6, z: 18, facing: Math.PI / 2 },
     "keyboard",
@@ -235,15 +241,22 @@ function roam(cat: OfficeCat, input: CatInput): CatPlan | null {
   const to = openSpot(cat, input);
   if (!to) return null;
   const dash = input.random() < DASH_CHANCE;
-  return plan("roam", { ...to, facing: TO_CAMERA }, "look", [2_000, 5_000], {
+  return catPlan("roam", { ...to, facing: TO_CAMERA }, "look", [2_000, 5_000], {
     speed: dash ? CAT_DASH_SPEED : CAT_WALK_SPEED,
   });
 }
 
 export const CAT_BRAIN: PetBrain<CatAct, CatInput> = {
-  urgent: (cat, input) =>
-    input.napping && cat.plan.id !== "keyboard" ? CAT_SPOTS.keyboard : null,
+  urgent: (cat, input) => {
+    if (input.napping) {
+      return cat.plan.id !== "keyboard" ? CAT_SPOTS.keyboard : null;
+    }
+    return input.play && cat.plan.id !== input.play.id ? input.play : null;
+  },
   keeps: (cat, input) => {
+    if (cat.plan.id.startsWith(PLAY_PREFIX)) {
+      return input.play?.id === cat.plan.id;
+    }
     switch (cat.plan.id) {
       case "keyboard":
         return input.napping;
