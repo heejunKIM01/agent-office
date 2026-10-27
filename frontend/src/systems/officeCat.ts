@@ -9,8 +9,8 @@
  * against Claude's legs while Claude sits at its desk. When the dog sleeps
  * on its bed, the cat may curl up on its back. When Claude has waited on my
  * next prompt a while it heads for my keyboard and lies on it until I type.
- * When I dangle a teaser wand by it (officeMe.ts) it turns to it and leaps
- * at the feather, and while I pat it, it stays put.
+ * When I dangle a teaser wand near it (officeMe.ts) it dashes over, if it
+ * is up and about, and leaps at the feathers; while I pat it, it stays put.
  */
 
 import {
@@ -25,6 +25,7 @@ import type { FloorPoint } from "./isoNavGrid";
 import type { MeSighting } from "./officeMe";
 import {
   PLAY_PREFIX,
+  besidePoint,
   distance,
   openSpot,
   petAt,
@@ -252,16 +253,17 @@ function roam(cat: OfficeCat, input: CatInput): CatPlan | null {
   });
 }
 
-/** I am this close or closer to play with it or pat it (m). */
-const PLAY_REACH = 2.4;
+/** It sees my wand from this far, plays this far from me, and I pat it this close (m). */
+const WAND_SIGHT = 7;
+const PLAY_AT = 1.1;
 const PAT_REACH = 1.4;
 
-/** I stand dangling the teaser wand by it. */
+/** I stand dangling the teaser wand near it. */
 const wandBy = (me: MeSighting | null, cat: FloorPoint): me is MeSighting =>
   me !== null &&
   me.planId === "wand" &&
   me.staying &&
-  distance(me, cat) < PLAY_REACH;
+  distance(me, cat) < WAND_SIGHT;
 
 /** I crouch beside it patting it. */
 export const pattedBy = (me: MeSighting | null, cat: FloorPoint): boolean =>
@@ -270,15 +272,18 @@ export const pattedBy = (me: MeSighting | null, cat: FloorPoint): boolean =>
   me.staying &&
   distance(me, cat) < PAT_REACH;
 
-/** Where it is, turned to the feather on my wand. */
-const play = (cat: OfficeCat, me: FloorPoint): CatPlan =>
-  catPlan(
+/** By me, turned to the feathers on my wand: where it is if close enough, else at a dash. */
+function play(cat: OfficeCat, me: FloorPoint, input: CatInput): CatPlan {
+  const near = distance(cat, me) <= PLAY_AT * 1.5;
+  const at = near ? cat : (besidePoint(me, PLAY_AT, input) ?? cat);
+  return catPlan(
     "play",
-    { x: cat.x, z: cat.z, facing: towards(cat, me) },
+    { x: at.x, z: at.z, facing: towards(at, me) },
     "play",
     [0, 0],
-    { hold: true },
+    { speed: CAT_DASH_SPEED, hold: true },
   );
+}
 
 export const CAT_BRAIN: PetBrain<CatAct, CatInput> = {
   urgent: (cat, input) => {
@@ -286,9 +291,10 @@ export const CAT_BRAIN: PetBrain<CatAct, CatInput> = {
       return cat.plan.id !== "keyboard" ? CAT_SPOTS.keyboard : null;
     }
     if (input.play) return cat.plan.id !== input.play.id ? input.play : null;
-    const down = cat.y === 0 && cat.phase === "stay";
-    if (down && cat.plan.id !== "play" && wandBy(input.me, cat)) {
-      return play(cat, input.me);
+    // Up and about (not resting on a spot of its own), it comes to play.
+    const awake = !cat.plan.rest && cat.phase !== "hopUp";
+    if (awake && cat.plan.id !== "play" && wandBy(input.me, cat)) {
+      return play(cat, input.me, input);
     }
     return null;
   },
@@ -298,7 +304,7 @@ export const CAT_BRAIN: PetBrain<CatAct, CatInput> = {
     }
     switch (cat.plan.id) {
       case "play":
-        return wandBy(input.me, cat);
+        return wandBy(input.me, cat) && distance(input.me, cat.plan.floor) < 2;
       case "keyboard":
         return input.napping;
       case "claude":

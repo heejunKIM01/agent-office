@@ -281,6 +281,31 @@ describe("playing with the pets", () => {
     expect(cat.plan.id).not.toBe("play");
   });
 
+  it("the cat up and about a few metres off dashes over to my wand", () => {
+    let cat: OfficeCat = {
+      ...catAt("plant", 0, dice(0.5)),
+      until: 10_000_000,
+    };
+    const me: OfficeMe = {
+      ...meAt(null, 0, dice(0.5)),
+      plan: { ...ME_SPOTS.coffee, id: "wand", act: "wand" },
+      x: cat.x - 4,
+      z: cat.z + 1,
+    };
+    for (let now = 100; now < 6_000; now += 100) {
+      cat = stepOfficeCat(cat, catInput(now, { me: meSightingOf(me) }));
+    }
+    expect(cat.plan.id).toBe("play");
+    expect(petActOf(cat)).toBe("play");
+    expect(distance(cat, me)).toBeLessThan(1.5);
+    // Asleep on its tower it does not come.
+    const tower = stepOfficeCat(
+      catAt("tower", 0, dice(0.5)),
+      catInput(100, { me: meSightingOf({ ...me, x: 9, z: 24 }) }),
+    );
+    expect(tower.plan.id).toBe("tower");
+  });
+
   it("the dog stays put while I pat it", () => {
     const water = DOG_SPOTS.water;
     let dog: OfficeDog = {

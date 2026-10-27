@@ -706,10 +706,10 @@ function poseMe(
   armR.rotation.set(0, 0, 0);
   switch (act) {
     case "stretch": {
-      // Both arms straight up, swaying, up on its toes.
+      // Both arms up and out in a V, clear of the head, swaying; up on its toes.
       const sway = 0.12 * Math.sin(seconds * 3);
-      armL.rotation.z = -2.9 + sway;
-      armR.rotation.z = 2.9 + sway;
+      armL.rotation.z = -2.45 + sway;
+      armR.rotation.z = 2.45 + sway;
       if (!seated) rig.hips.position.y += 0.06;
       return;
     }

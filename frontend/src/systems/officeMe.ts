@@ -108,8 +108,10 @@ const facingTo = (to: FloorPoint, look: FloorPoint) => ({
   facing: towards(to, look),
 });
 
-/** Between the cafe tables' far ends, turned to the coffee machine wall. */
+/** Between the cafe tables' far ends. */
 const CAFE_SPOT: FloorPoint = { x: 33.55, z: 28.9 };
+/** Turned this way I face the camera, the mug in my hand showing. */
+const TO_CAMERA = 0.8;
 
 /** My own spots. */
 export const ME_SPOTS = {
@@ -120,7 +122,7 @@ export const ME_SPOTS = {
   }),
   coffee: plan(
     "coffee",
-    { ...CAFE_SPOT, facing: Math.PI },
+    { ...CAFE_SPOT, facing: TO_CAMERA },
     "coffee",
     [8_000, 14_000],
   ),
@@ -247,8 +249,6 @@ export const ME_BRAIN: PetBrain<MeAct, MeInput> = {
         return true;
       case "fetch":
         return dogPlays(input.dog) && !fetchDone(me, input.dog);
-      case "wand":
-        return catPlays(input.cat) && distance(input.cat, target) < LOST_REACH;
       case "patDog":
         return stays(input.dog) && distance(input.dog, target) < LOST_REACH;
       case "patCat":
