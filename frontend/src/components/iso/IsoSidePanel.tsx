@@ -52,6 +52,18 @@ const SITE_LEGEND = [
   { icon: "⛺", spot: "rest" },
 ] as const;
 
+/** The fishing spot's places and what happens there (설정 「장소」 · 낚시터). */
+const FISHING_LEGEND = [
+  { icon: "🔎", spot: "pontoon" },
+  { icon: "🎣", spot: "seats" },
+  { icon: "🦐", spot: "net" },
+  { icon: "🪱", spot: "shop" },
+  { icon: "📋", spot: "board" },
+  { icon: "🐟", spot: "tank" },
+  { icon: "🏠", spot: "office" },
+  { icon: "🍜", spot: "rest" },
+] as const;
+
 /** The airport's spots and what happens there (설정 「장소」 · 공항). */
 const AIRPORT_LEGEND = [
   { icon: "🗼", spot: "tower" },
@@ -176,15 +188,25 @@ export function IsoSidePanel({
               does: t(`iso.siteSpotDoes.${spot}`),
             })),
           }
-        : {
-            heading: t("iso.panel.rooms"),
-            items: ROOM_LEGEND.map(({ icon, room }) => ({
-              icon,
-              key: room,
-              name: t(`iso.room.${room}`),
-              does: t(`iso.roomDoes.${room}`),
-            })),
-          };
+        : place === "fishing"
+          ? {
+              heading: t("iso.panel.fishing"),
+              items: FISHING_LEGEND.map(({ icon, spot }) => ({
+                icon,
+                key: spot,
+                name: t(`iso.fishingSpot.${spot}`),
+                does: t(`iso.fishingSpotDoes.${spot}`),
+              })),
+            }
+          : {
+              heading: t("iso.panel.rooms"),
+              items: ROOM_LEGEND.map(({ icon, room }) => ({
+                icon,
+                key: room,
+                name: t(`iso.room.${room}`),
+                does: t(`iso.roomDoes.${room}`),
+              })),
+            };
   const agentName = useCodingAgentName();
   const boss = useGameStore((s) => s.boss);
   const agents = useGameStore((s) => s.agents);

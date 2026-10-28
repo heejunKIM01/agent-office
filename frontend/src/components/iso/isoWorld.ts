@@ -1,11 +1,13 @@
 /**
  * A place the isometric view can show (설정 「장소」): the office, the
- * airport or the construction site. Each builds its own scene and moves its own people, and tells
- * the view how big it is so the camera frames it.
+ * airport, the construction site or the fishing pier. Each builds its own
+ * scene and moves its own people, and tells the view how big it is so the
+ * camera frames it.
  */
 
 import type * as THREE from "three";
 import type { AirportWords } from "@/systems/airportTalk";
+import type { FishingWords } from "@/systems/fishingTalk";
 import type { SiteWords } from "@/systems/siteTalk";
 import type { IsoPerson } from "@/systems/officePeople";
 import type { NoteStatus } from "@/systems/roomGimmicks";
@@ -19,6 +21,7 @@ export interface PlaceWords {
   office: BubbleWords;
   airport: AirportWords;
   site: SiteWords;
+  fishing: FishingWords;
 }
 
 export interface IsoWorld {

@@ -1,7 +1,8 @@
 /**
  * The three.js side of the isometric office: renderer, orthographic camera,
  * lights, pan/zoom controls and the render loop, around the place it shows
- * (설정 「장소」): the office, the airport or the construction site.
+ * (설정 「장소」): the office, the airport, the construction site or the
+ * fishing pier.
  */
 
 import * as THREE from "three";
@@ -22,6 +23,7 @@ import type { Theme } from "@/utils/theme";
 import { buildIsoOffice, PLATE_THICKNESS } from "./buildIsoOffice";
 import { createAirport } from "./airport/airportWorld";
 import { createSite } from "./construction/siteWorld";
+import { createFishing } from "./fishing/fishingWorld";
 import { IsoCat } from "./isoCat";
 import { IsoDog } from "./isoDog";
 import { IsoEffects } from "./isoEffects";
@@ -254,7 +256,8 @@ function addLights(
 }
 
 /**
- * ``place`` is the office, the airport or the site; ``onPersonLeft`` hears of each
+ * ``place`` is the office, the airport, the site or the fishing pier;
+ * ``onPersonLeft`` hears of each
  * subagent that rode the elevator away (or landed and went).
  */
 export function createIsoView(
@@ -286,7 +289,9 @@ export function createIsoView(
       ? createAirport(scene, left)
       : place === "site"
         ? createSite(scene, left)
-        : createOffice(scene, onPersonLeft);
+        : place === "fishing"
+          ? createFishing(scene, left)
+          : createOffice(scene, onPersonLeft);
   const lights = addLights(scene, world);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
