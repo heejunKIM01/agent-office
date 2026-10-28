@@ -30,6 +30,7 @@ const PLACE_ICONS: Record<Place, string> = {
   office: "🏢",
   airport: "✈️",
   site: "🏗️",
+  fishing: "🎣",
 };
 
 const THEME_ICONS: Record<Theme, ReactNode> = {
@@ -272,7 +273,7 @@ export default function SettingsModal({
               }))}
               value={place}
               onChange={(value) => void setPlace(value)}
-              className="grid grid-cols-3 gap-2"
+              className="grid grid-cols-2 gap-2"
             />
           </div>
 

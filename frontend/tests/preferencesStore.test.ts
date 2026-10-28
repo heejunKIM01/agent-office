@@ -75,6 +75,10 @@ describe("place", () => {
     await usePreferencesStore.getState().loadPreferences();
     expect(usePreferencesStore.getState().place).toBe("site");
 
+    apiFetch.mockResolvedValueOnce(saved({ place: "fishing" }));
+    await usePreferencesStore.getState().loadPreferences();
+    expect(usePreferencesStore.getState().place).toBe("fishing");
+
     usePreferencesStore.setState({ place: "office" });
     apiFetch.mockResolvedValueOnce(saved({ place: "moon" }));
     await usePreferencesStore.getState().loadPreferences();
