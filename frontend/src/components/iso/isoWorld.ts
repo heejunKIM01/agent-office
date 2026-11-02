@@ -10,6 +10,7 @@ import type { AirportWords } from "@/systems/airportTalk";
 import type { FishingWords } from "@/systems/fishingTalk";
 import type { SiteWords } from "@/systems/siteTalk";
 import type { IsoPerson } from "@/systems/officePeople";
+import type { Parcel } from "@/systems/officeParcels";
 import type { NoteStatus } from "@/systems/roomGimmicks";
 import type { BubbleWords } from "./isoBubbles";
 
@@ -50,5 +51,7 @@ export interface IsoWorld {
     last: { id: string; title: string; at: number } | null;
   }): void;
   setTurn(turn: { start: number; end: number | null } | null): void;
+  /** The session's installs: only the office has a courier bring them. */
+  setParcels?(parcels: { count: number; last: Parcel | null }): void;
   dispose(): void;
 }

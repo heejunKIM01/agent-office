@@ -44,6 +44,8 @@ interface Look {
   hair: string;
   pants: string;
   cap?: boolean;
+  /** The cap's colour, when not Explore's green. */
+  capColor?: string;
   glasses?: boolean;
 }
 
@@ -65,6 +67,15 @@ const OUTFIT_LOOKS: Record<Exclude<Outfit, "general">, Look> = {
     cap: true,
   },
   plan: { shirt: C.planShirt, hair: C.darkHair, pants: C.pants, glasses: true },
+};
+
+/** The courier who brings the parcels, in a brown uniform and cap. */
+const COURIER_LOOK: Look = {
+  shirt: C.courierShirt,
+  hair: C.darkHair,
+  pants: C.courierPants,
+  cap: true,
+  capColor: C.courierCap,
 };
 
 /** Whole figure scale; about 3.1m tall standing, a little under the walls. */
@@ -178,8 +189,9 @@ function head(look: Look): THREE.Group {
   };
   g.add(cheek(-0.36), cheek(0.36));
   if (look.cap) {
-    g.add(shell(0.69, C.exploreCap, [0, Math.PI * 2], [0, Math.PI * 0.3]));
-    const brim = box(0.78, 0.05, 0.42, C.exploreCap, 0, 0.38, 0.58);
+    const capColor = look.capColor ?? C.exploreCap;
+    g.add(shell(0.69, capColor, [0, Math.PI * 2], [0, Math.PI * 0.3]));
+    const brim = box(0.78, 0.05, 0.42, capColor, 0, 0.38, 0.58);
     brim.rotation.x = 0.12;
     g.add(brim);
   }
@@ -202,10 +214,19 @@ export function buildCharacter(
   kind: PersonKind,
   outfit: Outfit = "general",
 ): CharacterRig {
-  const look =
+  return buildRig(
     kind === "subagent" && outfit !== "general"
       ? OUTFIT_LOOKS[outfit]
-      : LOOKS[kind];
+      : LOOKS[kind],
+  );
+}
+
+/** The courier who brings a parcel when packages are installed (officeParcels.ts). */
+export function buildCourier(): CharacterRig {
+  return buildRig(COURIER_LOOK);
+}
+
+function buildRig(look: Look): CharacterRig {
   const root = new THREE.Group();
   root.scale.setScalar(SCALE);
   const hips = new THREE.Group();

@@ -16,6 +16,7 @@ import {
 } from "@/constants/isoFloorPlan";
 import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
 import type { IsoPerson } from "@/systems/officePeople";
+import type { Parcel } from "@/systems/officeParcels";
 import { NO_PLAY, stepPlay } from "@/systems/petPlay";
 import { FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
 import type { Place } from "@/utils/place";
@@ -27,6 +28,7 @@ import { createFishing } from "./fishing/fishingWorld";
 import { IsoCat } from "./isoCat";
 import { IsoDog } from "./isoDog";
 import { IsoEffects } from "./isoEffects";
+import { IsoParcels } from "./isoParcels";
 import { setNightView } from "./isoFurniture";
 import { IsoPeople } from "./isoPeople";
 import type { IsoWorld, PlaceWords } from "./isoWorld";
@@ -58,6 +60,8 @@ export interface IsoView {
   }): void;
   /** The session's latest turn: a long one leaves empty cups on Claude's desk. */
   setTurn(turn: { start: number; end: number | null } | null): void;
+  /** The session's installs: a box each behind Claude's chair, a new one brought up by a courier. */
+  setParcels(parcels: { count: number; last: Parcel | null }): void;
   /** My latest prompt when it said thanks: a fresh new one raises hearts. */
   setThanks(thanks: { id: string; at: number } | null): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
@@ -101,6 +105,7 @@ function createOffice(
   scene.add(office);
   const people = new IsoPeople(scene, onPersonLeft);
   const effects = new IsoEffects(office);
+  const parcels = new IsoParcels(office);
   const cat = new IsoCat(office);
   const dog = new IsoDog(office);
   /** A game the cat and dog play together, while one goes on. */
@@ -117,7 +122,14 @@ function createOffice(
       // Each pet sees where the other was a frame ago, and so do I.
       const catSeen = cat.sighting();
       const dogSeen = dog.sighting();
-      const inUse = people.update(now, dt, { cat: catSeen, dog: dogSeen });
+      const seen = people.update(now, dt, { cat: catSeen, dog: dogSeen });
+      // The courier opens the elevator, lights its lamp and is greeted too.
+      const courier = parcels.update(now, dt);
+      const inUse = {
+        ...seen,
+        elevatorOpen: seen.elevatorOpen || courier.elevatorOpen,
+        arriving: seen.arriving || courier.arriving,
+      };
       effects.update(now / 1000, dt, inUse);
       play = stepPlay(play, {
         now,
@@ -146,11 +158,13 @@ function createOffice(
     setNotes: (statuses) => effects.setNotes(statuses),
     setCommits: (commits) => effects.setCommits(commits),
     setTurn: (turn) => effects.setTurn(turn),
+    setParcels: (list) => parcels.setParcels(list),
     // The office's night is its windows (setNightView), set by the view.
     setNight: () => undefined,
     dispose: () => {
       people.dispose();
       effects.dispose();
+      parcels.dispose();
     },
   };
 }
@@ -380,6 +394,9 @@ export function createIsoView(
     },
     setTurn(turn): void {
       world.setTurn(turn);
+    },
+    setParcels(parcels): void {
+      world.setParcels?.(parcels);
     },
     setThanks(thanks: { id: string; at: number } | null): void {
       const fresh =
