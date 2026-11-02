@@ -58,5 +58,7 @@ export interface IsoWorld {
   setApproval?(approval: Approval): void;
   /** When the session last saw work (ms): only the office keeps late hours. */
   setLastWork?(at: number | null): void;
+  /** When the session's commits went through (ms): only the office has the pot on my desk. */
+  setCommitTimes?(times: readonly number[]): void;
   dispose(): void;
 }
