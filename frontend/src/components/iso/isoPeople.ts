@@ -50,6 +50,7 @@ import {
   type FloorPoint,
 } from "@/systems/isoNavGrid";
 import { loungeAct } from "@/systems/loungeActs";
+import { BOW_MS, BOW_WAIT_MS } from "@/systems/officeBow";
 import { stepVisit, VISIT_MAX_MS, type Visit } from "@/systems/officeApproval";
 import {
   CHEER_MS,
@@ -227,6 +228,13 @@ export class IsoPeople {
   /** Work just shipped: everyone claps until ``partyUntil`` (performance.now ms). */
   private partyPending = false;
   private partyUntil = 0;
+  /**
+   * I pushed back: Claude bows from ``bowFrom`` (performance.now ms) once it
+   * is not on its way anywhere, asked for at ``bowAsked``.
+   */
+  private bowAsked: number | null = null;
+  private bowPending = false;
+  private bowFrom: number | null = null;
   /** I said thanks: hearts rise from ``heartsFrom`` (performance.now ms) for a while. */
   private heartsPending = false;
   private heartsFrom: number | null = null;
@@ -388,6 +396,17 @@ export class IsoPeople {
     if (this.heartsFrom !== null && now - this.heartsFrom > HEARTS_MS) {
       this.heartsFrom = null;
     }
+    if (this.bowPending) {
+      this.bowPending = false;
+      this.bowAsked = now;
+    }
+    if (this.bowFrom !== null && now - this.bowFrom > BOW_MS) {
+      this.bowFrom = null;
+    }
+    // A bow that waited too long for Claude to stop walking is dropped.
+    if (this.bowAsked !== null && now - this.bowAsked > BOW_WAIT_MS) {
+      this.bowAsked = null;
+    }
     const gone: string[] = [];
     // Claude keeps quiet while a subagent reports to it.
     const listening = [...this.placed.values()].some(({ walker }) =>
@@ -437,7 +456,10 @@ export class IsoPeople {
         continue;
       }
       const me = placed.person.kind === "me" ? this.me : null;
-      const act = this.actOf(placed, now) ?? (me && meAct(me, now));
+      const bowing = this.bowOf(placed, now);
+      const act = bowing
+        ? "bow"
+        : (this.actOf(placed, now) ?? (me && meAct(me, now)));
       placed.rig.root.position.set(walker.x, 0, walker.z);
       // Waiting on a long command, or cheering on its feet in a room, it
       // turns from the rack or shelf to face the room.
@@ -461,7 +483,11 @@ export class IsoPeople {
         now / 1000,
         stuck && !leaving,
         act,
-        act === "throw" && me?.thrown ? (now - me.thrown.at) / THROW_MS : 0,
+        act === "throw" && me?.thrown
+          ? (now - me.thrown.at) / THROW_MS
+          : bowing && this.bowFrom !== null
+            ? (now - this.bowFrom) / BOW_MS
+            : 0,
       );
       // On its way to my desk Claude holds the board out in both hands.
       const carryingBoard =
@@ -691,6 +717,26 @@ export class IsoPeople {
     return null;
   }
 
+  /**
+   * Whether Claude is bowing this frame: a bow asked for starts once it is
+   * not walking (on its feet in a room or in a seat) and lasts ``BOW_MS``.
+   * One a walk cuts short (the prompt also sends it back to its desk) starts
+   * over when it stops.
+   */
+  private bowOf(placed: Placed, now: number): boolean {
+    if (placed.person.kind !== "claude") return false;
+    const walking = Boolean(placed.walker.path);
+    if (walking && this.bowFrom !== null) {
+      this.bowFrom = null;
+      this.bowAsked = now;
+    }
+    if (!walking && this.bowAsked !== null) {
+      this.bowAsked = null;
+      this.bowFrom = now;
+    }
+    return this.bowFrom !== null && now - this.bowFrom <= BOW_MS;
+  }
+
   /** Pile a book beside a reader for each new thing it reads in the library. */
   private stackBooks(placed: Placed): void {
     const { walker, person } = placed;
@@ -705,6 +751,11 @@ export class IsoPeople {
     placed.rig.pile.children.forEach((book, i) => {
       book.visible = i < pile.count;
     });
+  }
+
+  /** I pushed back: Claude bows twice in a sweat, once it stops walking. */
+  bow(): void {
+    this.bowPending = true;
   }
 
   /** I said thanks: hearts rise beside everyone's head for a moment. */
@@ -742,6 +793,8 @@ export class IsoPeople {
     this.fresh = true;
     this.callPending = false;
     this.callUntil = 0;
+    this.bowAsked = null;
+    this.bowFrom = null;
     // An errand asked for before the people are placed (a place or page
     // just opened) still runs once they are; one under way is dropped.
     this.visit = null;

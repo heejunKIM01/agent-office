@@ -8,6 +8,7 @@
 import * as THREE from "three";
 import type { IsoPose, IsoRoomId } from "@/systems/isoErrands";
 import type { LoungeAct } from "@/systems/loungeActs";
+import { bowAngle } from "@/systems/officeBow";
 import { MAX_PILE } from "@/systems/roomGimmicks";
 
 /**
@@ -23,6 +24,7 @@ export type PoseAct =
   | "dismay"
   | "clap"
   | "lunch"
+  | "bow"
   | MeAct;
 
 /** What I do up from my desk: stretch, throw the ball and call the dog, play, pat, look. */
@@ -604,7 +606,8 @@ function drip(sweat: THREE.Group, seconds: number): void {
  * phone, a book, the TV, a doze); at the rack, waiting on a long command, it
  * crosses its arms and checks its watch; typing it scratches its head now
  * and then; when its tests pass it throws its arms up, and when they fail
- * it holds its head, rocking (stuck or not). When work ships it claps.
+ * it holds its head, rocking (stuck or not). When work ships it claps, and
+ * when I push back it bows twice in a sweat (``progress`` through the bow).
  * Up from my desk I stretch, throw the ball (``progress`` through the
  * throw) and call the dog, dangle the teaser wand, crouch to pat a pet,
  * peek over a shoulder or look about (``poseMe``). ``seconds`` drives the
@@ -641,8 +644,9 @@ export function poseCharacter(
   rig.hips.rotation.y = 0;
   rig.wand.visible = pose !== "walk" && act === "wand" && !stuck;
   rig.hips.rotation.z = act === "dismay" ? 0.1 * Math.sin(seconds * 7) : 0;
-  rig.sweat.visible = stuck;
-  if (stuck) drip(rig.sweat, seconds);
+  const bowing = act === "bow" && pose !== "walk";
+  rig.sweat.visible = stuck || bowing;
+  if (rig.sweat.visible) drip(rig.sweat, seconds);
   // Only waving and the phone swing an arm out sideways.
   armL.rotation.z = 0;
   armR.rotation.z = 0;
@@ -654,6 +658,18 @@ export function poseCharacter(
     armR.rotation.x = 0.45 * swing;
     rig.hips.position.y =
       HIP_HEIGHT + 0.05 * Math.abs(Math.cos(seconds * STRIDE_RATE));
+    return;
+  }
+  if (bowing) {
+    // Bending forward from the hips in a sweat, arms down along its sides;
+    // the legs keep to the floor or the chair.
+    const bend = bowAngle(progress);
+    rig.hips.rotation.x = bend;
+    armL.rotation.set(0.1, 0, 0);
+    armR.rotation.set(0.1, 0, 0);
+    legL.rotation.x = (seated ? -Math.PI / 2 : 0) - bend;
+    legR.rotation.x = (seated ? -Math.PI / 2 : 0) - bend;
+    rig.hips.position.y = seated ? SEATED_HIP_HEIGHT : HIP_HEIGHT;
     return;
   }
   if (act === "dismay") {
