@@ -50,6 +50,7 @@ import {
   type FloorPoint,
 } from "@/systems/isoNavGrid";
 import { loungeAct } from "@/systems/loungeActs";
+import { stepVisit, VISIT_MAX_MS, type Visit } from "@/systems/officeApproval";
 import {
   CHEER_MS,
   DISMAY_MS,
@@ -160,6 +161,8 @@ export interface RoomsInUse {
   claude: ClaudeAt | null;
   /** Where I am and what I am up to, for the pets. */
   me: MeSighting | null;
+  /** Claude has just reached my desk with a pull request's board. */
+  boardHandedOver: boolean;
 }
 
 interface Placed {
@@ -236,6 +239,9 @@ export class IsoPeople {
   private me: OfficeMe | null = null;
   /** Where Claude was last frame, for me. */
   private claudeAt: ClaudeAt | null = null;
+  /** Claude's errand to my desk with a pull request's board, while it runs. */
+  private visit: Visit | null = null;
+  private visitPending = false;
 
   private words: BubbleWords = {
     thinking: "",
@@ -357,7 +363,14 @@ export class IsoPeople {
       catNap: false,
       claude: null,
       me: null,
+      boardHandedOver: false,
     };
+    if (this.visitPending) {
+      this.visitPending = false;
+      this.visit = { since: now, until: null };
+    }
+    // With no Claude on the floor the errand would never end.
+    if (this.visit && now - this.visit.since > VISIT_MAX_MS) this.visit = null;
     if (this.callPending) {
       this.callPending = false;
       this.callUntil = now + CALL_MS;
@@ -384,7 +397,11 @@ export class IsoPeople {
         placed.person.kind === "me"
           ? this.stepMe(placed.person, now, dt, pets)
           : stepIsoWalker(placed.walker, {
-              activity,
+              // On the errand to my desk it heads there as if to ask me.
+              activity:
+                placed.person.kind === "claude" && this.visit
+                  ? "asking"
+                  : activity,
               stuck,
               seat: placed.seat,
               spotIn: (room) => this.spotIn(id, room),
@@ -401,6 +418,15 @@ export class IsoPeople {
       }
       if (walker.goal !== "report") this.reporting.delete(id);
       placed.walker = walker;
+      if (placed.person.kind === "claude" && this.visit) {
+        const step = stepVisit(
+          this.visit,
+          now,
+          walker.goal === "mydesk" && walker.path === null,
+        );
+        this.visit = step.visit;
+        if (step.handedOver) inUse.boardHandedOver = true;
+      }
       if (walker.trip?.kind === "gone") {
         gone.push(id);
         continue;
@@ -432,6 +458,14 @@ export class IsoPeople {
         act,
         act === "throw" && me?.thrown ? (now - me.thrown.at) / THROW_MS : 0,
       );
+      // On its way to my desk Claude holds the board out in both hands.
+      const carryingBoard =
+        placed.person.kind === "claude" && this.visit?.until === null;
+      placed.rig.clipboard.visible = carryingBoard;
+      if (carryingBoard) {
+        placed.rig.arms[0].rotation.set(-0.95, 0, 0.12);
+        placed.rig.arms[1].rotation.set(-0.95, 0, -0.12);
+      }
       // In the cab, behind its doors: no chip or bubble either.
       const inCab = walker.z < ELEVATOR_DOOR.z - IN_CAB_DEPTH;
       rainOn(placed.rig, placed.person.rainCloud && !inCab, now / 1000);
@@ -519,7 +553,7 @@ export class IsoPeople {
       findPath: findFloorPath,
       walkable: isFloorWalkable,
       typedAt,
-      asked: claude?.person.activity === "asking",
+      asked: claude?.person.activity === "asking" || this.visit !== null,
       party: now < this.partyUntil,
       claude: this.claudeAt,
       dog: pets.dog,
@@ -669,6 +703,17 @@ export class IsoPeople {
     this.partyPending = true;
   }
 
+  /** A pull request was just opened: Claude takes its board to my desk. */
+  visitMe(): void {
+    this.visitPending = true;
+  }
+
+  /** Another pull request (or none) is the latest now: Claude stays put. */
+  cancelVisit(): void {
+    this.visit = null;
+    this.visitPending = false;
+  }
+
   /** Take everyone off the floor; the next `sync` places them afresh. */
   clear(): void {
     for (const [id, placed] of this.placed) this.remove(id, placed);
@@ -678,6 +723,9 @@ export class IsoPeople {
     this.fresh = true;
     this.callPending = false;
     this.callUntil = 0;
+    // An errand asked for before the people are placed (a place or page
+    // just opened) still runs once they are; one under way is dropped.
+    this.visit = null;
   }
 
   dispose(): void {

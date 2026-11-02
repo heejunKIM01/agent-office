@@ -93,6 +93,8 @@ export interface CharacterRig {
   legs: [THREE.Group, THREE.Group];
   arms: [THREE.Group, THREE.Group];
   book: THREE.Object3D;
+  /** A pull request's approval board, held out in front on the way to my desk. */
+  clipboard: THREE.Object3D;
   /** A mug in the right hand while having a coffee (cafe, lounge). */
   cup: THREE.Object3D;
   /** A phone held in both hands, looked at on the lounge sofa. */
@@ -248,6 +250,19 @@ function buildRig(look: Look): CharacterRig {
   book.visible = false;
   hips.add(book);
 
+  // Held up in front like the book, the paper towards the camera-side.
+  const clipboard = new THREE.Group();
+  clipboard.add(box(0.44, 0.56, 0.04, C.boardBack, 0, 0, 0));
+  clipboard.add(box(0.36, 0.44, 0.01, C.bookPages, 0, 0.02, 0.025));
+  for (const y of [0.16, 0.08, 0]) {
+    clipboard.add(box(0.26, 0.025, 0.005, C.boardLines, 0, y, 0.032));
+  }
+  clipboard.add(box(0.18, 0.07, 0.03, C.boardClip, 0, 0.26, 0.03));
+  clipboard.position.set(0, 0.45, 0.5);
+  clipboard.rotation.x = -0.45;
+  clipboard.visible = false;
+  hips.add(clipboard);
+
   // In the right hand, upright while the arm holds it out in front.
   const cup = new THREE.Group();
   cup.add(cylinder(0.11, 0.09, 0.24, C.cup, 0, -0.12, 0, 14));
@@ -365,6 +380,7 @@ function buildRig(look: Look): CharacterRig {
     legs,
     arms,
     book,
+    clipboard,
     cup,
     handset,
     watch,
