@@ -32,6 +32,7 @@ import { IsoDog } from "./isoDog";
 import { IsoApproval } from "./isoApproval";
 import { IsoEffects } from "./isoEffects";
 import { IsoParcels } from "./isoParcels";
+import { IsoPlant } from "./isoPlant";
 import { IsoTimeOfDay } from "./isoTimeOfDay";
 import { setNightView } from "./isoFurniture";
 import { IsoPeople } from "./isoPeople";
@@ -70,6 +71,8 @@ export interface IsoView {
   setApproval(approval: Approval): void;
   /** When the session last saw work (ms): working on into the night brings a pizza. */
   setLastWork(at: number | null): void;
+  /** When the session's commits went through (ms): the pot on my desk grows with today's. */
+  setCommitTimes(times: readonly number[]): void;
   /** My latest prompt when it said thanks: a fresh new one raises hearts. */
   setThanks(thanks: { id: string; at: number } | null): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
@@ -116,6 +119,7 @@ function createOffice(
   const parcels = new IsoParcels(office);
   const approval = new IsoApproval(office);
   const timeOfDay = new IsoTimeOfDay(office);
+  const plant = new IsoPlant(office);
   const cat = new IsoCat(office);
   const dog = new IsoDog(office);
   /** A game the cat and dog play together, while one goes on. */
@@ -147,6 +151,7 @@ function createOffice(
       if (inUse.boardHandedOver) approval.handOver();
       approval.update(now / 1000);
       timeOfDay.update(date, inUse.editingSeats);
+      plant.update(date, now / 1000);
       play = stepPlay(play, {
         now,
         dt,
@@ -176,6 +181,7 @@ function createOffice(
     setTurn: (turn) => effects.setTurn(turn),
     setParcels: (list) => parcels.setParcels(list),
     setLastWork: (at) => timeOfDay.setLastWork(at),
+    setCommitTimes: (times) => plant.setCommitTimes(times),
     setApproval: (latest) => {
       const board = approval.setApproval(latest);
       if (board === "bring") people.visitMe();
@@ -426,6 +432,9 @@ export function createIsoView(
     },
     setLastWork(at): void {
       world.setLastWork?.(at);
+    },
+    setCommitTimes(times): void {
+      world.setCommitTimes?.(times);
     },
     setThanks(thanks: { id: string; at: number } | null): void {
       const fresh =

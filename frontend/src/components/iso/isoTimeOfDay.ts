@@ -22,9 +22,12 @@ const DESK_TOP = 0.75;
  * right edge. The one sitting there hides anything nearer.
  */
 const LAMP_FROM_SEAT = { x: 0.95, z: -1.8 };
-/** The reception desk's top, and where on it the pizza goes (along its length, across). */
+/**
+ * The reception desk's top, and where on it the pizza goes (along its length,
+ * across): left of my monitor, leaving the desk's end to the pot (isoPlant.ts).
+ */
 const RECEPTION_TOP = 1.01;
-const PIZZA_ON_DESK = { along: -2.2, across: 0.05 };
+const PIZZA_ON_DESK = { along: -1.55, across: 0.05 };
 /** Lamps enough for a full row of typists. */
 const LAMPS = 8;
 
