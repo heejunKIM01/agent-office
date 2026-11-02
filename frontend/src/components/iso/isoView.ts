@@ -75,6 +75,8 @@ export interface IsoView {
   setCommitTimes(times: readonly number[]): void;
   /** My latest prompt when it said thanks: a fresh new one raises hearts. */
   setThanks(thanks: { id: string; at: number } | null): void;
+  /** My latest prompt when it pushed back: a fresh new one has Claude bow. */
+  setPushback(pushback: { id: string; at: number } | null): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
   setShipped(shipped: { id: string; at: number } | null): void;
   zoomBy(factor: number): void;
@@ -170,6 +172,7 @@ function createOffice(
       cat.hearts();
       dog.hearts();
     },
+    bow: () => people.bow(),
     ship: () => {
       effects.burst();
       people.party();
@@ -404,6 +407,7 @@ export function createIsoView(
   let shippedSeen: string | null = null;
   /** The thanks already answered with hearts (or seen when it was old). */
   let thanksSeen: string | null = null;
+  let pushbackSeen: string | null = null;
 
   return {
     setPeople(list: IsoPerson[]): void {
@@ -443,6 +447,14 @@ export function createIsoView(
         Date.now() - thanks.at < FRESH_MS;
       thanksSeen = thanks?.id ?? null;
       if (fresh) world.hearts();
+    },
+    setPushback(pushback: { id: string; at: number } | null): void {
+      const fresh =
+        pushback !== null &&
+        pushback.id !== pushbackSeen &&
+        Date.now() - pushback.at < FRESH_MS;
+      pushbackSeen = pushback?.id ?? null;
+      if (fresh) world.bow?.();
     },
     setShipped(shipped: { id: string; at: number } | null): void {
       const fresh =
