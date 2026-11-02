@@ -16,23 +16,26 @@ export const ALARM_SPOT = { x: 19.2, z: 0.25 };
 /** How fast the beams go round (turns a second). */
 const TURNS = 1.6;
 /** How bright the red flush on the room is at its brightest. */
-const FLUSH = 9;
+const FLUSH = 16;
+/** How far each beam reaches (m). */
+const BEAM_LENGTH = 3;
 
 /** A beam: a long open cone of red light lying on its side, pointing out. */
 function beam(): THREE.Mesh {
   const cone = new THREE.Mesh(
-    new THREE.ConeGeometry(0.9, 4, 20, 1, true),
+    new THREE.ConeGeometry(0.7, BEAM_LENGTH, 20, 1, true),
+    // Plain (not additive) blending: over the white walls an added red
+    // washes out to white.
     new THREE.MeshBasicMaterial({
       color: C.alarmBeam,
       transparent: true,
-      opacity: 0.28,
+      opacity: 0.4,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
     }),
   );
   cone.rotation.z = Math.PI / 2;
-  cone.position.x = 2;
+  cone.position.x = BEAM_LENGTH / 2;
   return cone;
 }
 
@@ -61,7 +64,7 @@ export class IsoAlarm {
     this.root.add(this.dome);
     this.rotor.position.y = 0.26;
     const back = beam();
-    back.position.x = -2;
+    back.position.x = -BEAM_LENGTH / 2;
     back.rotation.z = -Math.PI / 2;
     this.rotor.add(beam(), back);
     this.rotor.visible = false;

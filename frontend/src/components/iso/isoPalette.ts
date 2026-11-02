@@ -101,7 +101,7 @@ export const ISO_COLORS = {
   alarmBase: "#334155",
   alarmDomeOff: "#7f1d1d",
   alarmDomeOn: "#ef4444",
-  alarmBeam: "#f87171",
+  alarmBeam: "#ef4444",
   lunchBox: "#1f2937",
   lunchEgg: "#facc15",
   lunchGreens: "#22c55e",
