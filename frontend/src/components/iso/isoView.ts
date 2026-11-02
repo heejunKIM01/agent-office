@@ -18,6 +18,7 @@ import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
 import type { IsoPerson } from "@/systems/officePeople";
 import type { Approval } from "@/systems/officeApproval";
 import type { Parcel } from "@/systems/officeParcels";
+import { dayPart } from "@/systems/officeHours";
 import { NO_PLAY, stepPlay } from "@/systems/petPlay";
 import { FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
 import type { Place } from "@/utils/place";
@@ -31,6 +32,7 @@ import { IsoDog } from "./isoDog";
 import { IsoApproval } from "./isoApproval";
 import { IsoEffects } from "./isoEffects";
 import { IsoParcels } from "./isoParcels";
+import { IsoTimeOfDay } from "./isoTimeOfDay";
 import { setNightView } from "./isoFurniture";
 import { IsoPeople } from "./isoPeople";
 import type { IsoWorld, PlaceWords } from "./isoWorld";
@@ -66,6 +68,8 @@ export interface IsoView {
   setParcels(parcels: { count: number; last: Parcel | null }): void;
   /** The latest pull request: Claude brings its board to my desk, and a merge stamps it. */
   setApproval(approval: Approval): void;
+  /** When the session last saw work (ms): working on into the night brings a pizza. */
+  setLastWork(at: number | null): void;
   /** My latest prompt when it said thanks: a fresh new one raises hearts. */
   setThanks(thanks: { id: string; at: number } | null): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
@@ -111,6 +115,7 @@ function createOffice(
   const effects = new IsoEffects(office);
   const parcels = new IsoParcels(office);
   const approval = new IsoApproval(office);
+  const timeOfDay = new IsoTimeOfDay(office);
   const cat = new IsoCat(office);
   const dog = new IsoDog(office);
   /** A game the cat and dog play together, while one goes on. */
@@ -125,6 +130,9 @@ function createOffice(
     clear: () => people.clear(),
     update: (now, dt) => {
       // Each pet sees where the other was a frame ago, and so do I.
+      // The office keeps the local time: lunch in the cafe, lamps at night.
+      const date = new Date();
+      people.setLunch(dayPart(date) === "lunch");
       const catSeen = cat.sighting();
       const dogSeen = dog.sighting();
       const seen = people.update(now, dt, { cat: catSeen, dog: dogSeen });
@@ -138,6 +146,7 @@ function createOffice(
       effects.update(now / 1000, dt, inUse);
       if (inUse.boardHandedOver) approval.handOver();
       approval.update(now / 1000);
+      timeOfDay.update(date, inUse.editingSeats);
       play = stepPlay(play, {
         now,
         dt,
@@ -166,6 +175,7 @@ function createOffice(
     setCommits: (commits) => effects.setCommits(commits),
     setTurn: (turn) => effects.setTurn(turn),
     setParcels: (list) => parcels.setParcels(list),
+    setLastWork: (at) => timeOfDay.setLastWork(at),
     setApproval: (latest) => {
       const board = approval.setApproval(latest);
       if (board === "bring") people.visitMe();
@@ -413,6 +423,9 @@ export function createIsoView(
     },
     setApproval(approval): void {
       world.setApproval?.(approval);
+    },
+    setLastWork(at): void {
+      world.setLastWork?.(at);
     },
     setThanks(thanks: { id: string; at: number } | null): void {
       const fresh =

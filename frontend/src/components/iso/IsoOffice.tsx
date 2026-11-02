@@ -26,6 +26,7 @@ import {
   latestTurn,
 } from "@/systems/roomGimmicks";
 import { latestApproval } from "@/systems/officeApproval";
+import { lastWorkAt } from "@/systems/officeHours";
 import { parcelsDelivered } from "@/systems/officeParcels";
 import type { PlaceWords } from "./isoWorld";
 import { createIsoView, type IsoView } from "./isoView";
@@ -114,6 +115,7 @@ function IsoScene({
   const thanks = useMemo(() => lastThanks(eventLog), [eventLog]);
   const parcels = useMemo(() => parcelsDelivered(eventLog), [eventLog]);
   const approval = useMemo(() => latestApproval(eventLog), [eventLog]);
+  const lastWork = useMemo(() => lastWorkAt(eventLog), [eventLog]);
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<IsoView | null>(null);
   /** The session snapshot the people on the floor were placed from. */
@@ -237,6 +239,10 @@ function IsoScene({
   useEffect(() => {
     viewRef.current?.setApproval(approval);
   }, [approval]);
+
+  useEffect(() => {
+    viewRef.current?.setLastWork(lastWork);
+  }, [lastWork]);
 
   // Keep the people on the floor in step with the session.
   useEffect(() => {
