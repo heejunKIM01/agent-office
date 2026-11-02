@@ -1,6 +1,6 @@
 /**
  * The pot on my desk (systems/officePlant.ts counts the day's commits): a
- * terracotta pot at the end of the reception desk with a sprout in it that
+ * terracotta pot at the left end of the reception desk with a sprout in it that
  * grows taller and leafier with the day's commits, buds at five and flowers
  * at eight. Each new stage pops up with a little bounce; the next day it is
  * a sprout again.
@@ -17,9 +17,13 @@ import {
 import { cylinder, material } from "./isoFurniture";
 import { ISO_COLORS as C } from "./isoPalette";
 
-/** The reception desk's top, and where on it the pot stands (along its length, across). */
+/**
+ * The reception desk's top, and where on it the pot stands (along its length,
+ * across): the end away from where visitors stand to ask me something
+ * (WORK_SPOTS.mydesk), so they do not hide it, and clear of tonight's pizza.
+ */
 const DESK_TOP = 1.01;
-const ON_DESK = { along: 2.75, across: 0.1 };
+const ON_DESK = { along: -2.95, across: 0.1 };
 /** How tall the stem is at each stage (m). */
 const STEM = [0.07, 0.18, 0.32, 0.46, 0.5] as const;
 /** How many leaves show at each stage. */
