@@ -44,6 +44,8 @@ export interface IsoWorld {
   hearts(): void;
   /** I pushed back: Claude bows in a sweat (the office only). */
   bow?(): void;
+  /** Claude started a risky command: the warning light spins and everyone looks (the office only). */
+  alarm?(): void;
   /** Work just shipped (a push or merge). */
   ship(): void;
   /** The dark theme's night, or day again (the office and airport keep their own light). */

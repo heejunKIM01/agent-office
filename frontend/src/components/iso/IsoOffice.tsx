@@ -27,6 +27,7 @@ import {
 } from "@/systems/roomGimmicks";
 import { latestApproval } from "@/systems/officeApproval";
 import { lastWorkAt } from "@/systems/officeHours";
+import { latestAlarm } from "@/systems/officeAlarm";
 import { lastPushback } from "@/systems/officeBow";
 import { commitTimes } from "@/systems/officePlant";
 import { parcelsDelivered } from "@/systems/officeParcels";
@@ -116,6 +117,7 @@ function IsoScene({
   // Thanking the office raises hearts beside everyone's head.
   const thanks = useMemo(() => lastThanks(eventLog), [eventLog]);
   const pushback = useMemo(() => lastPushback(eventLog), [eventLog]);
+  const alarm = useMemo(() => latestAlarm(eventLog), [eventLog]);
   const parcels = useMemo(() => parcelsDelivered(eventLog), [eventLog]);
   const approval = useMemo(() => latestApproval(eventLog), [eventLog]);
   const lastWork = useMemo(() => lastWorkAt(eventLog), [eventLog]);
@@ -239,6 +241,10 @@ function IsoScene({
   useEffect(() => {
     viewRef.current?.setPushback(pushback);
   }, [pushback]);
+
+  useEffect(() => {
+    viewRef.current?.setAlarm(alarm);
+  }, [alarm]);
 
   useEffect(() => {
     viewRef.current?.setParcels(parcels);
