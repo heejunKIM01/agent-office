@@ -708,6 +708,12 @@ export class IsoPeople {
     this.visitPending = true;
   }
 
+  /** Another pull request (or none) is the latest now: Claude stays put. */
+  cancelVisit(): void {
+    this.visit = null;
+    this.visitPending = false;
+  }
+
   /** Take everyone off the floor; the next `sync` places them afresh. */
   clear(): void {
     for (const [id, placed] of this.placed) this.remove(id, placed);
@@ -717,8 +723,9 @@ export class IsoPeople {
     this.fresh = true;
     this.callPending = false;
     this.callUntil = 0;
+    // An errand asked for before the people are placed (a place or page
+    // just opened) still runs once they are; one under way is dropped.
     this.visit = null;
-    this.visitPending = false;
   }
 
   dispose(): void {

@@ -88,21 +88,27 @@ export class IsoApproval {
     this.noteText = document.createElement("div");
     this.noteText.className = NOTE_CLASS;
     this.note = new CSS2DObject(this.noteText);
-    this.note.center.set(0.5, 1);
-    this.note.position.set(spot.x, DESK_TOP + 0.9, spot.z);
+    // Hung under the board: Claude stands beside it and I sit behind it,
+    // and their name chips float over the desk.
+    this.note.center.set(0.5, 0);
+    this.note.position.set(spot.x, DESK_TOP - 0.15, spot.z);
     this.note.visible = false;
     office.add(this.note);
   }
 
   /**
-   * The session's latest pull request and its merge. Returns true when one
-   * was just opened, for Claude to bring its board over; until then the desk
-   * has none. A pull request opened earlier lies there already, stamped if
-   * it was merged.
+   * The session's latest pull request and its merge. Says ``bring`` when one
+   * was just opened, for Claude to bring its board over (until then the
+   * desk has none), ``changed`` when another one (or none) is the latest now
+   * and lies there already (stamped if it was merged), and ``same`` when the
+   * pull request is the one the desk has.
    */
-  setApproval(approval: Approval, now = Date.now()): boolean {
+  setApproval(
+    approval: Approval,
+    now = Date.now(),
+  ): "bring" | "changed" | "same" {
     const { created, merged } = approval;
-    let bring = false;
+    let result: "bring" | "changed" | "same" = "same";
     if ((created?.id ?? null) !== this.createdId) {
       this.createdId = created?.id ?? null;
       this.title = created?.title ?? "";
@@ -112,9 +118,10 @@ export class IsoApproval {
       this.stampStart = null;
       this.mergedId = null;
       this.noteUntil = null;
-      bring = created !== null && now - created.at < FRESH_MS;
+      const bring = created !== null && now - created.at < FRESH_MS;
       this.awaitingSince = bring ? now : null;
       this.board.visible = created !== null && !bring;
+      result = bring ? "bring" : "changed";
     }
     if (merged && merged.id !== this.mergedId) {
       this.mergedId = merged.id;
@@ -122,7 +129,7 @@ export class IsoApproval {
       else if (this.awaitingSince !== null) this.stampAfterHandover = true;
       else this.stampPending = true;
     }
-    return bring;
+    return result;
   }
 
   /** Claude has reached my desk: the board lands with its title over it. */

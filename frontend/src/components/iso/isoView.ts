@@ -167,7 +167,9 @@ function createOffice(
     setTurn: (turn) => effects.setTurn(turn),
     setParcels: (list) => parcels.setParcels(list),
     setApproval: (latest) => {
-      if (approval.setApproval(latest)) people.visitMe();
+      const board = approval.setApproval(latest);
+      if (board === "bring") people.visitMe();
+      if (board === "changed") people.cancelVisit();
     },
     // The office's night is its windows (setNightView), set by the view.
     setNight: () => undefined,
