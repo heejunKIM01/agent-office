@@ -1,6 +1,6 @@
 /**
  * Parcels on screen (systems/officeParcels.ts decides the courier's way): a
- * stack of cardboard boxes on the floor at the end of Claude's desk, a box
+ * stack of cardboard boxes on the floor behind Claude's chair, a box
  * per install in the session, and the courier in brown who brings a new one
  * up in the elevator, its label over his head, sets it on the stack, waves
  * and rides back down. The label shows over the stack a while after.
@@ -33,8 +33,11 @@ import {
 } from "./isoCharacters";
 import { box } from "./isoFurniture";
 
-/** The stack's middle on the floor: past the end of Claude's desk, by the wall. */
-const STACK = { x: CLAUDE_SEAT.x - 1.95, z: CLAUDE_SEAT.z - 1.55 };
+/**
+ * The stack's middle on the floor behind Claude's chair, at the front of the
+ * dev room: few walk there, and Claude in its chair does not hide it.
+ */
+const STACK = { x: CLAUDE_SEAT.x - 0.3, z: CLAUDE_SEAT.z + 2.6 };
 const BOX = { w: 0.6, h: 0.42, d: 0.52 };
 const COLORS = { card: "#c99a5b", tape: "#e8d3a6", label: "#f8fafc" };
 /** The label shows over the stack this long after a box lands (s). */
@@ -45,9 +48,10 @@ const MAX_QUEUE = 3;
 const WAY: CourierWay = {
   cab: ELEVATOR_CAB,
   door: ELEVATOR_DOOR,
-  // In front of the stack, facing it (towards the windows).
-  drop: { x: STACK.x, z: STACK.z + 1.3 },
-  dropFacing: Math.PI,
+  // Beside the stack on the right, facing it: in front, the plant by my
+  // desk would hide him.
+  drop: { x: STACK.x + 1.2, z: STACK.z + 0.15 },
+  dropFacing: -Math.PI / 2,
   findPath: findFloorPath,
 };
 
@@ -60,14 +64,14 @@ function parcelBox(): THREE.Group {
   return g;
 }
 
-/** Where box ``i`` sits on the stack: two piles side by side along z, bottom up. */
+/** Where box ``i`` sits on the stack: two piles side by side along x, bottom up. */
 function stackSpot(i: number): THREE.Vector3 {
   const pile = i % 2;
   const level = Math.floor(i / 2);
   return new THREE.Vector3(
-    STACK.x + (pile === 0 ? 0.02 : -0.03),
+    STACK.x + (pile === 0 ? -0.33 : 0.33),
     level * BOX.h,
-    STACK.z + (pile === 0 ? -0.3 : 0.3),
+    STACK.z + (pile === 0 ? 0.02 : -0.03),
   );
 }
 

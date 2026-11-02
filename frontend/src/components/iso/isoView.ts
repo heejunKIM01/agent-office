@@ -60,7 +60,7 @@ export interface IsoView {
   }): void;
   /** The session's latest turn: a long one leaves empty cups on Claude's desk. */
   setTurn(turn: { start: number; end: number | null } | null): void;
-  /** The session's installs: a box each beside Claude's desk, a new one brought up by a courier. */
+  /** The session's installs: a box each behind Claude's chair, a new one brought up by a courier. */
   setParcels(parcels: { count: number; last: Parcel | null }): void;
   /** My latest prompt when it said thanks: a fresh new one raises hearts. */
   setThanks(thanks: { id: string; at: number } | null): void;

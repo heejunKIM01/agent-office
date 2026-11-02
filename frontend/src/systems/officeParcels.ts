@@ -1,7 +1,7 @@
 /**
  * Parcels for installs (docs/plan/spec.md 「작업 공간 기믹」, 2026-11-02): when
  * a command that installs packages goes through, a courier steps out of the
- * elevator with a box, sets it down on the stack beside Claude's desk and
+ * elevator with a box, sets it down on the stack behind Claude's chair and
  * rides back down. The box's label is the packages it brought. Pure: no
  * three.js.
  */
@@ -46,7 +46,7 @@ export function parcelLabel(command: unknown): string | null {
   return null;
 }
 
-/** The stack beside Claude's desk holds this many boxes. */
+/** The stack behind Claude's chair holds this many boxes. */
 export const MAX_PARCELS = 6;
 
 export interface Parcel {
