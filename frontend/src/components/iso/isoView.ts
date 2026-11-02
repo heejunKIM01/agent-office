@@ -16,6 +16,7 @@ import {
 } from "@/constants/isoFloorPlan";
 import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
 import type { IsoPerson } from "@/systems/officePeople";
+import type { Approval } from "@/systems/officeApproval";
 import type { Parcel } from "@/systems/officeParcels";
 import { NO_PLAY, stepPlay } from "@/systems/petPlay";
 import { FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
@@ -27,6 +28,7 @@ import { createSite } from "./construction/siteWorld";
 import { createFishing } from "./fishing/fishingWorld";
 import { IsoCat } from "./isoCat";
 import { IsoDog } from "./isoDog";
+import { IsoApproval } from "./isoApproval";
 import { IsoEffects } from "./isoEffects";
 import { IsoParcels } from "./isoParcels";
 import { setNightView } from "./isoFurniture";
@@ -62,6 +64,8 @@ export interface IsoView {
   setTurn(turn: { start: number; end: number | null } | null): void;
   /** The session's installs: a box each behind Claude's chair, a new one brought up by a courier. */
   setParcels(parcels: { count: number; last: Parcel | null }): void;
+  /** The latest pull request: Claude brings its board to my desk, and a merge stamps it. */
+  setApproval(approval: Approval): void;
   /** My latest prompt when it said thanks: a fresh new one raises hearts. */
   setThanks(thanks: { id: string; at: number } | null): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
@@ -106,6 +110,7 @@ function createOffice(
   const people = new IsoPeople(scene, onPersonLeft);
   const effects = new IsoEffects(office);
   const parcels = new IsoParcels(office);
+  const approval = new IsoApproval(office);
   const cat = new IsoCat(office);
   const dog = new IsoDog(office);
   /** A game the cat and dog play together, while one goes on. */
@@ -131,6 +136,8 @@ function createOffice(
         arriving: seen.arriving || courier.arriving,
       };
       effects.update(now / 1000, dt, inUse);
+      if (inUse.boardHandedOver) approval.handOver();
+      approval.update(now / 1000);
       play = stepPlay(play, {
         now,
         dt,
@@ -159,12 +166,16 @@ function createOffice(
     setCommits: (commits) => effects.setCommits(commits),
     setTurn: (turn) => effects.setTurn(turn),
     setParcels: (list) => parcels.setParcels(list),
+    setApproval: (latest) => {
+      if (approval.setApproval(latest)) people.visitMe();
+    },
     // The office's night is its windows (setNightView), set by the view.
     setNight: () => undefined,
     dispose: () => {
       people.dispose();
       effects.dispose();
       parcels.dispose();
+      approval.dispose();
     },
   };
 }
@@ -397,6 +408,9 @@ export function createIsoView(
     },
     setParcels(parcels): void {
       world.setParcels?.(parcels);
+    },
+    setApproval(approval): void {
+      world.setApproval?.(approval);
     },
     setThanks(thanks: { id: string; at: number } | null): void {
       const fresh =
