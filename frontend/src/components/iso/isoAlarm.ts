@@ -1,6 +1,6 @@
 /**
  * The warning light on the back wall (systems/officeAlarm.ts): a red dome on
- * top of the dev room's window wall. When Claude runs a risky command it
+ * top of the dev room's window wall, beside its name. When Claude runs a risky command it
  * lights up, two beams sweep round it and the room flushes red for a few
  * seconds; everyone turns to look (isoPeople.ts).
  */
@@ -11,8 +11,11 @@ import { ALARM_MS } from "@/systems/officeAlarm";
 import { cylinder, material } from "./isoFurniture";
 import { ISO_COLORS as C } from "./isoPalette";
 
-/** Where it stands: on top of the back wall, over the middle of the dev room. */
-export const ALARM_SPOT = { x: 19.2, z: 0.25 };
+/**
+ * Where it stands: on top of the dev room's back wall, between its second
+ * and third windows, clear of the room's name on the wall (x 17.9 to 20.1).
+ */
+export const ALARM_SPOT = { x: 22.2, z: 0.25 };
 /** How fast the beams go round (turns a second). */
 const TURNS = 1.6;
 /** How bright the red flush on the room is at its brightest. */
