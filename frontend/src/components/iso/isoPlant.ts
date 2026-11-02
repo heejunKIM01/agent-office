@@ -9,6 +9,7 @@
 import * as THREE from "three";
 import { FURNITURE, type Furniture } from "@/constants/isoFloorPlan";
 import {
+  committedJustNow,
   commitsToday,
   plantStage,
   type PlantStage,
@@ -23,6 +24,8 @@ const ON_DESK = { along: 2.75, across: 0.1 };
 const STEM = [0.07, 0.18, 0.32, 0.46, 0.5] as const;
 /** How many leaves show at each stage. */
 const LEAVES = [2, 3, 5, 7, 7] as const;
+/** Larger than a real desk pot so the stages read at the floor's zoom. */
+const SIZE = 1.6;
 /** A new stage pops up over this long (s). */
 const GROW_SECONDS = 0.8;
 
@@ -60,6 +63,7 @@ export class IsoPlant {
       DESK_TOP,
       (desk?.z ?? 0) - along * Math.sin(turn) + across * Math.cos(turn),
     );
+    this.root.scale.setScalar(SIZE);
     this.root.add(cylinder(0.17, 0.13, 0.28, C.plantPot, 0, 0, 0, 18));
     this.root.add(cylinder(0.19, 0.19, 0.05, C.plantPot, 0, 0.25, 0, 18));
     this.root.add(cylinder(0.155, 0.155, 0.02, C.plantSoil, 0, 0.28, 0, 18));
@@ -110,8 +114,10 @@ export class IsoPlant {
   update(date: Date, seconds: number): void {
     const stage = plantStage(commitsToday(this.times, date));
     if (stage !== this.stage) {
-      // A stage reached while watching pops up; the first one just shows.
-      if (this.stage !== null && stage > this.stage) this.growStart = seconds;
+      // A stage a commit just reached pops up; the first one, and one that
+      // older commits reach once the session has loaded, just shows.
+      const grew = this.stage !== null && stage > this.stage;
+      if (grew && committedJustNow(this.times, date)) this.growStart = seconds;
       this.stage = stage;
       this.shape(stage);
     }

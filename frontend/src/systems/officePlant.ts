@@ -5,7 +5,7 @@
  * next day. Pure: no three.js.
  */
 
-import { isCommitCommand } from "./roomGimmicks";
+import { FRESH_MS, isCommitCommand } from "./roomGimmicks";
 
 /** Commits it takes to reach each stage: sprout, seedling, leafy, bud, flower. */
 export const STAGE_AT = [0, 1, 3, 5, 8] as const;
@@ -44,4 +44,17 @@ export function commitsToday(times: readonly number[], date: Date): number {
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
   return times.filter((t) => t >= start.getTime() && t < end.getTime()).length;
+}
+
+/**
+ * Whether one of ``times`` went through within the last minute of ``date``: a
+ * stage reached then pops up, while a session opened on older commits just
+ * shows its stage once they have loaded.
+ */
+export function committedJustNow(
+  times: readonly number[],
+  date: Date,
+): boolean {
+  const now = date.getTime();
+  return times.some((t) => now - t < FRESH_MS);
 }

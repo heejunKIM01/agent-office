@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  committedJustNow,
   commitTimes,
   commitsToday,
   plantStage,
@@ -42,5 +43,19 @@ describe("commitsToday", () => {
   it("starts again the next day", () => {
     const times = [at(2, 23), at(2, 9)];
     expect(commitsToday(times, new Date(2026, 10, 3, 0, 5))).toBe(0);
+  });
+});
+
+describe("committedJustNow", () => {
+  const now = new Date(2026, 10, 2, 15, 0, 0);
+  const ago = (s: number) => now.getTime() - s * 1000;
+
+  it("is true for a commit within the last minute", () => {
+    expect(committedJustNow([ago(5), ago(600)], now)).toBe(true);
+  });
+
+  it("is false once the newest commit is a minute old", () => {
+    expect(committedJustNow([ago(61), ago(600)], now)).toBe(false);
+    expect(committedJustNow([], now)).toBe(false);
   });
 });
