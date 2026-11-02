@@ -56,5 +56,7 @@ export interface IsoWorld {
   setParcels?(parcels: { count: number; last: Parcel | null }): void;
   /** The latest pull request and its merge: only the office has the board on my desk. */
   setApproval?(approval: Approval): void;
+  /** When the session last saw work (ms): only the office keeps late hours. */
+  setLastWork?(at: number | null): void;
   dispose(): void;
 }

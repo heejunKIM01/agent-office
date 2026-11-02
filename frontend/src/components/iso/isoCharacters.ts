@@ -16,7 +16,14 @@ import { MAX_PILE } from "@/systems/roomGimmicks";
  * or what I do up from my desk (officeMe.ts).
  */
 export type PoseAct =
-  LoungeAct | "watch" | "scratch" | "cheer" | "dismay" | "clap" | MeAct;
+  | LoungeAct
+  | "watch"
+  | "scratch"
+  | "cheer"
+  | "dismay"
+  | "clap"
+  | "lunch"
+  | MeAct;
 
 /** What I do up from my desk: stretch, throw the ball and call the dog, play, pat, look. */
 export type MeAct =
@@ -97,6 +104,8 @@ export interface CharacterRig {
   clipboard: THREE.Object3D;
   /** A mug in the right hand while having a coffee (cafe, lounge). */
   cup: THREE.Object3D;
+  /** A lunch box in the left hand, eaten in the cafe at lunchtime. */
+  lunch: THREE.Object3D;
   /** A phone held in both hands, looked at on the lounge sofa. */
   handset: THREE.Object3D;
   /** A wristwatch on the left wrist, checked while waiting on a command. */
@@ -272,6 +281,19 @@ function buildRig(look: Look): CharacterRig {
   cup.visible = false;
   arms[1].add(cup);
 
+  // In the left hand, held level in front: rice, an egg roll, greens and a
+  // pickled plum.
+  const lunch = new THREE.Group();
+  lunch.add(box(0.34, 0.1, 0.26, C.lunchBox, 0, -0.05, 0));
+  lunch.add(box(0.16, 0.012, 0.22, C.bookPages, -0.07, 0.05, 0));
+  lunch.add(box(0.12, 0.03, 0.08, C.lunchEgg, 0.09, 0.05, -0.05));
+  lunch.add(box(0.12, 0.03, 0.08, C.lunchGreens, 0.09, 0.05, 0.05));
+  lunch.add(box(0.04, 0.03, 0.04, C.lunchPlum, -0.07, 0.06, 0));
+  lunch.position.set(0, -0.7, 0.18);
+  lunch.rotation.x = 1.0;
+  lunch.visible = false;
+  arms[0].add(lunch);
+
   // On the floor a step behind it, to its left: facing a shelf, that is
   // toward the camera and clear of its legs and the walls. Each book a bit
   // askew.
@@ -382,6 +404,7 @@ function buildRig(look: Look): CharacterRig {
     book,
     clipboard,
     cup,
+    lunch,
     handset,
     watch,
     pile,
@@ -607,8 +630,11 @@ export function poseCharacter(
   rig.watch.visible = waiting;
   rig.book.visible =
     (pose === "work" && room === "library" && !stuck) || pastime === "book";
+  const eating = act === "lunch" && pose !== "walk" && !stuck;
+  rig.lunch.visible = eating;
   rig.cup.visible =
-    (pose === "work" && room === "cafe" && !stuck) || pastime === "coffee";
+    (pose === "work" && room === "cafe" && !stuck && !eating) ||
+    pastime === "coffee";
   rig.handset.visible = pastime === "phone";
   rig.phone.visible = pose === "phone";
   rig.hips.rotation.x = pastime ? loungeLean(pastime, seconds) : 0;
@@ -698,6 +724,16 @@ export function poseCharacter(
     // Waving: the left arm up and out, swinging side to side. Facing
     // Claude's desk, a reporter shows its left side to the camera.
     if (pose === "wave") armL.rotation.z = -2.5 - 0.3 * Math.sin(seconds * 10);
+    rig.hips.position.y = HIP_HEIGHT;
+    return;
+  }
+  if (eating) {
+    // The box held out in the left hand, the right hand going to and fro
+    // between it and the mouth.
+    armL.rotation.set(-1.05, 0, 0.25);
+    armR.rotation.set(-1.3 + 0.45 * Math.abs(Math.sin(seconds * 3.2)), 0, -0.3);
+    legL.rotation.x = 0;
+    legR.rotation.x = 0;
     rig.hips.position.y = HIP_HEIGHT;
     return;
   }

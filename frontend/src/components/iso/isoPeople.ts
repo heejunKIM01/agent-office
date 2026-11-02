@@ -239,6 +239,8 @@ export class IsoPeople {
   private me: OfficeMe | null = null;
   /** Where Claude was last frame, for me. */
   private claudeAt: ClaudeAt | null = null;
+  /** It is lunchtime: whoever would rest in the lounge eats in the cafe. */
+  private lunch = false;
   /** Claude's errand to my desk with a pull request's board, while it runs. */
   private visit: Visit | null = null;
   private visitPending = false;
@@ -409,7 +411,10 @@ export class IsoPeople {
               now,
               dt,
               leaving,
-              breakRoom: placed.person.breakRoom,
+              breakRoom:
+                this.lunch && placed.person.breakRoom === "lounge"
+                  ? "cafe"
+                  : placed.person.breakRoom,
               reportSpot: () => this.reportSpot(id),
               elevator: ELEVATOR,
             });
@@ -656,6 +661,15 @@ export class IsoPeople {
     if (!walker.path && now < placed.dismayUntil) return "dismay";
     // Work just shipped: everyone on their feet or seat claps.
     if (!walker.path && now < this.partyUntil) return "clap";
+    // On its break at lunchtime it eats a lunch box in the cafe.
+    if (
+      this.lunch &&
+      person.breakRoom === "lounge" &&
+      walker.goal === "cafe" &&
+      !walker.path
+    ) {
+      return "lunch";
+    }
     const lounging =
       walker.goal === "lounge" && !walker.path && walker.pose === "sit";
     if (!lounging) placed.loungeSince = null;
@@ -701,6 +715,11 @@ export class IsoPeople {
   /** Work just shipped (a push or merge): everyone claps for a moment. */
   party(): void {
     this.partyPending = true;
+  }
+
+  /** Lunchtime (12–13) or not: on a break, lunch is eaten in the cafe. */
+  setLunch(lunch: boolean): void {
+    this.lunch = lunch;
   }
 
   /** A pull request was just opened: Claude takes its board to my desk. */

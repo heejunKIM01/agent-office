@@ -581,11 +581,33 @@ function clock(): THREE.Group {
     material(C.clockRim),
   );
   rim.position.set(0, 2.4, 0.07);
-  const hour = box(0.05, 0.28, 0.02, C.clockRim, 0, 2.4, 0.09);
-  const minute = box(0.04, 0.4, 0.02, C.clockRim, 0, 2.4, 0.09);
-  minute.rotation.z = -2.1;
-  minute.position.set(0.17, 2.48, 0.09);
-  return group(face, rim, hour, minute);
+  // Each hand turns about the face's centre; isoTimeOfDay.ts sets the time.
+  const hand = (
+    which: "hour" | "minute" | "second",
+    length: number,
+    width: number,
+    color: string,
+    z: number,
+  ): THREE.Group => {
+    const pivot = new THREE.Group();
+    pivot.position.set(0, 2.4, z);
+    pivot.add(box(width, length, 0.02, color, 0, 0, 0));
+    pivot.userData.clockHand = which;
+    return pivot;
+  };
+  const pin = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.04, 0.03, 12),
+    material(C.clockRim),
+  );
+  pin.rotation.x = Math.PI / 2;
+  pin.position.set(0, 2.4, 0.12);
+  // Ten past ten until the time is set.
+  const hour = hand("hour", 0.26, 0.05, C.clockRim, 0.09);
+  hour.rotation.z = -((10 + 10 / 60) / 12) * Math.PI * 2;
+  const minute = hand("minute", 0.38, 0.04, C.clockRim, 0.1);
+  minute.rotation.z = -(10 / 60) * Math.PI * 2;
+  const second = hand("second", 0.42, 0.015, C.clockSecond, 0.11);
+  return group(face, rim, hour, minute, second, pin);
 }
 
 /** A two-pane window with a strip of city skyline at the bottom. */
