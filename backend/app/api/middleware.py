@@ -31,6 +31,13 @@ _LOCALHOST_HOSTS = frozenset({"127.0.0.1", "::1", "localhost", "testclient"})
 _LOOPBACK_ORIGIN_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
+def _is_loopback_origin_host(hostname: str | None) -> bool:
+    """``*.localhost`` names always resolve to loopback (RFC 6761 §6.3)."""
+    if hostname is None:
+        return False
+    return hostname in _LOOPBACK_ORIGIN_HOSTS or hostname.endswith(".localhost")
+
+
 def office_page_origins() -> frozenset[str]:
     """Origins the office page itself is served from.
 
@@ -40,7 +47,7 @@ def office_page_origins() -> frozenset[str]:
     return frozenset(
         origin.rstrip("/")
         for origin in settings.BACKEND_CORS_ORIGINS
-        if urlparse(origin).hostname in _LOOPBACK_ORIGIN_HOSTS
+        if _is_loopback_origin_host(urlparse(origin).hostname)
     )
 
 
