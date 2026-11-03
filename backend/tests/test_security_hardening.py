@@ -224,6 +224,12 @@ class TestWebSocketOriginValidation:
         ws = self._make_ws(origin="http://localhost:4747")
         assert validate_websocket_origin(ws) is True
 
+    def test_dot_localhost_origin_accepted(self) -> None:
+        """``agent-office.localhost`` is loopback, so the office page may be
+        served from it."""
+        ws = self._make_ws(origin="http://agent-office.localhost:4747")
+        assert validate_websocket_origin(ws) is True
+
     def test_cors_origin_non_loopback_rejected(self) -> None:
         """A non-loopback origin present in BACKEND_CORS_ORIGINS must still be
         rejected for WebSocket — the WS trust boundary stays localhost-only

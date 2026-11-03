@@ -32,6 +32,9 @@ class Settings(BaseSettings):
         "http://localhost:4747",
         "http://127.0.0.1:4747",
         "http://0.0.0.0:4747",
+        # *.localhost resolves to loopback, so the dev UI also opens at a
+        # memorable name (Next.js allows **.localhost dev origins by default).
+        "http://agent-office.localhost:4747",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
     ]
