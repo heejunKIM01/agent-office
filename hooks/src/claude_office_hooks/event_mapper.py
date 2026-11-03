@@ -216,6 +216,20 @@ def _handle_post_tool_use(
                         data["agent_transcript_path"] = agent_path
     else:
         _attribute_tool_event(raw_data, data)
+        if data["tool_name"] == "Write" and _wrote_new_file(raw_data):
+            data["file_created"] = True
+
+
+def _wrote_new_file(raw_data: dict[str, Any]) -> bool:
+    """Whether a Write made a file that was not there (``type: "create"``).
+
+    Claude Code's Write result says ``"create"`` for a new file and
+    ``"update"`` for one it overwrote.
+    """
+    tool_response = raw_data.get("tool_response")
+    if not isinstance(tool_response, dict):
+        return False
+    return cast(dict[str, Any], tool_response).get("type") == "create"
 
 
 def _handle_post_tool_use_failure(

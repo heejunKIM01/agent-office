@@ -374,6 +374,23 @@ function kiosk(): THREE.Group {
   );
 }
 
+/**
+ * The dev room's printer on its stand, facing the room: sheets come out of
+ * the slot at the back of the tray on top (components/iso/isoPrinter.ts
+ * prints them and lights the lamp on the front panel).
+ */
+function printer(): THREE.Group {
+  return group(
+    box(0.9, 0.55, 0.62, C.printerStand, 0, 0, 0),
+    box(0.8, 0.012, 0.006, C.printerSlot, 0, 0.27, 0.313),
+    box(0.82, 0.36, 0.58, C.printerBody, 0, 0.55, 0),
+    box(0.7, 0.012, 0.006, C.printerPanel, 0, 0.62, 0.293),
+    box(0.3, 0.08, 0.02, C.printerPanel, -0.16, 0.78, 0.29),
+    box(0.56, 0.012, 0.36, C.printerTray, 0, 0.91, 0.03),
+    box(0.5, 0.05, 0.05, C.printerSlot, 0, 0.91, -0.17),
+  );
+}
+
 function globe(): THREE.Group {
   const sphere = new THREE.Mesh(
     new THREE.SphereGeometry(0.55, 24, 18),
@@ -735,6 +752,8 @@ export function buildFurniture(kind: FurnitureKind, seed = 0): THREE.Group {
       return locker();
     case "serverRack":
       return serverRack(seed);
+    case "printer":
+      return printer();
     case "kiosk":
       return kiosk();
     case "globe":

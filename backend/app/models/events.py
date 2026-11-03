@@ -100,6 +100,8 @@ class EventData(BaseModel):
     notification_type: str | None = None
     message: str | None = None
     error_type: str | None = None
+    # A Write that made a new file (the printer prints its name).
+    file_created: bool | None = None
     reason: str | None = None
     summary: str | None = None
     prompt: str | None = None
@@ -255,6 +257,8 @@ class ToolEventData(EventDataBase):
     success: bool | None = None
     result_summary: str | None = None
     error_type: str | None = None
+    # A Write that made a new file (the printer prints its name).
+    file_created: bool | None = None
     thinking: str | None = None
 
 

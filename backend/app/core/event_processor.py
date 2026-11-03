@@ -117,6 +117,7 @@ def _history_detail(event: AnyEvent) -> dict[str, Any]:
         ("message", "message"),
         ("thinking", "thinking"),
         ("error_type", "errorType"),
+        ("file_created", "fileCreated"),
         ("task_description", "taskDescription"),
         ("agent_name", "agentName"),
         ("prompt", "prompt"),

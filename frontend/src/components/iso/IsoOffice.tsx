@@ -31,6 +31,7 @@ import { latestAlarm } from "@/systems/officeAlarm";
 import { lastPushback } from "@/systems/officeBow";
 import { commitTimes } from "@/systems/officePlant";
 import { parcelsDelivered } from "@/systems/officeParcels";
+import { printouts } from "@/systems/officePrinter";
 import type { PlaceWords } from "./isoWorld";
 import { createIsoView, type IsoView } from "./isoView";
 
@@ -119,6 +120,7 @@ function IsoScene({
   const pushback = useMemo(() => lastPushback(eventLog), [eventLog]);
   const alarm = useMemo(() => latestAlarm(eventLog), [eventLog]);
   const parcels = useMemo(() => parcelsDelivered(eventLog), [eventLog]);
+  const printed = useMemo(() => printouts(eventLog), [eventLog]);
   const approval = useMemo(() => latestApproval(eventLog), [eventLog]);
   const lastWork = useMemo(() => lastWorkAt(eventLog), [eventLog]);
   const commitsAt = useMemo(() => commitTimes(eventLog), [eventLog]);
@@ -249,6 +251,11 @@ function IsoScene({
   useEffect(() => {
     viewRef.current?.setParcels(parcels);
   }, [parcels]);
+
+  // A file written that was not there comes out of the printer with its name.
+  useEffect(() => {
+    viewRef.current?.setPrintouts(printed);
+  }, [printed]);
 
   useEffect(() => {
     viewRef.current?.setApproval(approval);

@@ -91,6 +91,41 @@ async def test_restored_history_keeps_what_the_log_shows() -> None:
 
 
 @pytest.mark.asyncio
+async def test_new_file_flag_reaches_the_log_and_survives_a_restart() -> None:
+    sid = "restore-new-file"
+    ep = EventProcessor()
+    await ep.process_event(_event(EventType.SESSION_START, sid))
+    await ep.process_event(
+        _event(
+            EventType.POST_TOOL_USE,
+            sid,
+            tool_name="Write",
+            tool_use_id="w1",
+            tool_input={"file_path": "src/printer.ts"},
+            success=True,
+            file_created=True,
+        )
+    )
+    await ep.process_event(
+        _event(
+            EventType.POST_TOOL_USE,
+            sid,
+            tool_name="Write",
+            tool_use_id="w2",
+            tool_input={"file_path": "src/printer.ts"},
+            success=True,
+        )
+    )
+    live = [entry["detail"] for entry in ep.sessions[sid].history]
+    assert live[1]["fileCreated"] is True
+    assert "fileCreated" not in live[2]
+
+    state = await EventProcessor().get_current_state(sid)
+    assert state is not None
+    assert [entry["detail"] for entry in state.history] == live
+
+
+@pytest.mark.asyncio
 async def test_lead_time_follows_the_lead_and_survives_a_restart() -> None:
     # A colleague's thinking counts from its lead's latest event, as the session
     # itself counts it when shown; an employee's work does not move it.

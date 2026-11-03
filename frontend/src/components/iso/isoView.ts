@@ -18,6 +18,7 @@ import { findFloorPath, isFloorWalkable } from "@/systems/isoNavGrid";
 import type { IsoPerson } from "@/systems/officePeople";
 import type { Approval } from "@/systems/officeApproval";
 import type { Parcel } from "@/systems/officeParcels";
+import type { Printout } from "@/systems/officePrinter";
 import { dayPart } from "@/systems/officeHours";
 import { NO_PLAY, stepPlay } from "@/systems/petPlay";
 import { FRESH_MS, type NoteStatus } from "@/systems/roomGimmicks";
@@ -32,6 +33,7 @@ import { IsoDog } from "./isoDog";
 import { IsoApproval } from "./isoApproval";
 import { IsoEffects } from "./isoEffects";
 import { IsoParcels } from "./isoParcels";
+import { IsoPrinter } from "./isoPrinter";
 import { ALARM_SPOT, IsoAlarm } from "./isoAlarm";
 import { IsoPlant } from "./isoPlant";
 import { IsoTimeOfDay } from "./isoTimeOfDay";
@@ -68,6 +70,8 @@ export interface IsoView {
   setTurn(turn: { start: number; end: number | null } | null): void;
   /** The session's installs: a box each behind Claude's chair, a new one brought up by a courier. */
   setParcels(parcels: { count: number; last: Parcel | null }): void;
+  /** The session's new files: a sheet each in the printer's tray, a new one printed with its name. */
+  setPrintouts(printouts: { count: number; last: Printout | null }): void;
   /** The latest pull request: Claude brings its board to my desk, and a merge stamps it. */
   setApproval(approval: Approval): void;
   /** When the session last saw work (ms): working on into the night brings a pizza. */
@@ -126,6 +130,7 @@ function createOffice(
   const timeOfDay = new IsoTimeOfDay(office);
   const plant = new IsoPlant(office);
   const warning = new IsoAlarm(office);
+  const printer = new IsoPrinter(office);
   const cat = new IsoCat(office);
   const dog = new IsoDog(office);
   /** A game the cat and dog play together, while one goes on. */
@@ -159,6 +164,7 @@ function createOffice(
       timeOfDay.update(date, inUse.editingSeats);
       plant.update(date, now / 1000);
       warning.update(now);
+      printer.update(now);
       play = stepPlay(play, {
         now,
         dt,
@@ -192,6 +198,7 @@ function createOffice(
     setCommits: (commits) => effects.setCommits(commits),
     setTurn: (turn) => effects.setTurn(turn),
     setParcels: (list) => parcels.setParcels(list),
+    setPrintouts: (list) => printer.setPrintouts(list),
     setLastWork: (at) => timeOfDay.setLastWork(at),
     setCommitTimes: (times) => plant.setCommitTimes(times),
     setApproval: (latest) => {
@@ -207,6 +214,7 @@ function createOffice(
       parcels.dispose();
       approval.dispose();
       warning.dispose();
+      printer.dispose();
     },
   };
 }
@@ -441,6 +449,9 @@ export function createIsoView(
     },
     setParcels(parcels): void {
       world.setParcels?.(parcels);
+    },
+    setPrintouts(printouts): void {
+      world.setPrintouts?.(printouts);
     },
     setApproval(approval): void {
       world.setApproval?.(approval);

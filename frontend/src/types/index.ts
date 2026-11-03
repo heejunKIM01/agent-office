@@ -68,6 +68,8 @@ export interface EventDetail {
   message?: string;
   thinking?: string;
   errorType?: string;
+  /** A Write made a file that was not there. */
+  fileCreated?: boolean;
   taskDescription?: string;
   agentName?: string;
   prompt?: string;

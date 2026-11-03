@@ -12,6 +12,7 @@ import type { SiteWords } from "@/systems/siteTalk";
 import type { IsoPerson } from "@/systems/officePeople";
 import type { Approval } from "@/systems/officeApproval";
 import type { Parcel } from "@/systems/officeParcels";
+import type { Printout } from "@/systems/officePrinter";
 import type { NoteStatus } from "@/systems/roomGimmicks";
 import type { BubbleWords } from "./isoBubbles";
 
@@ -58,6 +59,8 @@ export interface IsoWorld {
   setTurn(turn: { start: number; end: number | null } | null): void;
   /** The session's installs: only the office has a courier bring them. */
   setParcels?(parcels: { count: number; last: Parcel | null }): void;
+  /** The session's new files: only the office has the printer that prints them. */
+  setPrintouts?(printouts: { count: number; last: Printout | null }): void;
   /** The latest pull request and its merge: only the office has the board on my desk. */
   setApproval?(approval: Approval): void;
   /** When the session last saw work (ms): only the office keeps late hours. */
