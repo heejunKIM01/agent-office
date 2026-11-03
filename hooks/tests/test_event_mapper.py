@@ -263,3 +263,35 @@ class TestSessionStart:
         assert result is not None
         assert result["data"]["source"] == "compact"
         assert result["data"]["summary"] == "Session started (compact)"
+
+
+def _post_tool_use_write(write_type: str | None) -> dict:
+    raw: dict = {
+        "tool_name": "Write",
+        "tool_use_id": "tu_write",
+        "tool_input": {"file_path": "/tmp/p/src/new.ts", "content": "x"},
+        "session_id": SESSION_ID,
+        "transcript_path": TRANSCRIPT,
+    }
+    if write_type is not None:
+        raw["tool_response"] = {"type": write_type, "filePath": "/tmp/p/src/new.ts"}
+    return raw
+
+
+class TestWriteNewFile:
+    """A Write that made a new file says so; an overwrite does not."""
+
+    def test_create_is_flagged(self) -> None:
+        result = map_event("post_tool_use", _post_tool_use_write("create"), SESSION_ID)
+        assert result is not None
+        assert result["data"]["file_created"] is True
+
+    def test_update_is_not_flagged(self) -> None:
+        result = map_event("post_tool_use", _post_tool_use_write("update"), SESSION_ID)
+        assert result is not None
+        assert "file_created" not in result["data"]
+
+    def test_missing_response_is_not_flagged(self) -> None:
+        result = map_event("post_tool_use", _post_tool_use_write(None), SESSION_ID)
+        assert result is not None
+        assert "file_created" not in result["data"]
