@@ -105,8 +105,11 @@ export class IsoPrinter {
     this.noteText = document.createElement("div");
     this.noteText.className = NOTE_CLASS;
     this.note = new CSS2DObject(this.noteText);
-    this.note.center.set(0.5, 1);
-    this.note.position.set(0, TRAY_TOP + 0.9, 0);
+    // Up and to the left of the printer, its right end over the printer:
+    // the wall clock is up and to the right, and at the floor's own zoom a
+    // tag centred over the printer hides it.
+    this.note.center.set(1, 1);
+    this.note.position.set(-0.2, TRAY_TOP + 0.45, 0);
     this.note.visible = false;
     this.root.add(this.note);
     office.add(this.root);
