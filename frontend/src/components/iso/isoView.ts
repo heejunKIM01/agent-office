@@ -32,6 +32,7 @@ import { IsoDog } from "./isoDog";
 import { IsoApproval } from "./isoApproval";
 import { IsoEffects } from "./isoEffects";
 import { IsoParcels } from "./isoParcels";
+import { ALARM_SPOT, IsoAlarm } from "./isoAlarm";
 import { IsoPlant } from "./isoPlant";
 import { IsoTimeOfDay } from "./isoTimeOfDay";
 import { setNightView } from "./isoFurniture";
@@ -77,6 +78,8 @@ export interface IsoView {
   setThanks(thanks: { id: string; at: number } | null): void;
   /** My latest prompt when it pushed back: a fresh new one has Claude bow. */
   setPushback(pushback: { id: string; at: number } | null): void;
+  /** The session's latest risky command: a fresh new one sets off the warning light. */
+  setAlarm(alarm: { id: string; at: number } | null): void;
   /** The session's latest push or merge: a fresh new one sets off confetti and claps. */
   setShipped(shipped: { id: string; at: number } | null): void;
   zoomBy(factor: number): void;
@@ -122,6 +125,7 @@ function createOffice(
   const approval = new IsoApproval(office);
   const timeOfDay = new IsoTimeOfDay(office);
   const plant = new IsoPlant(office);
+  const warning = new IsoAlarm(office);
   const cat = new IsoCat(office);
   const dog = new IsoDog(office);
   /** A game the cat and dog play together, while one goes on. */
@@ -154,6 +158,7 @@ function createOffice(
       approval.update(now / 1000);
       timeOfDay.update(date, inUse.editingSeats);
       plant.update(date, now / 1000);
+      warning.update(now);
       play = stepPlay(play, {
         now,
         dt,
@@ -173,6 +178,10 @@ function createOffice(
       dog.hearts();
     },
     bow: () => people.bow(),
+    alarm: () => {
+      warning.ring();
+      people.alarm(ALARM_SPOT);
+    },
     ship: () => {
       effects.burst();
       people.party();
@@ -197,6 +206,7 @@ function createOffice(
       effects.dispose();
       parcels.dispose();
       approval.dispose();
+      warning.dispose();
     },
   };
 }
@@ -408,6 +418,7 @@ export function createIsoView(
   /** The thanks already answered with hearts (or seen when it was old). */
   let thanksSeen: string | null = null;
   let pushbackSeen: string | null = null;
+  let alarmSeen: string | null = null;
 
   return {
     setPeople(list: IsoPerson[]): void {
@@ -455,6 +466,14 @@ export function createIsoView(
         Date.now() - pushback.at < FRESH_MS;
       pushbackSeen = pushback?.id ?? null;
       if (fresh) world.bow?.();
+    },
+    setAlarm(alarm: { id: string; at: number } | null): void {
+      const fresh =
+        alarm !== null &&
+        alarm.id !== alarmSeen &&
+        Date.now() - alarm.at < FRESH_MS;
+      alarmSeen = alarm?.id ?? null;
+      if (fresh) world.alarm?.();
     },
     setShipped(shipped: { id: string; at: number } | null): void {
       const fresh =

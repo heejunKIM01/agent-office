@@ -50,6 +50,7 @@ import {
   type FloorPoint,
 } from "@/systems/isoNavGrid";
 import { loungeAct } from "@/systems/loungeActs";
+import { ALARM_MS, faceToward } from "@/systems/officeAlarm";
 import { BOW_MS, BOW_WAIT_MS } from "@/systems/officeBow";
 import { stepVisit, VISIT_MAX_MS, type Visit } from "@/systems/officeApproval";
 import {
@@ -235,6 +236,13 @@ export class IsoPeople {
   private bowAsked: number | null = null;
   private bowPending = false;
   private bowFrom: number | null = null;
+  /**
+   * A risky command set off the warning light at ``alarmAt``: everyone not
+   * on their way somewhere turns to look until ``alarmUntil`` (performance.now ms).
+   */
+  private alarmAt: { x: number; z: number } | null = null;
+  private alarmPending = false;
+  private alarmUntil = 0;
   /** I said thanks: hearts rise from ``heartsFrom`` (performance.now ms) for a while. */
   private heartsPending = false;
   private heartsFrom: number | null = null;
@@ -400,6 +408,10 @@ export class IsoPeople {
       this.bowPending = false;
       this.bowAsked = now;
     }
+    if (this.alarmPending) {
+      this.alarmPending = false;
+      this.alarmUntil = now + ALARM_MS;
+    }
     if (this.bowFrom !== null && now - this.bowFrom > BOW_MS) {
       this.bowFrom = null;
     }
@@ -468,6 +480,10 @@ export class IsoPeople {
       placed.rig.root.rotation.y = facesRoom
         ? walker.facing + Math.PI
         : walker.facing;
+      // The warning light went off: everyone standing or seated looks at it.
+      if (this.alarmAt && now < this.alarmUntil && !walker.path) {
+        placed.rig.root.rotation.y = faceToward(walker, this.alarmAt);
+      }
       const calling =
         placed.person.kind === "claude" &&
         now < this.callUntil &&
@@ -753,6 +769,12 @@ export class IsoPeople {
     });
   }
 
+  /** A risky command set off the warning light at ``at``: everyone turns to look. */
+  alarm(at: { x: number; z: number }): void {
+    this.alarmAt = at;
+    this.alarmPending = true;
+  }
+
   /** I pushed back: Claude bows twice in a sweat, once it stops walking. */
   bow(): void {
     this.bowPending = true;
@@ -795,6 +817,7 @@ export class IsoPeople {
     this.callUntil = 0;
     this.bowAsked = null;
     this.bowFrom = null;
+    this.alarmUntil = 0;
     // An errand asked for before the people are placed (a place or page
     // just opened) still runs once they are; one under way is dropped.
     this.visit = null;
