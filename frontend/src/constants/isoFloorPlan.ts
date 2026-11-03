@@ -91,6 +91,7 @@ export type FurnitureKind =
   | "locker"
   | "serverRack"
   | "kiosk"
+  | "printer"
   | "globe"
   | "workDesk"
   | "cafeTable"
@@ -235,6 +236,11 @@ const DEV_DESK_X = (DEV_SEATS_X[0] + DEV_END_SEAT_X) / 2;
  * by my desk; the dog's bed at the front of the lounge and its water bowl
  * beside the cat's.
  */
+/**
+ * The dev room's printer: in the back right corner under the clock, out of
+ * the way of people coming in from the elevator. It prints new files' names.
+ */
+export const PRINTER = { x: 25.9, z: 0.75 };
 export const CAT_TOWER = { x: 9.5, z: 26.4 };
 export const CAT_BOWL = { x: 37.6, z: 29.9 };
 export const CAT_BOX = { x: 22.6, z: 21.8 };
@@ -289,6 +295,7 @@ export const FURNITURE: Furniture[] = [
     z: 0.05,
   })),
   { kind: "clock", x: 26.8, z: 0.06 },
+  { kind: "printer", ...PRINTER },
   ...DEV_ROWS.map((z): Furniture => ({ kind: "longDesk", x: DEV_DESK_X, z })),
   ...DEV_ROWS.flatMap((z) =>
     DEV_SEATS_X.flatMap((x): Furniture[] => [
@@ -359,6 +366,7 @@ export const FOOTPRINTS: Partial<Record<FurnitureKind, [number, number]>> = {
   locker: [1.7, 0.9],
   serverRack: [1.2, 1.1],
   kiosk: [0.8, 0.56],
+  printer: [0.9, 0.62],
   globe: [0.8, 0.8],
   workDesk: [2.2, 0.9],
   cafeTable: [1.15, 1.15],
